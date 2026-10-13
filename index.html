@@ -555,13 +555,12 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .desk-more.l{left:4px} .desk-more.r{right:4px}
 .desk-more::after{content:''; position:absolute; left:50%; top:50%; width:9px; height:9px; border:solid #efece1; border-width:0 0 2px 2px; transform:translate(-30%,-50%) rotate(45deg)}
 .desk-more.r::after{transform:translate(-70%,-50%) rotate(-135deg)}
-@media (hover: none) and (orientation: portrait), (pointer: coarse) and (orientation: portrait){ .desk-more{display:block} .desk-more.on{opacity:.85} .desk-view{border:2px solid #c8963e} }
 .ug-keys{position:absolute; left:5%; right:5%; bottom:5%; display:flex; flex-wrap:wrap; justify-content:center; gap:3px; padding:5px; background:rgba(8,6,6,.78); box-shadow:0 0 0 1px rgba(200,150,62,.5); touch-action:manipulation; z-index:2}   /* the spirit-board letters (phones), over the bottom of the picture */
 .ug-keys button{width:calc((100% - 12 * 3px) / 13); min-width:18px; aspect-ratio:1.15; padding:0; font-family:"VCR OSD Mono",var(--type); font-size:12px; color:#efece1; background:#10121a;
   border:1px solid #c8963e; box-shadow:inset 0 0 0 1px #3b0d10; border-radius:0; cursor:pointer; -webkit-tap-highlight-color:transparent; -webkit-user-select:none; user-select:none}
 .ug-keys button:active{background:#3b0d10; color:#f0c868}
 .ug-keys button.wide{width:calc((100% - 12 * 3px) / 13 * 3 + 6px); aspect-ratio:auto; padding:3px 0; font-size:10px; letter-spacing:.1em}
-@media (hover: none), (pointer: coarse){ .ug-word input{width:min(78%,300px); letter-spacing:.14em; padding:6px 8px} }
+@media (hover: none), (pointer: coarse){ .ug-word{top:5%} .ug-word input{width:min(88%,340px); font-size:20px !important; letter-spacing:.16em; padding:10px 10px} }   /* phones: a bigger box to read what you have spelled */
 .ug-word.no input{animation:wordno .32s steps(2) 1; border-color:#a83030}
 @keyframes wordno{0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)}}
 .ug-word.ok input{transition:opacity .8s, border-color .2s; opacity:0; border-color:#e9f0ff}
@@ -609,9 +608,9 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
   filter:blur(2.5px)}   /* a faint warm light round the edge of the thing (a wide blur washed everything out in a grey haze) */
 .attn .room-glow.on{opacity:1; animation:roomglow 2.4s ease-in-out infinite}
 @keyframes roomglow{0%,100%{opacity:.12} 50%{opacity:.26}}   /* very faint on purpose: things should be hard to spot */
-.attn .room-back{position:absolute; left:12px; top:12px; width:46px; height:46px; z-index:12; cursor:pointer; border:2px solid #c8963e; border-radius:0;
-  background:#10121a; box-shadow:inset 0 0 0 2px #3b0d10; touch-action:manipulation}       /* phones: the way out, a gold box like the inventory's, always top left */
-.attn .room-back::before{content:""; position:absolute; left:13px; top:12px; border:9px solid transparent; border-right:12px solid #e6dcc4; border-left:0}
+.attn .room-back{position:absolute; left:50%; transform:translateX(-50%); bottom:calc(30px + clamp(30px,6vw,46px)); z-index:12; cursor:pointer; padding:6px 14px; border:0; background:none;
+  font-family:"VCR OSD Mono",var(--type); font-size:12px; letter-spacing:.32em; color:#e6dcc4; text-shadow:0 0 6px rgba(0,0,0,.9), 0 0 2px #000; touch-action:manipulation; -webkit-tap-highlight-color:transparent}       /* phones, in the cave rooms and inside the house: GO BACK, just above the artifacts */
+.attn .at-room.in-task .room-back{visibility:hidden}
 .attn .room-pan{position:absolute; top:50%; width:22px; height:44px; margin-top:-22px; z-index:5; pointer-events:none; opacity:0; transition:opacity .4s}
 .attn .room-pan.l{left:6px} .attn .room-pan.r{right:6px}
 .attn .room-pan::before{content:""; position:absolute; top:13px; border:9px solid transparent}
@@ -648,8 +647,7 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .attn .room-edge.bottom{left:0; right:0; top:auto; bottom:0; width:auto; height:26%; background:linear-gradient(0deg, rgba(255,232,190,.95), rgba(255,220,170,.55) 22%, rgba(255,210,150,.2) 55%, rgba(255,210,150,0))}
 .attn .at-room.near-edge .room-edge{opacity:1; animation:edgeglow 1.8s ease-in-out infinite}
 @keyframes edgeglow{0%,100%{opacity:.8} 50%{opacity:1}}
-.attn .room-back.right{left:auto; right:12px}
-.attn .room-back.right::before{left:17px; border:9px solid transparent; border-left:12px solid #e6dcc4; border-right:0}
+
 
 /* the full-screen button: four corner marks, turned inward once you are full screen */
 .fs-btn{position:absolute; top:10px; right:10px; z-index:40; width:30px; height:30px; padding:0; background:rgba(0,0,0,.35); border:0; border-radius:3px; cursor:pointer; opacity:.6; transition:opacity .2s}
@@ -6224,7 +6222,7 @@ const ATTN = (function(){
       if(TALL()){ host.style.width = Math.min(innerWidth - 12, P.width * 1.2) + 'px'; panTo(pan); return; }      // a phone held upright: the desk fills the width, shown bigger, and you slide along it
       host.style.width = Math.max(200, Math.min(P.width * .96, otherH * (W + F * 2) / (H + F * 2), (PH - 96) * (W + F * 2) / (H + F * 2))) + 'px'; pic.style.width = ''; pic.style.transform = ''; };
     // upright phones: the desk is drawn ZOOM times the width of the box and slides sideways: drag the bare desk (or tap an arrow) to look along it
-    const TALL = () => matchMedia('(hover: none), (pointer: coarse)').matches && innerHeight > innerWidth, ZOOM = 1.8; let pan = 0, panDrag = null;
+    const TALL = () => false, ZOOM = 1.8;      // (off: the user wants the desk at its normal size on phones. set back to the phone check to bring the bigger sliding desk back) let pan = 0, panDrag = null;
     function panTo(px){
       if(!TALL()){ pan = 0; return; }
       const fw = host.querySelector('.ug-frame').clientWidth, max = fw * (ZOOM - 1); pan = Math.max(0, Math.min(max, px));
@@ -6699,7 +6697,7 @@ const ATTN = (function(){
     if(W / H < 1.15){ h = H; w = H / .75; }
     const maxPan = Math.max(0, (w - W) / 2); pan = Math.max(-maxPan, Math.min(maxPan, pan));
     img.style.width = w + 'px'; img.style.height = h + 'px'; img.style.left = ((W - w) / 2 + pan) + 'px'; img.style.top = ((H - h) / 2) + 'px';
-    const bk = v.querySelector('.room-back'); bk.style.display = TOUCH && ROOMS[roomNow].back && !talking ? '' : 'none';
+    const bk = v.querySelector('.room-back'); bk.style.display = TOUCH && ROOMS[roomNow].back && ROOMS[roomNow].backSide === 'bottom' && !talking ? '' : 'none';      // (the house goes back by its right edge)
     v.querySelector('.room-pan.l').classList.toggle('on', maxPan > 2 && pan < maxPan - 2); v.querySelector('.room-pan.r').classList.toggle('on', maxPan > 2 && pan > -maxPan + 2);   // more to see that way
     if(TOUCH && maxPan > 2 && !panHinted && !(ask && ask.isConnected)){ panHinted = true; const hn = v.querySelector('.room-hint'); hn.classList.add('on'); setTimeout(()=> hn.classList.remove('on'), 4200); }
     const ed = v.querySelector('.room-edge'); ed.style.display = ROOMS[roomNow].back ? '' : 'none'; ed.classList.toggle('right', ROOMS[roomNow].backSide === 'right'); ed.classList.toggle('bottom', ROOMS[roomNow].backSide === 'bottom');      // the way back is the side you came in from
@@ -6923,7 +6921,7 @@ const ATTN = (function(){
   }
   function buildRoom(){
     roomEl = document.createElement('div'); roomEl.className = 'at-room';
-    roomEl.innerHTML = '<div class="room-stage"><img class="room-img" alt="" draggable="false"><div class="room-glows"></div></div><div class="room-blur"></div><div class="room-dark"></div><div class="room-edge"></div><div class="room-pan l"></div><div class="room-pan r"></div><div class="room-hint"><i></i>DRAG TO LOOK AROUND<br><br>HOLD AND SLIDE TO SEARCH</div><div class="room-talk"><canvas width="144" height="156"></canvas><div class="rt-text"></div></div><div class="room-curtain"></div><button type="button" class="room-back" aria-label="back"></button>';      // (the test list is gone; the book and the other unplaced games stay in the code for later)
+    roomEl.innerHTML = '<div class="room-stage"><img class="room-img" alt="" draggable="false"><div class="room-glows"></div></div><div class="room-blur"></div><div class="room-dark"></div><div class="room-edge"></div><div class="room-pan l"></div><div class="room-pan r"></div><div class="room-hint"><i></i>DRAG TO LOOK AROUND<br><br>HOLD AND SLIDE TO SEARCH</div><div class="room-talk"><canvas width="144" height="156"></canvas><div class="rt-text"></div></div><div class="room-curtain"></div><button type="button" class="room-back" aria-label="go back">GO BACK</button>';      // (the test list is gone; the book and the other unplaced games stay in the code for later)
     root.appendChild(roomEl);
     roomEl.querySelector('.room-img').src = ROOMS[roomNow].src; glows();
     roomEl.querySelector('.room-back').addEventListener('click', e=>{ e.stopPropagation(); toRoom(ROOMS[roomNow].back); });
@@ -6972,7 +6970,7 @@ const ATTN = (function(){
   }
   window.__attnOpen = id => { closeTask(); if(gated()){ gateNote(); return; } openTask(id); };      // one game can lead into another (the painting room's pot opens the flower)
   function openTask(id){
-    popup = document.createElement('div'); popup.className = 'ug-pop';
+    popup = document.createElement('div'); popup.className = 'ug-pop'; if(roomEl) roomEl.classList.add('in-task');      // (hides GO BACK while a game is open)
     popup.innerHTML = '<div class="ug-body"></div><button type="button" class="ug-back">back</button>';
     root.appendChild(popup);
     popup.querySelector('.ug-back').addEventListener('click', closeTask);
@@ -7025,7 +7023,7 @@ const ATTN = (function(){
     if(!root) return; const list = carrying(), k = list.map(i => i.id).join(',') + ':' + STATE.bits.length; if(k === invKey) return; invKey = k;
     root.querySelector('.at-inv').innerHTML = Array.from({length: Math.max(4, list.length)}, (_, i) => list[i] ? '<i class="has" data-item="' + list[i].id + '"><img src="' + list[i].icon + '" alt="' + list[i].name + '" title="' + list[i].name + '"></i>' : '<i></i>').join('');
   }
-  function closeTask(){ useHook = null; closeAsk(); if(stopTask){ stopTask(); stopTask = null; } if(popup){ popup.remove(); popup = null; } paintProps(); }
+  function closeTask(){ if(roomEl) roomEl.classList.remove('in-task'); useHook = null; closeAsk(); if(stopTask){ stopTask(); stopTask = null; } if(popup){ popup.remove(); popup = null; } paintProps(); }
   // click a thing you carry: "USE SILVER KEY?" YES / NO. YES hands it to the open puzzle, if it takes it
   const USE_NAME = {rag: 'BLOODY RAG', key: 'SILVER KEY', can: 'SEAL', shard: 'TORN CANVAS', cat: 'CAT', knob: 'KNOB', bit: 'KEY FRAGMENT'};
   let ask = null;
