@@ -604,15 +604,7 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .attn .room-reveal{position:absolute; opacity:0; pointer-events:none; transition:opacity .55s ease; z-index:1}   /* behind the doors / through the tunnel arches: fades in on hover */
 .attn .room-reveal.on{opacity:1}
 .attn .room-reveal.faint.on{opacity:.3}   /* the house is still shut */
-@media (hover: none), (pointer: coarse){
-  .attn .room-glow{opacity:.3; animation:roomglowtouch 3.2s ease-in-out infinite}            /* phones: no hover, so what you can tap is always faintly lit */
-  .attn .room-glow.on{animation:roomglow 2.4s ease-in-out infinite}
-  .attn .room-reveal{opacity:.08; animation:revealtouch 3.2s ease-in-out infinite}          /* the archways and the door: a faint breath of what is through them */
-  .attn .room-reveal.on{opacity:1; animation:none} .attn .room-reveal.faint.on{opacity:.3}
-  .attn .room-reveal.open{opacity:1; animation:none}                                          /* the house, once you may go in: its doors are just open */
-}
-@keyframes roomglowtouch{0%,100%{opacity:.22} 50%{opacity:.5}}
-@keyframes revealtouch{0%,100%{opacity:.04} 50%{opacity:.12}}
+@media (hover: none), (pointer: coarse){ .attn .room-reveal.open{opacity:1} }   /* phones: once you may go into the house, its doors are just open */
 .attn .room-glow{position:absolute; opacity:0; pointer-events:none; mix-blend-mode:screen; transition:opacity .35s; z-index:3;
   filter:blur(2.5px)}   /* a faint warm light round the edge of the thing (a wide blur washed everything out in a grey haze) */
 .attn .room-glow.on{opacity:1; animation:roomglow 2.4s ease-in-out infinite}
