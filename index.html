@@ -608,9 +608,10 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
   filter:blur(2.5px)}   /* a faint warm light round the edge of the thing (a wide blur washed everything out in a grey haze) */
 .attn .room-glow.on{opacity:1; animation:roomglow 2.4s ease-in-out infinite}
 @keyframes roomglow{0%,100%{opacity:.12} 50%{opacity:.26}}   /* very faint on purpose: things should be hard to spot */
-.attn .room-back{position:absolute; left:50%; transform:translateX(-50%); bottom:calc(30px + clamp(30px,6vw,46px)); z-index:12; cursor:pointer; padding:6px 14px; border:0; background:none;
+.attn .room-back{position:absolute; left:50%; transform:translateX(-50%); bottom:calc(16px + clamp(30px,6vw,46px)); z-index:12; cursor:pointer; padding:6px 14px; border:0; background:none;
   font-family:"VCR OSD Mono",var(--type); font-size:12px; letter-spacing:.32em; color:#e6dcc4; text-shadow:0 0 6px rgba(0,0,0,.9), 0 0 2px #000; touch-action:manipulation; -webkit-tap-highlight-color:transparent}       /* phones, in the cave rooms and inside the house: GO BACK, just above the artifacts */
 .attn .at-room.in-task .room-back{visibility:hidden}
+.ug-freeze{position:absolute; inset:0; z-index:60; background:transparent; cursor:wait; touch-action:none}
 .attn .room-pan{position:absolute; top:50%; width:22px; height:44px; margin-top:-22px; z-index:5; pointer-events:none; opacity:0; transition:opacity .4s}
 .attn .room-pan.l{left:6px} .attn .room-pan.r{right:6px}
 .attn .room-pan::before{content:""; position:absolute; top:13px; border:9px solid transparent}
@@ -6997,6 +6998,9 @@ const ATTN = (function(){
     const A = item ? ITEMS[item] : ARTIFACT[id], el = document.createElement('div'); el.className = 'ug-obtain';
     el.innerHTML = (A.icon ? '<img src="' + A.icon + '" alt="">' : '') + '<div class="ob-t">' + (item ? 'OBTAINED' : 'ARTIFACT OBTAINED') + (A.name ? ': ' + A.name : '') + '</div>';
     (popup || roomEl).appendChild(el);
+    // while it is being handed to you, nothing else can be touched (no spam clicks starting things twice)
+    const freeze = document.createElement('div'); freeze.className = 'ug-freeze'; (root || document.body).appendChild(freeze);
+    ['pointerdown', 'pointerup', 'click', 'touchstart'].forEach(ev => freeze.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); }, {passive: false}));
     const im = el.querySelector('img');
     if(im){
       const r = im.getBoundingClientRect(), dx = at[0] - (r.left + r.width / 2), dy = at[1] - (r.top + r.height / 2);
@@ -7005,7 +7009,7 @@ const ATTN = (function(){
     }
     requestAnimationFrame(()=> el.classList.add('on'));
     setTimeout(()=>{ el.classList.add('off'); }, 2400);
-    setTimeout(()=>{ el.remove(); then(); }, 2900);
+    setTimeout(()=>{ el.remove(); freeze.remove(); then(); }, 2900);
   }
   function carrying(){
     const list = [];
@@ -7103,7 +7107,7 @@ const ATTN = (function(){
     }
     root.style.background = '#000';
     root.classList.add('on'); paint(); requestAnimationFrame(roomLayout);
-    if(TOUCH && innerHeight > innerWidth && !rotateHinted){ rotateHinted = true; setTimeout(()=> tellNote('TURN YOUR PHONE SIDEWAYS TO SEE MORE'), 900); } liveRoom(); if(roomEl) fullRoom();
+    liveRoom();      // (no "turn your phone sideways" note any more) if(roomEl) fullRoom();
   }
   function stop(){ document.body.classList.remove('attn-playing'); stopIntro(); closeTask(); LIVE.stop(); if(fullStop){ fullStop(); fullStop = null; const b = root && root.querySelector('.room-full'); if(b) b.remove(); } if(root) root.classList.remove('on'); }
   // back to the very beginning: nothing found, nothing carried, standing in the forest
