@@ -559,8 +559,14 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .ug-keys button{width:calc((100% - 12 * 3px) / 13); min-width:18px; aspect-ratio:1.15; padding:0; font-family:"VCR OSD Mono",var(--type); font-size:12px; color:#efece1; background:#10121a;
   border:1px solid #c8963e; box-shadow:inset 0 0 0 1px #3b0d10; border-radius:0; cursor:pointer; -webkit-tap-highlight-color:transparent; -webkit-user-select:none; user-select:none}
 .ug-keys button:active{background:#3b0d10; color:#f0c868}
+.ug-keys button.del{width:calc((100% - 12 * 3px) / 13 * 3 + 6px); aspect-ratio:auto; padding:3px 0; font-size:10px}
 .ug-keys button.wide{width:calc((100% - 12 * 3px) / 13 * 3 + 6px); aspect-ratio:auto; padding:3px 0; font-size:10px; letter-spacing:.1em}
 @media (hover: none), (pointer: coarse){ .ug-word{top:5%} .ug-word input{width:min(88%,340px); font-size:20px !important; letter-spacing:.16em; padding:10px 10px} }   /* phones: a bigger box to read what you have spelled */
+.ug-keys.below{position:static; gap:5px; padding:6px; margin:2px 0 0; box-sizing:border-box; flex:none}   /* upright phones: under the game, big keys, nine to a row */
+.ug-keys.below button{width:calc((100% - 8 * 5px) / 9); aspect-ratio:1; font-size:16px}
+.ug-keys.below button.del{width:calc((100% - 8 * 5px) / 9); aspect-ratio:1; font-size:14px}
+.ug-keys.below button.wide{width:100%; aspect-ratio:auto; padding:9px 0; font-size:13px; letter-spacing:.3em}
+.ug-pop.ug-up{justify-content:flex-start; padding-top:46px}
 .ug-word.no input{animation:wordno .32s steps(2) 1; border-color:#a83030}
 @keyframes wordno{0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)}}
 .ug-word.ok input{transition:opacity .8s, border-color .2s; opacity:0; border-color:#e9f0ff}
@@ -5757,8 +5763,16 @@ const ATTN = (function(){
         field.readOnly = true; field.setAttribute('inputmode', 'none'); field.addEventListener('focus', () => field.blur());
         const keys = document.createElement('div'); keys.className = 'ug-keys';
         keys.innerHTML = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(c => '<button type="button" data-k="' + c + '">' + c + '</button>').join('') +
-          '<button type="button" data-k="del" class="wide" aria-label="delete">&#9664;</button><button type="button" data-k="ok" class="wide" aria-label="speak">SPEAK</button>';
-        host.querySelector('.ug-frame').appendChild(keys);      // over the bottom of the picture (gone again once the word is spoken)
+          '<button type="button" data-k="del" class="del" aria-label="delete">&#9664;</button><button type="button" data-k="ok" class="wide" aria-label="speak">SPEAK</button>';
+        if(innerHeight > innerWidth){                                    // upright: the game moves up the screen and the letters get the room under it, bigger
+          keys.classList.add('below'); host.querySelector('.ug-frame').after(keys);
+          const pop = host.closest('.ug-pop'); if(pop) pop.classList.add('ug-up');
+          // the picture shrinks just enough that it and the letters both fit between the boxes at the top and the artifacts at the bottom
+          const body = host.closest('.ug-body') || host;
+          const fitUp = () => { if(!pop || !keys.isConnected) return; keys.style.width = Math.min(440, pop.clientWidth - 14) + 'px'; const PH = pop.clientHeight, top = parseFloat(getComputedStyle(pop).paddingTop) || 0, room = PH - top - 76 - keys.offsetHeight - 12;
+            body.style.width = Math.max(180, Math.min(pop.clientWidth * .94, room / .755)) + 'px'; };
+          requestAnimationFrame(fitUp); setTimeout(fitUp, 250);
+        } else host.querySelector('.ug-frame').appendChild(keys);      // on its side: over the bottom of the picture (gone again once the word is spoken)
         keys.addEventListener('click', e => {
           const b = e.target.closest('button'); if(!b || STATE.seance) return;
           if(b.dataset.k === 'ok'){ if(field.value) speak(); return; }     // (a wrong word shakes and empties, as with Enter)
@@ -5766,7 +5780,7 @@ const ATTN = (function(){
           else if(field.value.length < 12) field.value += b.dataset.k;
           if(field.value.toUpperCase() === WORD) speak();
         });
-        const gone = () => { if(STATE.seance) keys.remove(); }; const mo = new MutationObserver(gone); mo.observe(form, {attributes: true});
+        const gone = () => { if(STATE.seance){ keys.remove(); const pop = host.closest('.ug-pop'); if(pop) pop.classList.remove('ug-up'); const body = host.closest('.ug-body'); if(body) body.style.width = ''; } }; const mo = new MutationObserver(gone); mo.observe(form, {attributes: true});
       }
     }
     let spokenAt = STATE.seance ? -1e9 : 0;
