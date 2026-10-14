@@ -7099,7 +7099,7 @@ const ATTN = (function(){
     const r = roomEl.querySelector('.room-stage').getBoundingClientRect();
     if(clientX === null){ sh.style.setProperty('--mx', '-9999px'); return; }
     sh.style.setProperty('--mx', (clientX - r.left) + 'px'); sh.style.setProperty('--my', (clientY - r.top) + 'px');
-    sh.style.setProperty('--lr', Math.round(Math.max(120, Math.min(r.width, r.height) * .3)) + 'px');
+    sh.style.setProperty('--lr', Math.round(Math.max(220, Math.min(r.width, r.height) * .62)) + 'px');
   }
   function roomDark(){ shadeRoom(); if(!roomEl) return; const d = ROOMS[roomNow].dark && ROOMS[roomNow].dark(); roomEl.classList.toggle('unlit', !!d); }
   function roomSpot(clientX, clientY, pad){
