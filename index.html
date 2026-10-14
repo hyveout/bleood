@@ -6766,6 +6766,7 @@ const ATTN = (function(){
       line.classList.remove('in'); setTimeout(()=>{ line.innerHTML = lines[i].replace(/ ?(\u2588+)/g, (_, m) => '&nbsp;<span class="rt-censor" style="white-space:nowrap">' + '&nbsp;'.repeat(m.length) + '</span>'); line.classList.add('in'); }, i ? 450 : 700);
       timer = setTimeout(next, (i ? 450 : 700) + 2600 + lines[i].length * 45); };
     el.addEventListener('pointerdown', e => { e.stopPropagation(); if(el.classList.contains('on')) next(); });
+    el.__skip = () => { if(el.__done) return; el.__done = true; clearTimeout(timer); el.classList.remove('on'); setTimeout(()=>{ el.remove(); if(then) then(); }, 300); };   // (developer skip)
     requestAnimationFrame(()=> el.classList.add('on')); next();
   }
   const END_LINES = ['He got everything back', 'No matter the sin, he always finds himself', 'My idol,', 'spare me for what I am about to do,', 'for there is no other way for me to live'];
@@ -7384,6 +7385,17 @@ const ATTN = (function(){
     if(!girlMayCome()){ girlNext = now + 4000; return; }
     girlCome();
   }, 100);
+  // ---------- DEVELOPER: Shift + D. during a film or a memory: skip it. otherwise: the house opens (and you get the mask if you don't have it) ----------
+  addEventListener('keydown', e => {
+    if(!(e.shiftKey && (e.key === 'D' || e.key === 'd'))) return;
+    if(e.target && e.target.matches && e.target.matches('input, textarea')) return;
+    if(!root || !root.classList.contains('on')) return;
+    const film = document.querySelector('.attn-intro');
+    if(film){ film.dispatchEvent(new Event('ended')); return; }
+    const mem = root.querySelector('.at-memory'); if(mem && mem.__skip){ mem.__skip(); return; }
+    STATE.mask = true; STATE.metHer = true; invKey = null; paintInv(); if(roomEl) glows();
+    tellNote('DEV: HOUSE OPEN');
+  });
   function reset(){
     closeTask();
     wearMask(false); girlGone(true); girlNext = 0;
