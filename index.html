@@ -560,6 +560,9 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .attn .room-shine{position:absolute; width:2.4%; aspect-ratio:1; transform:translate(-50%,-50%); z-index:2; pointer-events:none; opacity:0; animation:roomshine 2.4s ease-in-out infinite;
   background:radial-gradient(circle, rgba(255,248,225,.85) 0 12%, rgba(255,248,225,0) 45%), linear-gradient(90deg, transparent 47%, rgba(255,250,232,.95) 50%, transparent 53%), linear-gradient(0deg, transparent 47%, rgba(255,250,232,.95) 50%, transparent 53%)}
 @keyframes roomshine{0%,55%,100%{opacity:0; transform:translate(-50%,-50%) scale(.5) rotate(0)} 72%{opacity:1; transform:translate(-50%,-50%) scale(1) rotate(25deg)}}
+.attn .room-shade{position:absolute; inset:0; z-index:4; pointer-events:none; --mx:-9999px; --my:-9999px; --lr:220px; --d:.5;
+  background:radial-gradient(circle var(--lr) at var(--mx) var(--my), rgba(0,0,0,0) 0, rgba(0,0,0,0) 30%, rgba(3,2,1,calc(var(--d) * .6)) 70%, rgba(3,2,1,var(--d)) 100%),
+             radial-gradient(ellipse 75% 70% at 50% 46%, rgba(3,2,1,0) 35%, rgba(2,1,1,.55) 85%, rgba(0,0,0,.85) 100%)}   /* the shadows: darker everywhere, near black at the edges, lit round the pointer */
 .attn .room-unlit{position:absolute; inset:0; z-index:5; background:#020101; opacity:0; pointer-events:none; transition:opacity 1.6s ease}
 .attn .at-room.unlit .room-unlit{opacity:.82; transition:none}
 .attn .at-room.unlit .room-edge, .attn .at-room.unlit .room-edge.bottom{z-index:7; opacity:0; animation:none; mix-blend-mode:normal; background:linear-gradient(0deg, rgba(255,228,182,.95) 0%, rgba(255,220,168,.75) 40%, rgba(255,210,150,.25) 75%, rgba(255,210,150,0))}   /* in the dark the way out still shows */           /* a room with no light: black (the lantern lights it) */
@@ -7086,7 +7089,19 @@ const ATTN = (function(){
     };
     if(T.auto){ const me = talking; setTimeout(()=>{ if(talking === me){ box.classList.remove('on'); talking = null; } }, T.lines[0].length * 45 + 200 + T.auto); }   // a line said on its own: it goes when it is done
   }
-  function roomDark(){ if(!roomEl) return; const d = ROOMS[roomNow].dark && ROOMS[roomNow].dark(); roomEl.classList.toggle('unlit', !!d); }
+  // SHADOWS (user, Oct 14): every room darker, the edges near black, and a soft warm light round the pointer (on phones: under your finger while you hold).
+  // to switch it all off, set ROOM_SHADE to false. how dark each room is (0 = off):
+  const ROOM_SHADE = true, SHADE = {forest: .5, house: .45, inside: .52, tunnel: .5, cave: .45, mirror: 0};
+  function shadeRoom(){ if(!roomEl) return; const sh = roomEl.querySelector('.room-shade'); if(!sh) return;
+    const d = ROOM_SHADE ? (SHADE[roomNow] || 0) : 0; sh.style.setProperty('--d', d); sh.style.display = d ? '' : 'none'; }
+  function shadeAt(clientX, clientY){
+    if(!roomEl) return; const sh = roomEl.querySelector('.room-shade'); if(!sh) return;
+    const r = roomEl.querySelector('.room-stage').getBoundingClientRect();
+    if(clientX === null){ sh.style.setProperty('--mx', '-9999px'); return; }
+    sh.style.setProperty('--mx', (clientX - r.left) + 'px'); sh.style.setProperty('--my', (clientY - r.top) + 'px');
+    sh.style.setProperty('--lr', Math.round(Math.max(120, Math.min(r.width, r.height) * .3)) + 'px');
+  }
+  function roomDark(){ shadeRoom(); if(!roomEl) return; const d = ROOMS[roomNow].dark && ROOMS[roomNow].dark(); roomEl.classList.toggle('unlit', !!d); }
   function roomSpot(clientX, clientY, pad){
     if(ROOMS[roomNow].dark && ROOMS[roomNow].dark()) return undefined;      // you can't see anything in there
     const img = roomEl.querySelector('.room-stage').getBoundingClientRect(), x = (clientX - img.left) / img.width * 1600, y = (clientY - img.top) / img.height * 1200;
@@ -7095,8 +7110,13 @@ const ATTN = (function(){
   }
   function buildRoom(){
     roomEl = document.createElement('div'); roomEl.className = 'at-room';
-    roomEl.innerHTML = '<div class="room-stage"><img class="room-img" alt="" draggable="false"><div class="room-glows"></div><div class="room-unlit"></div></div><div class="room-blur"></div><div class="room-dark"></div><div class="room-edge"></div><div class="room-pan l"></div><div class="room-pan r"></div><div class="room-hint"><i></i>DRAG TO LOOK AROUND<br><br>HOLD AND SLIDE TO SEARCH</div><div class="room-talk"><canvas width="144" height="156"></canvas><div class="rt-text"></div></div><div class="room-curtain"></div><button type="button" class="room-back" aria-label="go back">GO BACK</button>';      // (the test list is gone; the book and the other unplaced games stay in the code for later)
+    roomEl.innerHTML = '<div class="room-stage"><img class="room-img" alt="" draggable="false"><div class="room-glows"></div><div class="room-shade"></div><div class="room-unlit"></div></div><div class="room-blur"></div><div class="room-dark"></div><div class="room-edge"></div><div class="room-pan l"></div><div class="room-pan r"></div><div class="room-hint"><i></i>DRAG TO LOOK AROUND<br><br>HOLD AND SLIDE TO SEARCH</div><div class="room-talk"><canvas width="144" height="156"></canvas><div class="rt-text"></div></div><div class="room-curtain"></div><button type="button" class="room-back" aria-label="go back">GO BACK</button>';      // (the test list is gone; the book and the other unplaced games stay in the code for later)
     root.appendChild(roomEl);
+    roomEl.addEventListener('pointermove', e => shadeAt(e.clientX, e.clientY));
+    roomEl.addEventListener('pointerdown', e => { if(e.pointerType !== 'mouse') shadeAt(e.clientX, e.clientY); });
+    roomEl.addEventListener('pointerleave', () => shadeAt(null));
+    roomEl.addEventListener('pointerup', e => { if(e.pointerType !== 'mouse') shadeAt(null); });
+    roomEl.addEventListener('pointercancel', () => shadeAt(null));
     roomEl.querySelector('.room-img').src = ROOMS[roomNow].src; glows();
     roomEl.querySelector('.room-back').addEventListener('click', e=>{ e.stopPropagation(); toRoom(ROOMS[roomNow].back); });
     let down = null, moved = 0, searching = false, holdT = 0, lastXY = [0, 0];
