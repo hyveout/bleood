@@ -7393,8 +7393,9 @@ const ATTN = (function(){
     const film = document.querySelector('.attn-intro');
     if(film){ film.dispatchEvent(new Event('ended')); return; }
     const mem = root.querySelector('.at-memory'); if(mem && mem.__skip){ mem.__skip(); return; }
-    STATE.mask = true; STATE.metHer = true; invKey = null; paintInv(); if(roomEl) glows();
-    tellNote('DEV: HOUSE OPEN');
+    STATE.mask = true; STATE.metHer = true; TASKS.forEach(t => { have[t.id] = true; }); STATE.gate = GATES.length;      // every artifact, and past both of her gates
+    invKey = null; paintInv(); paint(); if(roomEl){ glows(); paintProps(); }
+    tellNote('DEV: HOUSE OPEN + ALL ARTIFACTS');
   });
   function reset(){
     closeTask();
