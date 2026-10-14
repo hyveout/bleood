@@ -6611,7 +6611,24 @@ const ATTN = (function(){
   // her games: the first time (after 2 artifacts) the dot, the second time (after 5) the maze. win and you can go on collecting
   // at a gate, she offers you a memory: a black screen with her words; once it is over you can go on collecting
   // (her two minigames, dotsTask and mazeTask, are still in the code but no longer used)
-  function herGame(){ askYesNo('RELIVE MEMORY?', ()=> memory(HER_LINES[Math.min(1, STATE.gate || 0)], ()=>{ STATE.gate = (STATE.gate || 0) + 1; gateTold = -1; })); }
+  // the first memory is a film now (Cut Scene 1); the second is still her words on black
+  const MEMORY_FILMS = ['bleood_cutscene_1.mp4', null];
+  function herGame(){
+    const g = Math.min(1, STATE.gate || 0), next = ()=>{ STATE.gate = (STATE.gate || 0) + 1; gateTold = -1; };
+    askYesNo('RELIVE MEMORY?', ()=> MEMORY_FILMS[g] ? memoryFilm(MEMORY_FILMS[g], next, ()=> memory(HER_LINES[g], next)) : memory(HER_LINES[g], next));
+  }
+  // a film, over the whole game, then back to where you were. if it can't play at all, `fallback` runs instead (her words on black)
+  function memoryFilm(src, then, fallback){
+    const v = document.createElement('video'); v.className = 'attn-intro'; v.src = src; v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'auto';
+    (root || document.body).appendChild(v);
+    const block = e => { e.preventDefault(); e.stopPropagation(); };                 // nothing behind it can be touched while it plays
+    ['pointerdown', 'click', 'touchstart'].forEach(ev => v.addEventListener(ev, block, {passive: false}));
+    let over = false, started = false;
+    const end = ok => { if(over) return; over = true; v.pause(); v.removeAttribute('src'); v.load(); v.remove(); (ok || !fallback ? then : fallback)(); };
+    v.addEventListener('playing', ()=> started = true);
+    v.addEventListener('ended', ()=> end(true)); v.addEventListener('error', ()=> end(started));
+    const p = v.play(); if(p && p.catch) p.catch(()=>{ v.muted = true; v.play().catch(()=> end(false)); });   // sound refused: play it muted rather than not at all
+  }
   // a memory: the screen goes black and the words come up in the middle, a line at a time. click (or wait) for the next
   function memory(lines, then){
     closeAsk(); const el = document.createElement('div'); el.className = 'at-memory'; el.innerHTML = '<div class="am-line"></div>'; root.appendChild(el);
