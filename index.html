@@ -599,6 +599,15 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .ug-keys.below button.del{width:calc((100% - 8 * 5px) / 9); aspect-ratio:1; font-size:14px}
 .ug-keys.below button.wide{width:100%; aspect-ratio:auto; padding:9px 0; font-size:13px; letter-spacing:.3em}
 .ug-pop.ug-up{justify-content:flex-start; padding-top:46px}
+/* phones: no boxes at all. the letters float in the dark like a spirit board, and the word comes up on a single faint line */
+@media (hover: none), (pointer: coarse){
+  .ug-keys, .ug-keys.below{background:radial-gradient(ellipse 60% 62% at 50% 50%, rgba(0,0,0,.82), rgba(0,0,0,.55) 65%, rgba(0,0,0,0) 100%) !important; box-shadow:none !important; border:0 !important}   /* a soft pool of dark behind the letters, no edges */
+  .ug-keys button, .ug-keys.below button{background:none !important; border:0 !important; box-shadow:none !important; color:rgba(239,236,225,.82); text-shadow:0 0 6px rgba(0,0,0,.95), 0 0 2px #000}
+  .ug-keys button:active{background:none !important; color:#f0c868; text-shadow:0 0 8px rgba(240,200,104,.8)}
+  .ug-keys.below button.wide{letter-spacing:.45em; color:rgba(240,200,104,.85)}
+  .ug-word input{background:none !important; border:0 !important; border-bottom:1px solid rgba(200,150,62,.55) !important; box-shadow:none !important; text-shadow:0 0 6px #000}
+  .ug-word input:focus{box-shadow:none !important}
+}
 .ug-word.no input{animation:wordno .32s steps(2) 1; border-color:#a83030}
 @keyframes wordno{0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)}}
 .ug-word.ok input{transition:opacity .8s, border-color .2s; opacity:0; border-color:#e9f0ff}
