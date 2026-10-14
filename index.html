@@ -7,12 +7,24 @@
 /* no zooming on phones: no double-tap zoom, and text boxes at 16px so iPhones don't zoom in when you type in one */
 html, body{touch-action:manipulation; -webkit-text-size-adjust:100%; text-size-adjust:100%}
 @media (hover: none), (pointer: coarse){ input, textarea, select{font-size:16px !important} }
+/* phones: no text selection, no blue highlight, no hold-for-menu, no image drag (a long press used to turn the screen blue) */
+@media (hover: none), (pointer: coarse){
+  html, body, body *{-webkit-user-select:none !important; user-select:none !important; -webkit-touch-callout:none !important; -webkit-tap-highlight-color:transparent !important}
+  input, textarea{-webkit-user-select:text !important; user-select:text !important}
+  img{-webkit-user-drag:none; user-drag:none}
+  ::selection{background:transparent}
+}
 </style>
 <script>
 /* iPhones ignore user-scalable=no, so pinches are stopped here as well (double-tap zoom is off through touch-action above) */
 (function(){
   const stop = e => { e.preventDefault(); };
   ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => document.addEventListener(ev, stop, {passive: false}));
+  if(matchMedia('(hover: none), (pointer: coarse)').matches){
+    document.addEventListener('selectstart', e => { if(!(e.target.closest && e.target.closest('input, textarea'))) e.preventDefault(); });
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('selectionchange', () => { const a = document.activeElement; if(!(a && a.matches && a.matches('input, textarea'))){ const s = getSelection(); if(s && s.rangeCount) s.removeAllRanges(); } });
+  }
   document.addEventListener('touchmove', e => { if(e.touches.length > 1 || (e.scale !== undefined && e.scale !== 1)) e.preventDefault(); }, {passive: false});
   // typing in a text box (the seance): keep the page at 1x while it has focus, and snap it back to 1x when you are done
   const vp = () => document.querySelector('meta[name=viewport]'), FIXED = 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no';
