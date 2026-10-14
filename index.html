@@ -7315,12 +7315,13 @@ const ATTN = (function(){
   // a piece of the silver key, found anywhere: the third one makes the key
   function gotBit(k, at){ if(STATE.bits.includes(k)) return; STATE.bits.push(k); bitDone(at); }
   function bitDone(at){
-    if(STATE.bits.length >= KEY_BITS.length){ STATE.key = true; obtain(null, at, ()=> paintInv(), 'key'); }
-    else obtain(null, at, ()=> paintInv(), 'bit');
+    if(STATE.bits.length >= KEY_BITS.length) STATE.key = true;
+    obtain(null, at, ()=> paintInv(), 'bit');      /* the whole key, "KEY FRAGMENT 2/3 COLLECTED" */
   }
   function obtain(id, at, then, item){
     const A = item ? ITEMS[item] : ARTIFACT[id], el = document.createElement('div'); el.className = 'ug-obtain';
-    el.innerHTML = (A.icon ? '<img src="' + A.icon + '" alt="">' : '') + '<div class="ob-t">' + (item ? 'OBTAINED' : 'ARTIFACT OBTAINED') + (A.name ? ': ' + A.name : '') + '</div>';
+    const isBit = item === 'bit', icon = isBit ? KEY_SRC : A.icon, label = isBit ? 'KEY FRAGMENT ' + Math.min(STATE.bits.length, KEY_BITS.length) + '/' + KEY_BITS.length + ' COLLECTED' : (item ? 'OBTAINED' : 'ARTIFACT OBTAINED') + (A.name ? ': ' + A.name : '');
+    el.innerHTML = (icon ? '<img src="' + icon + '" alt="">' : '') + '<div class="ob-t">' + label + '</div>';
     (popup || roomEl).appendChild(el);
     // while it is being handed to you, nothing else can be touched (no spam clicks starting things twice)
     const freeze = document.createElement('div'); freeze.className = 'ug-freeze'; (root || document.body).appendChild(freeze);
@@ -7338,7 +7339,7 @@ const ATTN = (function(){
   function carrying(){
     const list = [];
     if(STATE.rag && !STATE.used.rag) list.push({id: 'rag', icon: RAG_ICON, name: 'bloody rag'});                   // until you wipe the mirror with it
-    if(STATE.bits.length && !STATE.key) list.push({id: 'bit', icon: KEYBIT_ICON, name: 'key fragment (' + STATE.bits.length + ' of 3)'});      // until all three make the key
+    if(STATE.bits.length && !STATE.key) list.push({id: 'bit', icon: KEY_SRC, name: 'key fragment (' + STATE.bits.length + ' of 3)', fill: STATE.bits.length / KEY_BITS.length});      // until all three make the key
     if(STATE.key && !STATE.used.key) list.push({id: 'key', icon: KEY_SRC, name: 'silver key'});                  // gone once you use it on the lock
     if(STATE.shard && !STATE.used.shard) list.push({id: 'shard', icon: CANVAS_ICON, name: 'torn canvas'});    // until you use it on the painting
     if(STATE.can && !STATE.used.can) list.push({id: 'can', icon: CAN_SRC, name: 'seal'});                   // until you use it on the pot
@@ -7350,7 +7351,7 @@ const ATTN = (function(){
   let invKey = null;
   function paintInv(){
     if(!root) return; const list = carrying(), k = list.map(i => i.id).join(',') + ':' + STATE.bits.length + ':' + !!STATE.mask + !!STATE.masked; if(k === invKey) return; invKey = k;
-    const boxes = Array.from({length: Math.max(4, list.length)}, (_, i) => list[i] ? '<i class="has" data-item="' + list[i].id + '"><img src="' + list[i].icon + '" alt="' + list[i].name + '" title="' + list[i].name + '"></i>' : '<i></i>');
+    const boxes = Array.from({length: Math.max(4, list.length)}, (_, i) => list[i] ? '<i class="has" data-item="' + list[i].id + '"><img src="' + list[i].icon + '"' + (list[i].fill ? ' style="-webkit-mask-image:linear-gradient(to top,#000 ' + (list[i].fill * 100).toFixed(1) + '%,rgba(0,0,0,.14) ' + (list[i].fill * 100).toFixed(1) + '%);mask-image:linear-gradient(to top,#000 ' + (list[i].fill * 100).toFixed(1) + '%,rgba(0,0,0,.14) ' + (list[i].fill * 100).toFixed(1) + '%)"' : '') + ' alt="' + list[i].name + '" title="' + list[i].name + '"></i>' : '<i></i>');
     if(STATE.mask) boxes.splice(2, 0, '<b class="at-mask' + (STATE.masked ? ' on' : '') + '" title="mask"><img src="' + MASK_SRC + '" alt="mask"></b>');      // the mask, between the boxes: tap to put it on / take it off
     root.querySelector('.at-inv').innerHTML = boxes.join('');
   }
