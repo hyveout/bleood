@@ -555,7 +555,7 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .desk-more.l{left:4px} .desk-more.r{right:4px}
 .desk-more::after{content:''; position:absolute; left:50%; top:50%; width:9px; height:9px; border:solid #efece1; border-width:0 0 2px 2px; transform:translate(-30%,-50%) rotate(45deg)}
 .desk-more.r::after{transform:translate(-70%,-50%) rotate(-135deg)}
-.attn .at-inv .at-mask{width:clamp(28px,5vw,40px); aspect-ratio:1; pointer-events:auto; cursor:pointer; display:block; box-sizing:border-box;
+.attn .at-inv .at-mask{width:clamp(38px,7vw,54px); align-self:center; aspect-ratio:1; pointer-events:auto; cursor:pointer; display:block; box-sizing:border-box;
   border:1px solid #c8963e; background:radial-gradient(circle at 50% 45%, #4a4134 0%, #2a241c 55%, #15121a 100%); box-shadow:inset 0 0 0 2px #2a1a10}   /* the mask: a box like the others, in the middle of the four */
 .attn .room-shine{position:absolute; width:2.4%; aspect-ratio:1; transform:translate(-50%,-50%); z-index:2; pointer-events:none; opacity:0; animation:roomshine 2.4s ease-in-out infinite;
   background:radial-gradient(circle, rgba(255,248,225,.85) 0 12%, rgba(255,248,225,0) 45%), linear-gradient(90deg, transparent 47%, rgba(255,250,232,.95) 50%, transparent 53%), linear-gradient(0deg, transparent 47%, rgba(255,250,232,.95) 50%, transparent 53%)}
@@ -723,7 +723,7 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 /* a room that is a game: the game's picture fills the scene, no frame */
 .attn .room-full{position:absolute; inset:0; pointer-events:auto}
 .attn .room-full .ug-frame{width:100%; height:100%; box-shadow:none}
-.attn .room-full .ug-pic{width:100%; height:100%}
+.attn .room-full .ug-pic{width:100%; height:100%; filter:brightness(.5) contrast(1.15)}   /* the mirror room: much darker */
 .attn .room-full .ug-cap{display:none}
 .attn .at-room .ug-obtain{z-index:9}
 
@@ -5428,7 +5428,7 @@ const ATTN = (function(){
       C.filter(c => c.y >= cy).forEach(candle);
       p.restore();
       p.save(); p.font = '700 ' + Math.round(11 * k) + 'px "Courier Prime", "Courier New", monospace'; p.textAlign = 'center'; p.textBaseline = 'middle';
-      C.forEach(c => { const h = 46 * c.s * c.tall * sc * 1.7, lx = c.x + Math.cos(c.a) * 10 * k, ly = c.y - h - 8 * k;
+      C.forEach(c => { const h = 46 * c.s * c.tall * sc * 1.7, front = c.y >= cy, lx = c.x + Math.cos(c.a) * 10 * k, ly = front ? c.y + 10 * k : c.y - h - 8 * k;      // front candles: the number under them, clear of the cat
         p.fillStyle = 'rgba(150,12,14,.92)'; p.fillText(String(order(c)), lx, ly); });
       p.restore();
     }
@@ -7368,7 +7368,8 @@ const ATTN = (function(){
           q.fillStyle = '#000'; q.fillRect(0, 0, inv.width, inv.height); q.globalCompositeOperation = 'destination-out'; q.drawImage(holes, 0, 0);      // just the holes
           g.globalCompositeOperation = 'destination-out'; g.drawImage(inv, (W - hw) / 2, (H - hh) / 2, hw, hh); g.globalCompositeOperation = 'source-over'; } };
       holes.onload = paintMask; paintMask(); maskView.__paint = paintMask; addEventListener('resize', paintMask); document.addEventListener('fullscreenchange', () => setTimeout(paintMask, 60));
-      ['pointerdown', 'pointerup', 'click', 'touchstart'].forEach(ev => maskView.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); }, {passive: false}));   // you can't do anything with it on
+      ['pointerup', 'click', 'touchstart'].forEach(ev => maskView.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); }, {passive: false}));
+      maskView.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); wearMask(false); });      // tap anywhere to take it off   // you can't do anything with it on
       root.appendChild(maskView); requestAnimationFrame(()=> maskView && maskView.classList.add('on'));
     } else if(!on && maskView){ const m = maskView; maskView = null; m.classList.remove('on'); setTimeout(()=> m.remove(), 260); }
     if(!on && girlEv && girlEv.safeAt) scare();                          // took it off while she was still there
