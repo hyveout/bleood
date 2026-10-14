@@ -573,8 +573,8 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .attn .mask-view.on{opacity:1}
 .attn .room-girl{position:absolute; bottom:4%; height:66%; transform:translateX(-50%); z-index:4; pointer-events:none; opacity:0; filter:brightness(.8) contrast(1.1); transition:opacity .25s}
 .attn .room-girl.on{opacity:.95}
-.attn .at-room.haunted .room-stage{animation:lightsflick 1.3s steps(1) infinite}      /* while she is there the lights falter */
-@keyframes lightsflick{0%{filter:brightness(1)} 9%{filter:brightness(.62)} 13%{filter:brightness(1)} 37%{filter:brightness(.82)} 41%{filter:brightness(1)} 66%{filter:brightness(.55)} 69%{filter:brightness(.9)} 73%{filter:brightness(1)}}
+.attn.haunted{animation:lightsflick .7s steps(1) infinite}      /* while she is there the whole screen flickers hard */
+@keyframes lightsflick{0%{filter:brightness(1)} 6%{filter:brightness(.15)} 11%{filter:brightness(1.4) contrast(1.3)} 17%{filter:brightness(.35)} 22%{filter:brightness(.05)} 30%{filter:brightness(1.2)} 38%{filter:brightness(.25) saturate(1.6) hue-rotate(-12deg)} 44%{filter:brightness(1)} 52%{filter:brightness(.1)} 58%{filter:brightness(1.5) contrast(1.4)} 64%{filter:brightness(.4)} 72%{filter:brightness(.9)} 79%{filter:brightness(.08)} 86%{filter:brightness(1.3)} 93%{filter:brightness(.3)}}
 .attn .room-girl.off{opacity:0; transition:opacity .6s}
 @keyframes girlflick{0%{filter:brightness(.8) contrast(1.1)} 50%{filter:brightness(.55) contrast(1.3)}}
 .attn .girl-scare{position:absolute; inset:0; width:100%; height:100%; z-index:80; image-rendering:pixelated}
@@ -7314,10 +7314,10 @@ const ATTN = (function(){
     const stage = roomEl.querySelector('.room-stage'), el = document.createElement('img'); el.className = 'room-girl'; el.alt = ''; el.src = GIRL.src();
     el.style.left = (18 + Math.random() * 64) + '%'; stage.appendChild(el);
     requestAnimationFrame(()=> el.classList.add('on'));
-    girlEv = {el, t0: performance.now(), safeAt: 0}; roomEl.classList.add('haunted');
+    girlEv = {el, t0: performance.now(), safeAt: 0}; root.classList.add('haunted');
   }
   function girlGone(now){
-    if(!girlEv) return; const el = girlEv.el; girlEv = null; if(roomEl) roomEl.classList.remove('haunted');
+    if(!girlEv) return; const el = girlEv.el; girlEv = null; if(root) root.classList.remove('haunted');
     if(now){ el.remove(); return; } el.classList.remove('on'); el.classList.add('off'); setTimeout(()=> el.remove(), 700);
     girlNext = performance.now() + 30000 + Math.random() * 40000;
   }
