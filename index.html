@@ -7627,9 +7627,10 @@ const ATTN = (function(){
     if(film){ film.dispatchEvent(new Event('ended')); return; }
     if(!root || !root.classList.contains('on')) return;
     const mem = root.querySelector('.at-memory'); if(mem && mem.__skip){ mem.__skip(); return; }
-    STATE.mask = true; STATE.metHer = true; TASKS.forEach(t => { have[t.id] = true; }); STATE.gate = GATES.length; STATE.key = true; STATE.used.key = true; STATE.bookOpen = true;      // every artifact, past both of her gates, the book unlocked
+    STATE.mask = true; STATE.metHer = true; TASKS.forEach(t => { have[t.id] = true; }); STATE.gate = GATES.length; STATE.key = true; STATE.bookOpen = true;      // every artifact, past both of her gates, the book unlocked
+    ['rag', 'key', 'shard', 'can', 'lantern', 'knob', 'cat', 'vhs'].forEach(k => { STATE[k] = true; STATE.used[k] = false; });      // and every item, in hand, unused
     invKey = null; paintInv(); paint(); if(roomEl){ glows(); paintProps(); }
-    tellNote('DEV: HOUSE OPEN + ALL ARTIFACTS + BOOK');
+    tellNote('DEV: HOUSE OPEN + ALL ARTIFACTS + ALL ITEMS + BOOK');
   });
   function reset(){
     closeTask();
