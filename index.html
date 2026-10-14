@@ -7,6 +7,8 @@
 /* no zooming on phones: no double-tap zoom, and text boxes at 16px so iPhones don't zoom in when you type in one */
 html, body{touch-action:manipulation; -webkit-text-size-adjust:100%; text-size-adjust:100%}
 @media (hover: none), (pointer: coarse){ input, textarea, select{font-size:16px !important} }
+#crt, #crt *, .attn, .attn *{-webkit-user-select:none; user-select:none; -webkit-touch-callout:none}
+#crt input, #crt textarea{-webkit-user-select:text; user-select:text}
 /* phones: no text selection, no blue highlight, no hold-for-menu, no image drag (a long press used to turn the screen blue) */
 @media (hover: none), (pointer: coarse){
   html, body, body *{-webkit-user-select:none !important; user-select:none !important; -webkit-touch-callout:none !important; -webkit-tap-highlight-color:transparent !important}
@@ -574,7 +576,8 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 @keyframes roomshine{0%,55%,100%{opacity:0; transform:translate(-50%,-50%) scale(.5) rotate(0)} 72%{opacity:1; transform:translate(-50%,-50%) scale(1) rotate(25deg)}}
 .crt:fullscreen .attn .at-inv{top:42px}
 .crt:fullscreen .attn .room-talk{top:calc(42px + clamp(44px,7vw,58px))}
-.attn .desk-live{position:absolute; pointer-events:none; z-index:1}      /* the things on the desk, live in the room */
+.attn .desk-live{position:absolute; pointer-events:none; z-index:3}      /* in front of the painting, so what you lift never slips behind it */
+.attn .room-lprop.lantern-lit{z-index:4}      /* the things on the desk, live in the room */
 .attn .at-room[data-desk="1"]{cursor:grab !important} .attn .at-room[data-desk="2"]{cursor:grabbing !important}
 .attn .room-shade{position:absolute; inset:0; z-index:4; pointer-events:none; --mx:-9999px; --my:-9999px; --lr:220px; --d:.5;
   background:radial-gradient(circle var(--lr) at var(--mx) var(--my), rgba(0,0,0,0) 0, rgba(0,0,0,0) 30%, rgba(3,2,1,calc(var(--d) * .6)) 70%, rgba(3,2,1,var(--d)) 100%),
@@ -614,7 +617,7 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .ug-keys.below button{width:calc((100% - 8 * 5px) / 9); aspect-ratio:1; font-size:16px}
 .ug-keys.below button.del{width:calc((100% - 8 * 5px) / 9); aspect-ratio:1; font-size:14px}
 .ug-keys.below button.wide{width:100%; aspect-ratio:auto; padding:9px 0; font-size:13px; letter-spacing:.3em}
-.ug-pop.ug-up{justify-content:flex-start; padding-top:46px}
+.ug-pop.ug-up{justify-content:flex-start; padding-top:clamp(86px,13vw,100px)}   /* clear of the inventory and the mask box */
 /* phones: no boxes at all. the letters float in the dark like a spirit board, and the word comes up on a single faint line */
 @media (hover: none), (pointer: coarse){
   .ug-keys, .ug-keys.below{background:radial-gradient(ellipse 60% 62% at 50% 50%, rgba(0,0,0,.82), rgba(0,0,0,.55) 65%, rgba(0,0,0,0) 100%) !important; box-shadow:none !important; border:0 !important}   /* a soft pool of dark behind the letters, no edges */
@@ -6412,7 +6415,7 @@ const ATTN = (function(){
     const W = 1110, H = 600, stage = roomEl.querySelector('.room-stage');
     const cv = deskLiveEl = document.createElement('canvas'); cv.width = W; cv.height = H; cv.className = 'desk-live';
     const b = DESK_RECT; cv.style.cssText = 'left:' + (b[0] / 16) + '%;top:' + (b[1] / 12) + '%;width:' + ((b[2] - b[0]) / 16) + '%;height:' + ((b[3] - b[1]) / 12) + '%';
-    stage.querySelector('.room-img').after(cv);
+    stage.querySelector('.room-glows').after(cv);
     const g = cv.getContext('2d'), img = s => { const i = new Image(); i.src = s; return i; };
     const pics = {}; Object.keys(DESK_THINGS).forEach(k => { pics[k] = img(DESK_THINGS[k].src); });
     const ready = () => Object.values(pics).every(i => i.complete && i.naturalWidth);
