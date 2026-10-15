@@ -7598,7 +7598,7 @@ const ATTN = (function(){
     if(!root){
       root = document.createElement('div'); root.className = 'attn';
       root.innerHTML = '<div class="at-inv"></div><div class="at-title">Attention</div><div class="at-sub">task test. the room comes later</div><div class="at-list"></div><div class="at-slots"></div>';
-      setInterval(()=>{ if(root.classList.contains('on')){ paintInv(); AMB.level(document.querySelector('.attn-intro, .at-memory') || document.hidden ? 0 : AMB.VOL);      // (silent under every cutscene and memory) } }, 300);      // (the ambience dips under films and memories)
+      setInterval(()=>{ if(root.classList.contains('on')){ paintInv(); AMB.level(document.querySelector('.attn-intro, .at-memory') || document.hidden ? 0 : AMB.VOL);      /* (silent under every cutscene and memory) */ } }, 300);      // (the ambience dips under films and memories)
       // a found artifact, clicked: the hint to take it back to him
       root.querySelector('.at-slots').addEventListener('click', e=>{
         const s = e.target.closest('i.on'); if(!s) return; e.stopPropagation();
