@@ -7564,12 +7564,35 @@ const ATTN = (function(){
     v.addEventListener('ended', go); v.addEventListener('error', go);                       // if it can't play (missing file), straight into the game
     const p = v.play(); if(p && p.catch) p.catch(()=>{ v.muted = true; v.play().catch(go); });  // if sound is refused, play it muted rather than not at all
   }
+  // the background: a looping ambience (its own file next to the page), quiet under the films and her memories, off when you leave the game
+  const AMB = (function(){
+    let ctx = null, gain = null, src = null, buf = null, loading = null, el = null, want = 0;
+    const SRC = 'bleood_ambience.mp3', VOL = .55;
+    function load(){
+      if(loading) return loading;
+      try{ ctx = new (window.AudioContext || window.webkitAudioContext)(); gain = ctx.createGain(); gain.gain.value = 0; gain.connect(ctx.destination); }catch(_){ ctx = null; }
+      loading = !ctx ? Promise.resolve(null) : fetch(SRC).then(r => r.ok ? r.arrayBuffer() : Promise.reject()).then(a => new Promise((ok, no) => ctx.decodeAudioData(a, ok, no))).then(b => buf = b).catch(()=> null);
+      return loading;
+    }
+    function begin(){                                                      // gapless loop through Web Audio; a plain looping <audio> if that can't work
+      if(ctx && ctx.state === 'suspended') ctx.resume().catch(()=>{});
+      load().then(b => {
+        if(b && !src){ src = ctx.createBufferSource(); src.buffer = b; src.loop = true; src.connect(gain); src.start(); }
+        else if(!b && !el){ el = new Audio(SRC); el.loop = true; el.volume = 0; const p = el.play(); if(p && p.catch) p.catch(()=>{}); }
+      });
+    }
+    function level(v){ want = v;
+      if(gain && ctx){ const t = ctx.currentTime; gain.gain.cancelScheduledValues(t); gain.gain.setTargetAtTime(v, t, .35); }
+      if(el){ el.volume = Math.max(0, Math.min(1, el.volume + (v - el.volume) * .4)); } }
+    function end(){ level(0); setTimeout(()=>{ if(want) return; if(src){ try{ src.stop(); }catch(_){ } src = null; } if(el){ el.pause(); el = null; } }, 1500); }
+    return {begin, level, end, VOL};
+  })();
   function start(host){
     document.body.classList.add('attn-playing'); setTimeout(()=> dispatchEvent(new Event('resize')), 50);
     if(!root){
       root = document.createElement('div'); root.className = 'attn';
       root.innerHTML = '<div class="at-inv"></div><div class="at-title">Attention</div><div class="at-sub">task test. the room comes later</div><div class="at-list"></div><div class="at-slots"></div>';
-      setInterval(()=>{ if(root.classList.contains('on')) paintInv(); }, 300);
+      setInterval(()=>{ if(root.classList.contains('on')){ paintInv(); AMB.level(document.querySelector('.attn-intro, .at-memory') || document.hidden ? 0 : AMB.VOL); } }, 300);      // (the ambience dips under films and memories)
       // a found artifact, clicked: the hint to take it back to him
       root.querySelector('.at-slots').addEventListener('click', e=>{
         const s = e.target.closest('i.on'); if(!s) return; e.stopPropagation();
@@ -7588,9 +7611,10 @@ const ATTN = (function(){
     }
     root.style.background = '#000';
     root.classList.add('on'); paint(); requestAnimationFrame(roomLayout);
+    AMB.begin();      // (PLAY was the click, so the sound is allowed to start)
     liveRoom();      // (no "turn your phone sideways" note any more) if(roomEl) fullRoom();
   }
-  function stop(){ document.body.classList.remove('attn-playing'); stopIntro(); closeTask(); LIVE.stop(); if(fullStop){ fullStop(); fullStop = null; const b = root && root.querySelector('.room-full'); if(b) b.remove(); } if(root) root.classList.remove('on'); }
+  function stop(){ AMB.end(); document.body.classList.remove('attn-playing'); stopIntro(); closeTask(); LIVE.stop(); if(fullStop){ fullStop(); fullStop = null; const b = root && root.querySelector('.room-full'); if(b) b.remove(); } if(root) root.classList.remove('on'); }
   // back to the very beginning: nothing found, nothing carried, standing in the forest
   // ---------- the mask: the captured man gives it to you. she comes for you in the rooms; wear it within two seconds or she takes you ----------
   let maskView = null, girlEv = null, girlNext = 0;
