@@ -732,6 +732,10 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .attn .room-curtain{position:absolute; inset:0; z-index:5; background:#000; opacity:0; pointer-events:none; transition:opacity .5s ease}
 .attn .at-room.dark .room-curtain{opacity:1}
 .attn .at-room .room-stage{position:absolute; pointer-events:none}
+/* the scary grade: deeper blacks, a bit more contrast, a little less colour (reds still read). one place to tune it; delete these two lines to turn it off */
+.attn .at-room .room-stage{filter:var(--grade, none)}
+.attn{--grade:brightness(.88) contrast(1.22) saturate(.86)}
+.attn .ug-pop .ug-frame{filter:var(--grade-pop, none)} .attn{--grade-pop:brightness(.92) contrast(1.12) saturate(.9)}
 .attn .at-room .room-img{position:absolute; inset:0; width:100%; height:100%; user-select:none; -webkit-user-drag:none; pointer-events:none}
 .attn .at-room .room-live{position:absolute; inset:0; width:100%; height:100%; pointer-events:none}
 .attn-intro{position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000; z-index:90}   /* game 2's intro film */
