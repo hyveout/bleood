@@ -5340,14 +5340,13 @@ const ATTN = (function(){
       if(line !== said){ said = line; say(line); }
     }
     const letGo = ()=>{ holding = false; };
-    btn.addEventListener('pointerdown', e=>{ e.preventDefault(); if(!STATE.used.can && !bloomAt){ sfx('locked'); return; } holding = true; try{ btn.setPointerCapture(e.pointerId); }catch(_){} });
+    btn.addEventListener('pointerdown', e=>{ e.preventDefault(); holding = true; try{ btn.setPointerCapture(e.pointerId); }catch(_){} });
     pic.addEventListener('pointerdown', e=>{
       const r = pic.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * (W + FR * 2) - FR, y = (e.clientY - r.top) / r.height * (H + FR * 2) - FR;
       if(offerAt && performance.now() > offerAt && !gone){
         if(x > BX - 40 && x < BX + 110 && y < SOIL){ gone = true; done({at: [e.clientX, e.clientY]}); }
         return;
       }
-      if(!STATE.used.can && !bloomAt && !gone){ sfx('locked'); return; }      // nothing to water her with yet
       e.preventDefault(); holding = true; try{ pic.setPointerCapture(e.pointerId); }catch(_){}
     });
     [btn, pic].forEach(el => ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => el.addEventListener(ev, letGo)));
@@ -5694,7 +5693,7 @@ const ATTN = (function(){
       const dx = downX === null ? 0 : e.clientX - downX; downX = null;
       if(closed){                                                       // the lock: without the key it only rattles
         if(unlockAt) return;
-        lockShake = 1; sfx('locked'); say(STATE.key ? 'it is locked. you could use the key' : 'it is locked'); host.classList.add('ug-jolt'); setTimeout(()=>host.classList.remove('ug-jolt'), 200); return;
+        lockShake = 1; say(STATE.key ? 'it is locked. you could use the key' : 'it is locked'); host.classList.add('ug-jolt'); setTimeout(()=>host.classList.remove('ug-jolt'), 200); return;
       }
       if(!turn && at === MARK && !gotMark && x > GX + MARK_R[0] - 8 && x < GX + MARK_R[0] + MARK_R[2] * .7 && y > PY + MARK_R[1] - 6 && y < PY + MARK_R[1] + MARK_R[3] + 6){   // the golden bookmark: the book's artifact
         gotMark = true; build(); done({at: [e.clientX, e.clientY], stay: true}); return;
@@ -5963,7 +5962,7 @@ const ATTN = (function(){
         return;
       }
       if(!STATE.used.rag && !revealAt){                                   // the glass is too filthy to wipe with your hand: it needs the rag from the porch
-        if(x > MX && x < MX + MW && y > MY && y < MY + MH) sfx('locked'); return;      // (only on the glass itself)                                                         // (no hint: it just won't wipe)
+        return;                                                         // (no hint: it just won't wipe)
       }
       e.__used = true; down = true; last = null; try{ pic.setPointerCapture(e.pointerId); }catch(_){} wipe(x, y); e.preventDefault();
     });
@@ -6431,7 +6430,7 @@ const ATTN = (function(){
     pic.addEventListener('pointerdown', e => {
       if(!ready() || !built) return;
       const [x, y] = toPic(e);
-      if(!STATE.cutOpen && !cutting){ sfx('locked'); return; }             // (no hint: it won't open until the cat is used on it)
+      if(!STATE.cutOpen && !cutting) return;                              // (no hint: it won't open until the cat is used on it)
       try{ pic.setPointerCapture(e.pointerId); }catch(_){ }
       if(cutting){ if(onPaw(x, y)){ const [tx, ty] = at(sliced); holding = true; grab = [x - tx, y - ty]; pic.style.cursor = 'grabbing'; } return; }   // take hold of the paw wherever you touch it
       if(openAt) return;
@@ -6904,7 +6903,6 @@ const ATTN = (function(){
       const [x, y] = toPic(e);
       if(!STATE.bits.includes('key2') && !STATE.key && bit.naturalWidth && x > BIT_AT[0] - 14 && x < BIT_AT[0] + bit.naturalWidth * BIT_K + 14 && y > BIT_AT[1] - 14 && y < BIT_AT[1] + bit.naturalHeight * BIT_K + 14){ gotBit('key2', [e.clientX, e.clientY]); return; }   // the piece of the key on top
       if(TVS.tuned){ if(TVS.filmed && !film && !have.tv && !taken && Math.hypot(x - BALL[0], y - BALL[1]) < 90){ taken = true; done({at: [e.clientX, e.clientY]}); } return; }   // taken: only once   // take the ball: the STATIC BALL artifact
-      if(!STATE.used.knob && Math.hypot(x - (KN[1].x + KN[1].s / 2), y - (KN[1].y + KN[1].s / 2)) < KN[1].s * .9){ sfx('locked'); return; }      // the bare post: no knob to turn
       const i = KN.findIndex((k, j) => (j === 0 || STATE.used.knob) && Math.hypot(x - (k.x + k.s / 2), y - (k.y + k.s / 2)) < k.s * .9); if(i < 0) return;
       drag = {i, px: x, py: y}; try{ pic.setPointerCapture(e.pointerId); }catch(_){ }
     });
