@@ -7496,7 +7496,7 @@ const ATTN = (function(){
         askYesNo('TAKE THE ' + name + '?', ()=>{ STATE[s.take] = true; light(null); glows(); obtain(null, at, ()=> paintInv(), s.take); });
         return;
       }
-      light(null); if(s.go && roomNow === 'forest' && !STATE.mask){ roomTalk(null, {lines: ['wait...'], auto: 1200}); return; }      // he won't let you go without it
+      light(null); if(s.go && roomNow === 'forest' && !STATE.mask && !STATE.epilogue){ roomTalk(null, {lines: ['wait...'], auto: 1200}); return; }      // he won't let you go without it
       if(s.go) toRoom(s.go); else if(s.talk && s.talk === 'doll' && TASKS.every(t => have[t.id])) askYesNo('GIVE ARTIFACTS?', ()=> memoryFilm('bleood_final_cutscene.mp4', ()=> epilogue(), ()=> memory(END_LINES, ()=> epilogue()))); else if(s.talk === 'doll' && !STATE.mask) roomTalk(null, {lines: FIRST_TALK, then: giveMask}); else if(s.talk) roomTalk(s.talk); else if(s.task && RUN[s.task]){ if(gated() && s.task !== 'poster' && s.task !== 'note'){ gateNote(); return; } openTask(s.task); }   // (all seven found: the trapped man asks for them back; after her last words a new game starts)
     });
     addEventListener('resize', ()=>{ if(root.classList.contains('on')) roomLayout(); });
@@ -7819,7 +7819,7 @@ const ATTN = (function(){
   // after you give him everything: you wake in the forest again. no one is tied to the tree. she waits in the mirror; after her, only the date is left
   const EPI_LINES = END_LINES;      // (placeholder: what she says at the very end, until the real lines come)
   function epilogue(){
-    reset(); STATE.epilogue = true; STATE.metHer = true; STATE.mirror = {scared: true, glass: true}; STATE.gate = GATES.length; STATE.key = true; STATE.used.key = true;      // (the mirror room: nothing left to pick up)
+    reset(); STATE.epilogue = true; STATE.mask = true; STATE.metHer = true; STATE.mirror = {scared: true, glass: true}; STATE.gate = GATES.length; STATE.key = true; STATE.used.key = true;      // (the mirror room: nothing left to pick up)
     if(roomEl){ glows(); paintProps(); liveRoom(); } paint();
   }
   function countdown(){
