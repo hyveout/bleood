@@ -5565,7 +5565,7 @@ const ATTN = (function(){
     }
     function patternBig(){ const c = document.createElement('canvas'); c.width = 900; c.height = 700; const p = c.getContext('2d'); p.drawImage(blackPage(false, 4), 0, 0, 900, 700);
       drawPattern(p, 450, 380, 330, 150, 3); return c.toDataURL(); }
-    const MARK_R = [122, 6, 40, 62];      /* (small, in the top corner of the last page: the credits fill the rest) */                                    // where the golden bookmark lies on its page: x, y, w, h
+    const MARK_R = [116, 8, 46, 72];      /* (in the top corner of the candle page) */                                    // where the golden bookmark lies on its page: x, y, w, h
     let SPREADS = null;
     function withOn(base, f){ const c = document.createElement('canvas'); c.width = PW; c.height = PH; const p = c.getContext('2d'); p.drawImage(base, 0, 0); f(p); return c; }
     function build(){
@@ -5585,8 +5585,9 @@ const ATTN = (function(){
       // spread 2: the note (the torn canvas lies opposite); spread 3: the photograph (the bookmark lies opposite)
       // spread 2, left: KILL YOUR IDOLS in ink, and the seal with its cup under it
       SPREADS[2][0] = withOn(BLANK[2][0], p => { paste(p, pasted.kyi, 2, 0, {m: 12, top: 18, h: PH * .26, shadow: false, blend: 'multiply', filter: 'sepia(.4) contrast(1.2)'});
-        paste(p, pasted.seal, 2, 0, {m: 6, w: PW * .5, cx: PW * .275, top: PH * .3, h: PH * .64, shadow: false, blend: 'multiply', filter: 'sepia(.35) saturate(.85)'});
-        paste(p, pasted.bench, 2, 0, {m: 6, w: PW * .4, cx: PW * .765, top: PH * .5, h: PH * .42, tilt: .05, filter: 'sepia(.35) saturate(.8) brightness(1.05)'}); });      // the photograph of her on the bench, pasted in beside the seal
+        paste(p, pasted.seal, 2, 0, {m: 22, top: PH * .36, h: PH * .58, shadow: false, blend: 'multiply', filter: 'sepia(.35) saturate(.85)'}); });
+      // spread 2, right: the photograph of her on the bench, the whole page (the torn canvas lies pressed on top of it)
+      SPREADS[2][1] = withOn(BLANK[2][1], p => paste(p, pasted.bench, 2, 1, {m: 14, tilt: -.03, filter: 'sepia(.35) saturate(.8) brightness(1.05)'}));
       // spread 3: the photograph and its words, laid across both pages so the writing can be read
       if(pasted.photo.complete && pasted.photo.naturalWidth){ const im = pasted.photo, sc = Math.min((PW * 2 - 20) / im.naturalWidth, (PH - 24) / im.naturalHeight), w = im.naturalWidth * sc, h = im.naturalHeight * sc, x0 = PW - w / 2, y0 = (PH - h) / 2;
         [0, 1].forEach(side => { SPREADS[3][side] = withOn(BLANK[3][side], p => { p.save(); p.globalCompositeOperation = 'multiply'; p.filter = 'sepia(.4) saturate(.8) contrast(1.1)'; p.drawImage(im, x0 - side * PW, y0, w, h); p.restore(); }); }); }
@@ -5600,7 +5601,7 @@ const ATTN = (function(){
         const h = ink(role, 14, 'rgba(58,34,24,.92)', .7, 16); p.translate(0, h + 4); ink(who, 22, 'rgba(150,14,16,.95)', 1.3, 22);
         p.restore(); };
       SPREADS[4][0] = withOn(BLANK[4][0], p => { credit(p, PH * .2, ['designed and', 'developed by'], ['HYVEOUT'], -.03); credit(p, PH * .6, ['assets by'], ['FOOLVEIL'], .02); });      // (the middle of the page)
-      if(!gotIt) SPREADS[GIFT][1] = withOn(BLANK[GIFT][1], p => drawGift(p, PW / 2, PH / 2));
+      if(!gotIt) SPREADS[GIFT][1] = withOn(SPREADS[GIFT][1] || BLANK[GIFT][1], p => drawGift(p, PW / 2, PH / 2));
       // the last page: the credits, written in under where the bookmark lies (they stay once it is taken)
       const CREDITS = [['designed and developed by', 'hyveout'], ['assets and scenery by', 'foolveil'], ['cutscenes by', 'b1eed0ut and happy'], ['sound design by', 'shadx2']];
       const credits = p => { p.save(); p.textAlign = 'center'; p.textBaseline = 'middle'; p.globalCompositeOperation = 'multiply';
@@ -5610,7 +5611,9 @@ const ATTN = (function(){
           fit(role, 8.2); p.fillStyle = 'rgba(70,46,32,.85)'; p.fillText(role, PW / 2, y);      // in the site's font, inked into the paper
           fit(who, 11.5); p.fillStyle = 'rgba(40,22,16,.95)'; p.fillText(who, PW / 2, y + 11); });
         p.restore(); };
-      SPREADS[MARK][1] = withOn(BLANK[MARK][1], p => { credit(p, PH * .34, ['cutscenes by'], ['B1EED0UT', 'AND HAPPY'], .03); credit(p, PH * .61, ['voice acting by'], ['ANNIE'], -.02); credit(p, PH * .8, ['sound design by'], ['SHADX2'], .02);      // (under the bookmark) if(gotMark) return;
+      SPREADS[4][1] = withOn(BLANK[4][1], p => { credit(p, PH * .12, ['cutscenes by'], ['B1EED0UT', 'AND HAPPY'], .03); credit(p, PH * .47, ['voice acting by'], ['ANNIE'], -.02); credit(p, PH * .72, ['sound design by'], ['SHADX2'], .02); });
+      // the golden bookmark lies in the corner of the candle page
+      SPREADS[MARK][1] = withOn(SPREADS[MARK][1] || BLANK[MARK][1], p => { if(gotMark) return;
         p.save(); p.translate(MARK_R[0] + MARK_R[2] / 2, MARK_R[1] + MARK_R[3] / 2); p.rotate(.06);
         if(markImg.complete && markImg.naturalWidth){
           const [mx, my, mw, mh] = [-MARK_R[2] / 2, -MARK_R[3] / 2, MARK_R[2], MARK_R[3]];
@@ -5622,7 +5625,7 @@ const ATTN = (function(){
         p.restore();
       });
     }
-    const LAST = 4, GIFT = 2, MARK = 4;  // the torn canvas lies in spread 2; the golden bookmark (the book's artifact) marks spread 3
+    const LAST = 4, GIFT = 2, MARK = 1;  // the torn canvas lies in spread 2; the golden bookmark (the book's artifact) marks spread 3
     let gotIt = !!STATE.shard, gotMark = !!have.book;
     build();
     markImg.onload = build; pieceImg.onload = build; if(document.fonts && document.fonts.ready) document.fonts.ready.then(build);
