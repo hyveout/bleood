@@ -678,6 +678,8 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .attn .room-girl{aspect-ratio:1100/733}
 .attn .room-girl img{position:absolute; inset:0; width:100%; height:100%}
 .attn .room-girl .rg-arm.l{transform-origin:43.8% 35.7%; animation:armsl 1.9s ease-in-out infinite}
+.attn .room-girl .rg-head{transform-origin:50% 32.2%; animation:girlhead 3.7s ease-in-out infinite}
+@keyframes girlhead{0%,100%{rotate:0deg} 25%{rotate:-5deg} 48%{rotate:3deg} 62%{rotate:3deg} 63%{rotate:-7deg} 66%{rotate:-6deg} 85%{rotate:2deg}}      /* her head lolls, tilts, and now and then snaps the other way */
 .attn .room-girl .rg-arm.r{transform-origin:56.2% 35.7%; animation:armsr 2.3s ease-in-out infinite}
 @keyframes armsl{0%,100%{rotate:0deg} 30%{rotate:-4deg} 55%{rotate:2.5deg} 70%{rotate:-1deg} 72%{rotate:3.5deg} 74%{rotate:.5deg}}      /* reaching, slowly, with a jerk now and then */
 @keyframes armsr{0%,100%{rotate:0deg} 35%{rotate:4.5deg} 60%{rotate:-2deg} 80%{rotate:1deg} 82%{rotate:-3.5deg} 84%{rotate:0deg}}
@@ -781,7 +783,7 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .attn .room-back{position:absolute; left:50%; transform:translateX(-50%); bottom:calc(16px + clamp(30px,6vw,46px)); z-index:12; cursor:pointer; padding:6px 14px; border:0; background:none;
   font-family:"VCR OSD Mono",var(--type); font-size:12px; letter-spacing:.32em; color:#e6dcc4; text-shadow:0 0 6px rgba(0,0,0,.9), 0 0 2px #000; touch-action:manipulation; -webkit-tap-highlight-color:transparent}       /* phones, in the cave rooms and inside the house: GO BACK, just above the artifacts */
 .attn .at-room.in-task .room-back{visibility:hidden}
-.ug-freeze{position:absolute; inset:0; z-index:60; background:transparent; cursor:wait; touch-action:none}
+.ug-freeze{position:absolute; inset:0; z-index:60; background:transparent; cursor:default; touch-action:none}      /* (no busy cursor: it only blocks clicks while the item is handed over) */
 .attn .room-pan{position:absolute; top:50%; width:22px; height:44px; margin-top:-22px; z-index:5; pointer-events:none; opacity:0; transition:opacity .4s}
 .attn .room-pan.l{left:6px} .attn .room-pan.r{right:6px}
 .attn .room-pan::before{content:""; position:absolute; top:13px; border:9px solid transparent}
@@ -7711,16 +7713,16 @@ const ATTN = (function(){
     if(!girlIm && GIRL.ready()){ girlIm = new Image(); girlIm.src = GIRL.src(); }
     const im = girlIm; if(!im || !im.complete || !im.naturalWidth) return null;      // (first time: it is still decoding; the whole picture is used once)
     const W = im.naturalWidth, H = im.naturalHeight, k = W / 1100, P = pts => pts.map(([x, y]) => [x * k, y * k]);
-    const L = P([[0, 0], [452, 0], [468, 228], [484, 262], [480, 312], [0, 312]]), R = P([[1100, 0], [648, 0], [632, 228], [616, 262], [620, 312], [1100, 312]]);
+    const L = P([[0, 0], [452, 0], [468, 228], [484, 262], [480, 312], [0, 312]]), R = P([[1100, 0], [648, 0], [632, 228], [616, 262], [620, 312], [1100, 312]]), HD = P([[486, 80], [614, 80], [616, 246], [578, 240], [550, 236], [522, 240], [484, 246]]);      // HD: her head and hair, cut at the neck
     const mk = (fn) => { const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'); fn(g); return c.toDataURL('image/webp', .9); };
     const path = (g, pts) => { g.beginPath(); pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); };
-    girlParts = {body: mk(g => { g.drawImage(im, 0, 0); g.globalCompositeOperation = 'destination-out'; path(g, L); g.fill(); path(g, R); g.fill(); }),
+    girlParts = {body: mk(g => { g.drawImage(im, 0, 0); g.globalCompositeOperation = 'destination-out'; path(g, L); g.fill(); path(g, R); g.fill(); path(g, HD); g.fill(); }), h: mk(g => { path(g, HD); g.clip(); g.drawImage(im, 0, 0); }),
       l: mk(g => { path(g, L); g.clip(); g.drawImage(im, 0, 0); }), r: mk(g => { path(g, R); g.clip(); g.drawImage(im, 0, 0); })};
     return girlParts;
   }
   function girlCome(){
     const stage = roomEl.querySelector('.room-stage'), parts = girlLayers(), el = document.createElement('div'); el.className = 'room-girl';
-    el.innerHTML = parts ? '<img alt="" src="' + parts.body + '"><img class="rg-arm l" alt="" src="' + parts.l + '"><img class="rg-arm r" alt="" src="' + parts.r + '">' : '<img alt="" src="' + GIRL.src() + '">';
+    el.innerHTML = parts ? '<img alt="" src="' + parts.body + '"><img class="rg-arm l" alt="" src="' + parts.l + '"><img class="rg-arm r" alt="" src="' + parts.r + '"><img class="rg-head" alt="" src="' + parts.h + '">' : '<img alt="" src="' + GIRL.src() + '">';
     el.style.left = (18 + Math.random() * 64) + '%'; stage.appendChild(el);
     requestAnimationFrame(()=> el.classList.add('on'));
     girlEv = {el, t0: performance.now(), safeAt: 0}; root.classList.add('haunted');
