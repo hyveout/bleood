@@ -745,6 +745,13 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .attn .am-line.in{opacity:1}
 .rt-censor{background:linear-gradient(#c33a42,#8e1f26); display:inline-block; min-width:.62em}
 .attn .room-prop{position:absolute; pointer-events:none; z-index:2}   /* things in the room sit in front of the door reveal (z 1), under the hover glows (z 3) */
+.attn .room-prop{filter:var(--pf, none) blur(.35px) drop-shadow(0 2px 2px rgba(0,0,0,.55)) drop-shadow(0 5px 7px rgba(0,0,0,.35))}      /* soft edge, sitting on the ground */
+.attn .at-room[data-room=forest]{--pf:brightness(.8) saturate(.7) sepia(.08) hue-rotate(-8deg)}      /* blue-grey night */
+.attn .at-room[data-room=house]{--pf:brightness(.84) saturate(.78) sepia(.12)}                      /* the grey porch */
+.attn .at-room[data-room=inside]{--pf:brightness(.8) saturate(.8) sepia(.28)}                       /* warm brown dark inside */
+.attn .at-room[data-room=cave]{--pf:brightness(.86) saturate(.82) sepia(.22)}
+.attn .at-room[data-room=tunnel], .attn .at-room[data-room=mirror]{--pf:brightness(.8) saturate(.72) sepia(.06)}
+.attn .desk-live{filter:blur(.3px) saturate(.88) sepia(.12)}      /* the desk things: the same soft edge and the cave's warm cast */
 .attn .room-prop.sway{transform-origin:10.5% 100%; animation:headsway 5s ease-in-out infinite}
 @keyframes headsway{0%,100%{transform:rotate(-1.4deg)} 50%{transform:rotate(1.4deg)}}
 /* the flash-cut montage between scenes */
@@ -6551,9 +6558,14 @@ const ATTN = (function(){
       g.clearRect(0, 0, W, H);
       D.z.forEach(k => {
         if(!here(k)) return;
+        if(!(drag && drag.k === k) && !KEY_BITS.includes(k) && k !== 'knob'){ const A = alphaOf[k], cx = D.pos[k][0] + A.w / 2, cy = D.pos[k][1] + A.h * .97, rx = A.w * .46, ry = Math.max(5, A.h * .045);      // where it touches the desk: a soft dark patch, so it sits on it
+          const sg = g.createRadialGradient(cx, cy, 0, cx, cy, rx); sg.addColorStop(0, 'rgba(0,0,0,.55)'); sg.addColorStop(.6, 'rgba(0,0,0,.25)'); sg.addColorStop(1, 'rgba(0,0,0,0)');
+          g.save(); g.translate(cx, cy); g.scale(1, ry / rx); g.translate(-cx, -cy); g.fillStyle = sg; g.beginPath(); g.arc(cx, cy, rx, 0, Math.PI * 2); g.fill(); g.restore(); }
         if(drag && drag.k === k){ g.shadowColor = 'rgba(0,0,0,.75)'; g.shadowBlur = 22; g.shadowOffsetY = 16; }
         g.drawImage(pics[k], D.pos[k][0], D.pos[k][1]); g.shadowColor = 'transparent'; g.shadowBlur = 0; g.shadowOffsetY = 0;
       });
+      { const lp = here('lamp') ? [D.pos.lamp[0] + alphaOf.lamp.w * .5, D.pos.lamp[1] + alphaOf.lamp.h * .36] : [W * .7, H * .2];      // things further from the lamp fall into shadow (drawn onto the things only)
+        g.save(); g.globalCompositeOperation = 'source-atop'; const fall = g.createRadialGradient(lp[0], lp[1], 60, lp[0], lp[1], 760); fall.addColorStop(0, 'rgba(40,22,8,0)'); fall.addColorStop(.5, 'rgba(14,9,6,.22)'); fall.addColorStop(1, 'rgba(4,3,3,.5)'); g.fillStyle = fall; g.fillRect(0, 0, W, H); g.restore(); }
       if(here('lamp')){ const p = D.pos.lamp, A = alphaOf.lamp, lx = p[0] + A.w * .5, ly = p[1] + A.h * .36, f = .8 + Math.sin(now / 170) * .06 + Math.sin(now / 53) * .04 + (Math.random() < .03 ? -.25 : 0);      // its light, flickering
         g.save(); g.globalCompositeOperation = 'lighter'; const lg = g.createRadialGradient(lx, ly, 10, lx, ly, 330); lg.addColorStop(0, 'rgba(255,196,120,' + (.22 * f) + ')'); lg.addColorStop(.45, 'rgba(255,170,90,' + (.08 * f) + ')'); lg.addColorStop(1, 'rgba(255,150,60,0)'); g.fillStyle = lg; g.fillRect(lx - 340, ly - 340, 680, 680); g.restore(); }
       if(!drag) KEY_BITS.concat(['knob']).filter(k => DESK_THINGS[k]).forEach(k => {                              // the glint off any piece that shows
@@ -7304,6 +7316,7 @@ const ATTN = (function(){
   }
   function liveRoom(){ if(!roomEl) return; const stage = roomEl.querySelector('.room-stage'); if(roomNow === 'forest' && root.classList.contains('on')) LIVE.start(stage); else LIVE.stop(); }
   function glows(){
+    if(roomEl) roomEl.dataset.room = roomNow;
     // one glow per spot in this room, placed as a share of the scene so it scales with it
     lit = null; liveRoom(); fullRoom();
     roomDark(); deskLive();
