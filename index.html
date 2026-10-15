@@ -7558,8 +7558,8 @@ const ATTN = (function(){
   function startWithIntro(host){
     document.body.classList.add('attn-playing'); setTimeout(()=> dispatchEvent(new Event('resize')), 50);
     stopIntro();
-    const v = introEl = document.createElement('video'); v.className = 'attn-intro'; v.src = INTRO_VIDEO; v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'auto';
-    host.appendChild(v);
+    const v = introEl = document.createElement('video'); v.className = 'attn-intro intro-film'; v.src = INTRO_VIDEO; v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'auto';
+    host.appendChild(v); AMB.begin(); AMB.level(AMB.VOL, 3.5);      // the ambience comes up slowly under the opening film and carries on into the game
     let went = false; const go = ()=>{ if(went || introEl !== v) return; went = true; stopIntro(); start(host); };
     v.addEventListener('ended', go); v.addEventListener('error', go);                       // if it can't play (missing file), straight into the game
     const p = v.play(); if(p && p.catch) p.catch(()=>{ v.muted = true; v.play().catch(go); });  // if sound is refused, play it muted rather than not at all
@@ -7578,13 +7578,14 @@ const ATTN = (function(){
       if(ctx && ctx.state === 'suspended') ctx.resume().catch(()=>{});
       load().then(b => {
         if(b && !src){ src = ctx.createBufferSource(); src.buffer = b; src.loop = true; src.connect(gain); src.start(); }
-        else if(!b && !el){ el = new Audio(SRC); el.loop = true; el.volume = 0; const p = el.play(); if(p && p.catch) p.catch(()=>{}); }
+        else if(!b && !el){ el = new Audio(SRC); el.loop = true; el.volume = 0; const p = el.play(); if(p && p.catch) p.catch(()=>{}); const w = want; lastV = -1; level(w, 3.5); }
       });
     }
-    function level(v){ want = v;
-      if(gain && ctx){ const t = ctx.currentTime; gain.gain.cancelScheduledValues(t); gain.gain.setTargetAtTime(v, t, .35); }
-      if(el){ el.volume = Math.max(0, Math.min(1, el.volume + (v - el.volume) * .4)); } }
-    function end(){ level(0); setTimeout(()=>{ if(want) return; if(src){ try{ src.stop(); }catch(_){ } src = null; } if(el){ el.pause(); el = null; } }, 1500); }
+    let lastV = -1;
+    function level(v, slow){ if(v === lastV && !slow) return; lastV = v; want = v;      // (slow: a long fade, e.g. the fade-in at the start)
+      if(gain && ctx){ const t = ctx.currentTime; gain.gain.cancelScheduledValues(t); gain.gain.setValueAtTime(gain.gain.value, t); gain.gain.setTargetAtTime(v, t, slow || .35); }
+      if(el){ const from = el.volume, t0 = performance.now(), dur = (slow || .35) * 3000; const step = ()=>{ if(!el || want !== v) return; const k = Math.min(1, (performance.now() - t0) / dur); el.volume = from + (v - from) * k; if(k < 1) requestAnimationFrame(step); }; step(); } }
+    function end(){ lastV = -1; level(0); setTimeout(()=>{ if(want) return; if(src){ try{ src.stop(); }catch(_){ } src = null; } if(el){ el.pause(); el = null; } }, 1500); }
     return {begin, level, end, VOL};
   })();
   function start(host){
@@ -7592,7 +7593,7 @@ const ATTN = (function(){
     if(!root){
       root = document.createElement('div'); root.className = 'attn';
       root.innerHTML = '<div class="at-inv"></div><div class="at-title">Attention</div><div class="at-sub">task test. the room comes later</div><div class="at-list"></div><div class="at-slots"></div>';
-      setInterval(()=>{ if(root.classList.contains('on')){ paintInv(); AMB.level(document.querySelector('.attn-intro, .at-memory') || document.hidden ? 0 : AMB.VOL); } }, 300);      // (the ambience dips under films and memories)
+      setInterval(()=>{ if(root.classList.contains('on')){ paintInv(); AMB.level(document.querySelector('.attn-intro:not(.intro-film), .at-memory') || document.hidden ? 0 : AMB.VOL); } }, 300);      // (the ambience dips under films and memories)
       // a found artifact, clicked: the hint to take it back to him
       root.querySelector('.at-slots').addEventListener('click', e=>{
         const s = e.target.closest('i.on'); if(!s) return; e.stopPropagation();
@@ -7611,7 +7612,7 @@ const ATTN = (function(){
     }
     root.style.background = '#000';
     root.classList.add('on'); paint(); requestAnimationFrame(roomLayout);
-    AMB.begin();      // (PLAY was the click, so the sound is allowed to start)
+    AMB.begin(); AMB.level(AMB.VOL, 3.5);      // (already up if the opening film ran; otherwise it fades in now)
     liveRoom();      // (no "turn your phone sideways" note any more) if(roomEl) fullRoom();
   }
   function stop(){ AMB.end(); document.body.classList.remove('attn-playing'); stopIntro(); closeTask(); LIVE.stop(); if(fullStop){ fullStop(); fullStop = null; const b = root && root.querySelector('.room-full'); if(b) b.remove(); } if(root) root.classList.remove('on'); }
