@@ -7564,7 +7564,7 @@ const ATTN = (function(){
     document.body.classList.add('attn-playing'); setTimeout(()=> dispatchEvent(new Event('resize')), 50);
     stopIntro();
     const v = introEl = document.createElement('video'); v.className = 'attn-intro intro-film'; v.src = INTRO_VIDEO; v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'auto';
-    host.appendChild(v); AMB.begin(); AMB.level(AMB.VOL, 3.5);      // the ambience comes up slowly under the opening film and carries on into the game
+    host.appendChild(v);
     let went = false; const go = ()=>{ if(went || introEl !== v) return; went = true; stopIntro(); start(host); };
     v.addEventListener('ended', go); v.addEventListener('error', go);                       // if it can't play (missing file), straight into the game
     const p = v.play(); if(p && p.catch) p.catch(()=>{ v.muted = true; v.play().catch(go); });  // if sound is refused, play it muted rather than not at all
@@ -7598,7 +7598,7 @@ const ATTN = (function(){
     if(!root){
       root = document.createElement('div'); root.className = 'attn';
       root.innerHTML = '<div class="at-inv"></div><div class="at-title">Attention</div><div class="at-sub">task test. the room comes later</div><div class="at-list"></div><div class="at-slots"></div>';
-      setInterval(()=>{ if(root.classList.contains('on')){ paintInv(); AMB.level(document.hidden ? 0 : AMB.VOL); } }, 300);      // (the ambience dips under films and memories)
+      setInterval(()=>{ if(root.classList.contains('on')){ paintInv(); AMB.level(document.querySelector('.attn-intro, .at-memory') || document.hidden ? 0 : AMB.VOL);      // (silent under every cutscene and memory) } }, 300);      // (the ambience dips under films and memories)
       // a found artifact, clicked: the hint to take it back to him
       root.querySelector('.at-slots').addEventListener('click', e=>{
         const s = e.target.closest('i.on'); if(!s) return; e.stopPropagation();
