@@ -672,11 +672,17 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .attn .at-inv .at-mask.on{border-color:#f0c868; box-shadow:inset 0 0 0 2px #3b0d10, 0 0 10px rgba(240,200,104,.6)}
 .attn .mask-view{position:absolute; inset:0; width:100%; height:100%; z-index:6; opacity:0; transition:opacity .22s; cursor:default; touch-action:none}   /* wearing it: only the eye holes to see through */   /* wearing it: only the eye holes to see through */
 .attn .mask-view.on{opacity:1}
-.attn .room-girl{position:absolute; bottom:4%; height:66%; transform:translateX(-50%); z-index:4; pointer-events:none; opacity:0; filter:brightness(.8) contrast(1.1); transition:opacity .25s}
-.attn .room-girl.on{opacity:.95}
+.attn .room-girl{position:absolute; bottom:4%; height:60%; translate:-50% 0; transform-origin:50% 100%; z-index:4; pointer-events:none; opacity:0; filter:brightness(.8) contrast(1.1); transition:opacity .25s, height 2.4s cubic-bezier(.5,0,.9,.6);
+  animation:girlsway 3.3s ease-in-out infinite, girlbreathe 2.1s ease-in-out infinite, girltwitch 2.9s linear infinite}
+.attn .room-girl.on{opacity:.95; height:69%}      /* she creeps closer the longer she stands there */
+/* she is never quite still: a slow sway from the feet, shallow breathing, and now and then a jerk of the head and shoulders */
+@keyframes girlsway{0%,100%{rotate:-1.6deg} 50%{rotate:1.8deg}}
+@keyframes girlbreathe{0%,100%{scale:1 1} 45%{scale:1.015 1.022} 60%{scale:1.01 1.016}}
+@keyframes girltwitch{0%,58%,100%{translate:-50% 0} 60%{translate:-48.2% -.7%} 62%{translate:-51.6% .3%} 64%{translate:-49.5% 0} 66%{translate:-50% 0}
+  84%{translate:-50% 0} 85%{translate:-50.9% -.3%} 86%{translate:-50% 0}}
 .attn.haunted{animation:lightsflick .7s steps(1) infinite}      /* while she is there the whole screen flickers hard */
 @keyframes lightsflick{0%{filter:brightness(1)} 6%{filter:brightness(.15)} 11%{filter:brightness(1.4) contrast(1.3)} 17%{filter:brightness(.35)} 22%{filter:brightness(.05)} 30%{filter:brightness(1.2)} 38%{filter:brightness(.25) saturate(1.6) hue-rotate(-12deg)} 44%{filter:brightness(1)} 52%{filter:brightness(.1)} 58%{filter:brightness(1.5) contrast(1.4)} 64%{filter:brightness(.4)} 72%{filter:brightness(.9)} 79%{filter:brightness(.08)} 86%{filter:brightness(1.3)} 93%{filter:brightness(.3)}}
-.attn .room-girl.off{opacity:0; transition:opacity .6s}
+.attn .room-girl.off{opacity:0; transition:opacity .6s, height .6s}
 @keyframes girlflick{0%{filter:brightness(.8) contrast(1.1)} 50%{filter:brightness(.55) contrast(1.3)}}
 .attn .girl-scare{position:absolute; inset:0; width:100%; height:100%; z-index:80; image-rendering:pixelated}
 .wall-note-frame{background:#0c0a08; padding:0; box-sizing:border-box; border:2px solid #c8963e}
