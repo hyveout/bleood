@@ -790,6 +790,11 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 /* the play button every game waits behind */
 .playgate{position:absolute; inset:0; z-index:30; display:none; align-items:center; justify-content:center; background:radial-gradient(ellipse at center, rgba(20,16,12,.85), #000 75%)}
 .playgate.on{display:flex}
+.book-credits{position:absolute; display:flex; flex-direction:column; justify-content:space-evenly; align-items:center; text-align:center; pointer-events:none; opacity:0; transition:opacity .5s; mix-blend-mode:multiply}
+.book-credits.on{opacity:1}
+.book-credits p{margin:0; line-height:1.15}
+.book-credits i{display:block; white-space:nowrap; font-style:normal; font-family:var(--display); font-size:.78em; color:rgba(64,40,28,.9); letter-spacing:.02em}
+.book-credits b{display:block; white-space:nowrap; font-weight:normal; font-family:var(--display); font-size:1.18em; margin-top:.15em; color:rgba(34,18,12,.95)}
 /* Attention's own play screen: the user's art; PLAY (a soft, low-res graphic like the art) sits right under the title */
 .playgate:not(.pg-attn) .pg-art{display:contents} .playgate:not(.pg-attn) .pg-play img{display:none}
 .playgate.pg-attn{background:#000}
@@ -5560,7 +5565,7 @@ const ATTN = (function(){
     }
     function patternBig(){ const c = document.createElement('canvas'); c.width = 900; c.height = 700; const p = c.getContext('2d'); p.drawImage(blackPage(false, 4), 0, 0, 900, 700);
       drawPattern(p, 450, 380, 330, 150, 3); return c.toDataURL(); }
-    const MARK_R = [10, 30, 88, 137];                                    // where the golden bookmark lies on its page: x, y, w, h
+    const MARK_R = [57, 8, 58, 90];      /* (smaller, up top: the credits are written under it) */                                    // where the golden bookmark lies on its page: x, y, w, h
     let SPREADS = null;
     function withOn(base, f){ const c = document.createElement('canvas'); c.width = PW; c.height = PH; const p = c.getContext('2d'); p.drawImage(base, 0, 0); f(p); return c; }
     function build(){
@@ -5587,7 +5592,16 @@ const ATTN = (function(){
       // spread 4, left: the girl on the bench (the bookmark lies opposite)
       SPREADS[4][0] = withOn(BLANK[4][0], p => paste(p, pasted.bench, 4, 0, {m: 14, tilt: -.03, filter: 'sepia(.35) saturate(.8) brightness(1.05)'}));      // a photograph pasted in
       if(!gotIt) SPREADS[GIFT][1] = withOn(BLANK[GIFT][1], p => drawGift(p, PW / 2, PH / 2));
-      if(!gotMark) SPREADS[MARK][1] = withOn(BLANK[MARK][1], p => {
+      // the last page: the credits, written in under where the bookmark lies (they stay once it is taken)
+      const CREDITS = [['designed and developed by', 'hyveout'], ['assets and scenery by', 'foolveil'], ['cutscenes by', 'b1eed0ut and happy'], ['sound design by', 'shadx2']];
+      const credits = p => { p.save(); p.textAlign = 'center'; p.textBaseline = 'middle'; p.globalCompositeOperation = 'multiply';
+        const fit = (t, fs) => { do{ p.font = fs + 'px "Haunteod", "Courier Prime", monospace'; fs -= .25; }while(fs > 5 && p.measureText(t).width > PW * .9); };
+        const top = MARK_R[1] + MARK_R[3] + 16, step = (PH - 10 - top) / CREDITS.length;
+        CREDITS.forEach(([role, who], i) => { const y = top + i * step;
+          fit(role, 8.2); p.fillStyle = 'rgba(70,46,32,.85)'; p.fillText(role, PW / 2, y);      // in the site's font, inked into the paper
+          fit(who, 11.5); p.fillStyle = 'rgba(40,22,16,.95)'; p.fillText(who, PW / 2, y + 11); });
+        p.restore(); };
+      SPREADS[MARK][1] = withOn(BLANK[MARK][1], p => { if(gotMark) return;      /* (the credits are written over the page as text: the canvas is too small for the font) */
         p.save(); p.translate(MARK_R[0] + MARK_R[2] / 2, MARK_R[1] + MARK_R[3] / 2); p.rotate(.06);
         if(markImg.complete && markImg.naturalWidth){
           const [mx, my, mw, mh] = [-MARK_R[2] / 2, -MARK_R[3] / 2, MARK_R[2], MARK_R[3]];
@@ -5607,6 +5621,12 @@ const ATTN = (function(){
     if(!under) under = blackPage(true, 99);
 
     let at = 0, turn = null, reachedEnd = false, gone = false;
+    const cred = document.createElement('div'); cred.className = 'book-credits';      // the credits on the last page, in the site's font (sharp, over the page)
+    cred.innerHTML = [['designed and developed by', 'hyveout'], ['assets and scenery by', 'foolveil'], ['cutscenes by', 'b1eed0ut and happy'], ['sound design by', 'shadx2']].map(([r, w]) => '<p><i>' + r + '</i><b>' + w + '</b></p>').join('');
+    { const fr = host.querySelector('.ug-frame'); fr.style.position = 'relative'; fr.appendChild(cred);
+      const TW = W + FR * 2, TH = H + FR * 2, top = PY + MARK_R[1] + MARK_R[3] + 12;
+      cred.style.cssText = 'left:' + ((FR + GX + 6) / TW * 100) + '%;width:' + ((PW - 12) / TW * 100) + '%;top:' + ((FR + top) / TH * 100) + '%;height:' + ((PH - (top - PY) - 8) / TH * 100) + '%'; }
+    const credFit = () => { cred.style.fontSize = (pic.clientWidth * .0205) + 'px'; }; credFit(); addEventListener('resize', credFit);
     // ---- shut: the book as it stands in the room, its clasp locked; the key opens it ----
     let closed = !STATE.bookOpen, unlockAt = 0, lockShake = 0;
     const bookImg = new Image(); bookImg.src = BOOK_CLOSED_SRC;           // the book from the room (inside_of_house.psd, Layer 18)
@@ -5676,6 +5696,7 @@ const ATTN = (function(){
         g.fillStyle = 'rgba(30,20,10,' + (.3 * Math.sin(k * Math.PI)) + ')'; g.fillRect(c > 0 ? GX : GX + w, PY, PW - w, PH);
       }
       if(turn && k >= 1){ at = turn.to; turn = null; arrived(); }
+      cred.classList.toggle('on', !closed && at === LAST && !turn);      /* the credits show on the last page once it lies open */
       if(!turn && at === GIFT && !gotIt) glint(g, GX + PW / 2 + 18, PY + PH / 2 - 14, now, 8);      // the torn canvas pressed in the pages
       // the stitching down the spine
       g.fillStyle = 'rgba(30,22,14,.55)'; g.fillRect(GX - 1, PY, 2, PH);
