@@ -598,11 +598,11 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
   border:2px solid #c8963e; box-shadow:inset 0 0 0 2px #3b0d10; cursor:pointer}
 .attn .at-list button[disabled]{opacity:.4; cursor:default}
 .attn .at-list button:not([disabled]):hover{background:#3b0d10}
-.attn .at-slots{position:absolute; left:0; right:0; bottom:0; z-index:7; display:flex; gap:clamp(5px,1.2vw,10px); justify-content:center; padding:8px 0 10px;
-  background:linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.75) 40%); pointer-events:none}
+.attn .at-slots{position:absolute; left:var(--vl,0px); right:var(--vr,0px); bottom:var(--vb,0px); z-index:7; display:flex; gap:clamp(5px,1.2vw,10px); justify-content:center; padding:22px 0 10px;
+  background:linear-gradient(rgba(0,0,0,0), rgba(0,0,0,.35) 45%, rgba(0,0,0,.6)); pointer-events:none}      /* a soft shadow that fades up into the scene */
 .ug-pop{padding-bottom:clamp(52px,9vw,70px); padding-top:clamp(44px,7vw,58px)}
-.attn .at-inv{position:absolute; left:0; right:0; top:0; z-index:7; display:flex; align-items:center; gap:clamp(5px,1.2vw,10px); justify-content:center; padding:8px 0 10px; pointer-events:none;
-  background:linear-gradient(rgba(0,0,0,.75) 60%,rgba(0,0,0,0))}
+.attn .at-inv{position:absolute; left:var(--vl,0px); right:var(--vr,0px); top:var(--vt,0px); z-index:7; display:flex; align-items:center; gap:clamp(5px,1.2vw,10px); justify-content:center; padding:8px 0 22px; pointer-events:none;
+  background:linear-gradient(rgba(0,0,0,.6), rgba(0,0,0,.35) 55%, rgba(0,0,0,0))}      /* a soft shadow from the top edge, fading down */
 .attn .at-inv i{width:clamp(28px,5vw,40px); aspect-ratio:1; border:1px solid #8a6a2a; background:rgba(16,18,26,.85); box-shadow:inset 0 0 0 2px #2a1a10}
 .attn .at-inv i.has{pointer-events:auto; cursor:pointer}
 .attn .at-inv i.has:hover{border-color:#d8b060; box-shadow:inset 0 0 0 2px #2a1a10, 0 0 8px rgba(216,176,96,.45)}
@@ -654,7 +654,7 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .attn .room-shine{position:absolute; width:2.4%; aspect-ratio:1; transform:translate(-50%,-50%); z-index:2; pointer-events:none; opacity:0; animation:roomshine 2.4s ease-in-out infinite;
   background:radial-gradient(circle, rgba(255,248,225,.85) 0 12%, rgba(255,248,225,0) 45%), linear-gradient(90deg, transparent 47%, rgba(255,250,232,.95) 50%, transparent 53%), linear-gradient(0deg, transparent 47%, rgba(255,250,232,.95) 50%, transparent 53%)}
 @keyframes roomshine{0%,55%,100%{opacity:0; transform:translate(-50%,-50%) scale(.5) rotate(0)} 72%{opacity:1; transform:translate(-50%,-50%) scale(1) rotate(25deg)}}
-.crt:fullscreen .attn .at-inv{top:42px}
+.crt:fullscreen .attn .at-inv{padding-top:50px}      /* (pushed down past the notch, but the shadow still starts at the very top, so there is no bar floating mid-screen) */
 .crt:fullscreen .attn .room-talk{top:calc(var(--vt,0px) + 42px + clamp(44px,7vw,58px))}
 .attn .desk-live{position:absolute; pointer-events:none; z-index:3}      /* in front of the painting, so what you lift never slips behind it */
 .attn .room-lprop.lantern-lit{z-index:4}      /* the things on the desk, live in the room */
@@ -7129,7 +7129,7 @@ const ATTN = (function(){
     const maxPan = Math.max(0, (w - W) / 2); pan = Math.max(-maxPan, Math.min(maxPan, pan));
     img.style.width = w + 'px'; img.style.height = h + 'px'; img.style.left = ((W - w) / 2 + pan) + 'px'; img.style.top = ((H - h) / 2) + 'px';
     { const sl = (W - w) / 2 + pan, st = (H - h) / 2, vl = Math.max(0, sl), vt = Math.max(0, st), vr = Math.max(0, W - (sl + w)), vb = Math.max(0, H - (st + h));      // the part of the screen the scene covers
-      v.style.setProperty('--vl', vl + 'px'); v.style.setProperty('--vt', vt + 'px'); v.style.setProperty('--vr', vr + 'px'); v.style.setProperty('--vb', vb + 'px');
+      [v, root].forEach(el => { if(!el) return; el.style.setProperty('--vl', vl + 'px'); el.style.setProperty('--vt', vt + 'px'); el.style.setProperty('--vr', vr + 'px'); el.style.setProperty('--vb', vb + 'px'); });      // (the bars use it too)
       v.style.clipPath = vl || vt || vr || vb ? 'inset(' + vt + 'px ' + vr + 'px ' + vb + 'px ' + vl + 'px)' : '';       // a screen wider than the scene (full screen on a wide monitor): nothing shows past its edges
     }
     const bk = v.querySelector('.room-back'); bk.style.display = TOUCH && ROOMS[roomNow].back && ROOMS[roomNow].backSide === 'bottom' && !talking ? '' : 'none';      // (the house goes back by its right edge)
