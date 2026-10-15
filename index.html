@@ -810,12 +810,12 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .attn.ended .at-inv, .attn.ended .at-slots{display:none}
 .attn .field-way{position:absolute; top:var(--vt,0px); bottom:var(--vb,0px); left:var(--vl,0px); width:14%; z-index:4; pointer-events:none; opacity:0; mix-blend-mode:screen; transition:opacity .6s;
   background:linear-gradient(90deg, rgba(255,232,190,.75), rgba(255,220,170,.35) 30%, rgba(255,210,150,.08) 70%, rgba(255,210,150,0))}
-.attn .field-way.on{opacity:.55; animation:fieldway 2.6s ease-in-out infinite}
+.attn .at-room.near-way .field-way.on{opacity:.55; animation:fieldway 2.6s ease-in-out infinite}      /* only when you are near that edge */
 @keyframes fieldway{0%,100%{opacity:.4} 50%{opacity:.7}}
 .attn .field-timer{display:none; position:absolute; left:0; right:0; top:calc(var(--vt,0px) + clamp(92px,15cqh,124px)); z-index:7; flex-direction:column; align-items:center; gap:4px; pointer-events:none; text-shadow:0 2px 0 #000}
 .attn .at-room[data-room=field] .field-timer{display:flex}
 .attn .ft-day{font-family:var(--display); font-size:clamp(1rem,3.4cqw,2rem); color:rgba(170,16,18,.95); letter-spacing:.06em}
-.attn .ft-time{font-family:var(--display); font-size:clamp(.75rem,2.2cqw,1.4rem); max-width:92%; text-align:center; color:#e8e3d6; letter-spacing:.04em; display:flex; flex-direction:column; align-items:center; gap:.15em; text-transform:uppercase}
+.attn .ft-time{font-family:"VCR OSD Mono",var(--type); font-size:clamp(2rem,8cqw,4.6rem); color:rgba(196,18,20,.96); letter-spacing:.1em; text-shadow:0 0 18px rgba(170,10,12,.45), 0 3px 0 #000}
 .attn .ft-again{pointer-events:auto; margin-top:6px; font-family:"VCR OSD Mono",var(--type); font-size:clamp(.65rem,1.5cqw,.9rem); letter-spacing:.14em; color:rgba(232,227,214,.8); background:rgba(0,0,0,.35); border:1px solid rgba(232,227,214,.35); padding:.45em 1.1em; cursor:pointer}
 .attn .ft-again:hover{border-color:rgba(232,227,214,.85); color:#e8e3d6}
 .attn .at-countdown{position:absolute; inset:0; z-index:95; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:clamp(10px,2.4cqh,22px); background:#000; opacity:0; transition:opacity 1.6s}
@@ -7491,7 +7491,7 @@ const ATTN = (function(){
     roomEl.addEventListener('pointermove', e=>{
       if(down && searching){ lastXY = [e.clientX, e.clientY]; light(roomSpot(e.clientX, e.clientY, 50)); return; }      // phones: holding still, then sliding, searches (the faint glow shows under your finger)
       if(down){ lastXY = [e.clientX, e.clientY]; const dx = e.clientX - down[0]; moved = Math.max(moved, Math.abs(dx)); if(moved > 6){ clearTimeout(holdT); pan = down[1] + dx; roomLayout(); light(null); } }
-      else { const edge = !popup && !talking && atEdge(e.clientX, e.clientY), s = popup || edge || talking ? null : roomSpot(e.clientX, e.clientY); roomEl.style.cursor = s || edge ? 'pointer' : 'default'; light(s); roomEl.classList.toggle('near-edge', !!edge); }      // hovering a thing makes it glow; nearing the way back lights that side
+      else { const edge = !popup && !talking && atEdge(e.clientX, e.clientY), s = popup || edge || talking ? null : roomSpot(e.clientX, e.clientY); roomEl.style.cursor = s || edge ? 'pointer' : 'default'; light(s); roomEl.classList.toggle('near-edge', !!edge); { const R0 = roomEl.getBoundingClientRect(), vl = parseFloat(getComputedStyle(roomEl).getPropertyValue('--vl')) || 0, vw = R0.width - vl - (parseFloat(getComputedStyle(roomEl).getPropertyValue('--vr')) || 0); roomEl.classList.toggle('near-way', !!STATE.epilogue && roomNow === 'house' && !popup && !talking && (e.clientX - R0.left - vl) / vw < .08); } }      // hovering a thing makes it glow; nearing the way back lights that side
     });
     roomEl.addEventListener('pointerup', e=>{
       if(talking && !(talking.T && talking.T.auto)){ down = null; if(performance.now() - talking.since > 300) talking.next(); return; }      // (not the same tap that started it)
@@ -7853,7 +7853,7 @@ const ATTN = (function(){
       const W1 = ['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'], T = ['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
       const say = n => n < 20 ? W1[n] : n < 100 ? T[Math.floor(n / 10)] + (n % 10 ? ' ' + W1[n % 10] : '') : W1[Math.floor(n / 100)] + ' hundred' + (n % 100 ? ' ' + say(n % 100) : '');
       const u = (n, w) => say(n) + ' ' + w + (n === 1 ? '' : 's');
-      tm.innerHTML = '<span>' + u(D, 'day') + ' ' + u(H, 'hour') + '</span><span>' + u(M, 'minute') + ' ' + u(S, 'second') + '</span>'; };      // (the title font has no numbers: the time is written out)
+      tm.textContent = pad(D) + ':' + pad(H) + ':' + pad(M) + ':' + pad(S); };      // (in the VCR font: the title font has no numbers)
     tick(); fieldClock = setInterval(tick, 1000);
   }
   function enterMirror(){
