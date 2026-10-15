@@ -672,9 +672,9 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .attn .at-inv .at-mask.on{border-color:#f0c868; box-shadow:inset 0 0 0 2px #3b0d10, 0 0 10px rgba(240,200,104,.6)}
 .attn .mask-view{position:absolute; inset:0; width:100%; height:100%; z-index:6; opacity:0; transition:opacity .22s; cursor:default; touch-action:none}   /* wearing it: only the eye holes to see through */   /* wearing it: only the eye holes to see through */
 .attn .mask-view.on{opacity:1}
-.attn .room-girl{position:absolute; bottom:4%; height:60%; translate:-50% 0; transform-origin:50% 100%; z-index:4; pointer-events:none; opacity:0; filter:brightness(.8) contrast(1.1); transition:opacity .25s, height 2.4s cubic-bezier(.5,0,.9,.6);
+.attn .room-girl{position:absolute; bottom:4%; height:var(--gh, 60%); translate:-50% 0; transform-origin:50% 100%; z-index:4; pointer-events:none; opacity:0; filter:brightness(.8) contrast(1.1); transition:opacity .25s, height 2.4s cubic-bezier(.5,0,.9,.6);
   animation:girlsway 3.3s ease-in-out infinite, girlbreathe 2.1s ease-in-out infinite, girltwitch 2.9s linear infinite}
-.attn .room-girl.on{opacity:.95; height:69%}      /* she creeps closer the longer she stands there */
+.attn .room-girl.on{opacity:.95; height:calc(var(--gh, 60%) * 1.15)}      /* she creeps closer the longer she stands there */
 .attn .room-girl{aspect-ratio:1100/733}
 .attn .room-girl img{position:absolute; inset:0; width:100%; height:100%}
 .attn .room-girl .rg-arm.l{transform-origin:43.8% 35.7%; animation:armsl 1.9s ease-in-out infinite}
@@ -683,7 +683,8 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .attn .room-girl .rg-arm.r{transform-origin:56.2% 35.7%; animation:armsr 2.3s ease-in-out infinite}
 @keyframes armsl{0%,100%{rotate:0deg} 30%{rotate:-4deg} 55%{rotate:2.5deg} 70%{rotate:-1deg} 72%{rotate:3.5deg} 74%{rotate:.5deg}}      /* reaching, slowly, with a jerk now and then */
 @keyframes armsr{0%,100%{rotate:0deg} 35%{rotate:4.5deg} 60%{rotate:-2deg} 80%{rotate:1deg} 82%{rotate:-3.5deg} 84%{rotate:0deg}}
-.attn .at-room[data-room=cave] .room-girl{height:84%} .attn .at-room[data-room=cave] .room-girl.on{height:98%}      /* right up at the desk: she is close */
+.attn .room-girl.deep{z-index:1; filter:brightness(.62) contrast(1.15)}      /* further in: behind things, darker */
+.attn .room-occ{position:absolute; inset:0; width:100%; height:100%; z-index:1; pointer-events:none}      /* a piece of the room itself, laid back over her so she stands behind it */
 /* she is never quite still: a slow sway from the feet, shallow breathing, and now and then a jerk of the head and shoulders */
 @keyframes girlsway{0%,100%{rotate:-1.6deg} 50%{rotate:1.8deg}}
 @keyframes girlbreathe{0%,100%{scale:1 1} 45%{scale:1.015 1.022} 60%{scale:1.01 1.016}}
@@ -7720,15 +7721,37 @@ const ATTN = (function(){
       l: mk(g => { path(g, L); g.clip(); g.drawImage(im, 0, 0); }), r: mk(g => { path(g, R); g.clip(); g.drawImage(im, 0, 0); })};
     return girlParts;
   }
+  const GIRL_SPOTS = {
+    forest: [{x: 230, b: 38, h: 22, deep: true, occ: [[143, 195, 172, 392], [278, 195, 306, 392]]},      // far off, between the shrine gate's posts
+             {x: 625, b: 44, h: 22, deep: true}, {front: true}, {front: true}],                   // in the cave mouth across the clearing
+    house:  [{x: 310, b: 33, h: 52, deep: true, occ: [[165, 92, 462, 410, .5]]},             // behind the paper doors, a shape through the glass
+             {x: 735, b: 12, h: 56, deep: true, occ: [[638, 0, 670, 560]]},                    // down the side of the house, past the post
+             {front: true}],
+    inside: [{x: 333, b: 22, h: 44, deep: true, occ: [[198, 196, 268, 472], [342, 196, 410, 472]]},      // in the iron maiden, between its doors
+             {x: 560, b: 33, h: 40, deep: true, occ: [[412, 384, 702, 472]]},                  // behind the bench
+             {front: true}],
+    cave:   [{x: 0, b: 20, h: 92, deep: true, occ: [[0, 326, 800, 600]]},                    // standing behind the desk (x: anywhere)
+             {front: true}],
+    tunnel: [{x: 268, b: 46, h: 30, deep: true}, {x: 538, b: 46, h: 30, deep: true},          // far back in either archway
+             {front: true}]
+  };
   function girlCome(){
     const stage = roomEl.querySelector('.room-stage'), parts = girlLayers(), el = document.createElement('div'); el.className = 'room-girl';
     el.innerHTML = parts ? '<img alt="" src="' + parts.body + '"><img class="rg-arm l" alt="" src="' + parts.l + '"><img class="rg-arm r" alt="" src="' + parts.r + '"><img class="rg-head" alt="" src="' + parts.h + '">' : '<img alt="" src="' + GIRL.src() + '">';
-    el.style.left = (18 + Math.random() * 64) + '%'; stage.appendChild(el);
+    const spots = GIRL_SPOTS[roomNow] || [{front: true}], sp = spots[Math.floor(Math.random() * spots.length)], occs = [];
+    if(sp.front || !sp.x && sp.x !== 0){ el.style.left = (18 + Math.random() * 64) + '%'; if(roomNow === 'cave') el.style.setProperty('--gh', '84%'); }      // in front of everything, anywhere along the room
+    else {
+      el.style.left = (sp.x ? sp.x / 8 : 25 + Math.random() * 50) + '%'; el.style.bottom = sp.b + '%'; el.style.setProperty('--gh', sp.h + '%');
+      if(sp.deep) el.classList.add('deep');
+      (sp.occ || []).forEach(([x0, y0, x1, y1, op]) => { const o = document.createElement('img'); o.className = 'room-occ'; o.alt = ''; o.src = stage.querySelector('.room-img').src;
+        o.style.clipPath = 'inset(' + (y0 / 6) + '% ' + (100 - x1 / 8) + '% ' + (100 - y1 / 6) + '% ' + (x0 / 8) + '%)'; if(op) o.style.opacity = op; occs.push(o); });
+    }
+    stage.appendChild(el); occs.forEach(o => stage.appendChild(o));                       // (the pieces of the room go over her)
     requestAnimationFrame(()=> el.classList.add('on'));
-    girlEv = {el, t0: performance.now(), safeAt: 0}; root.classList.add('haunted');
+    girlEv = {el, occs, t0: performance.now(), safeAt: 0}; root.classList.add('haunted');
   }
   function girlGone(now){
-    if(!girlEv) return; const el = girlEv.el; girlEv = null; if(root) root.classList.remove('haunted');
+    if(!girlEv) return; const el = girlEv.el; (girlEv.occs || []).forEach(o => setTimeout(()=> o.remove(), now ? 0 : 700)); girlEv = null; if(root) root.classList.remove('haunted');
     if(now){ el.remove(); return; } el.classList.remove('on'); el.classList.add('off'); setTimeout(()=> el.remove(), 700);
     girlNext = performance.now() + 30000 + Math.random() * 40000;
   }
