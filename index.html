@@ -814,7 +814,7 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .attn .at-room.near-way .field-way.on{opacity:.55; animation:fieldway 2.6s ease-in-out infinite}      /* only when you are near that edge */
 @keyframes fieldway{0%,100%{opacity:.4} 50%{opacity:.7}}
 .attn .field-timer{display:none; position:absolute; left:0; right:0; top:calc(var(--vt,0px) + clamp(92px,15cqh,124px)); z-index:7; flex-direction:column; align-items:center; gap:4px; pointer-events:none; text-shadow:0 2px 0 #000}
-.attn .at-room[data-room=field] .field-timer{display:flex}
+.attn .at-room[data-room=field] .field-timer{display:flex; opacity:0; transition:opacity .6s} .attn .at-room[data-room=field] .field-timer.ready{opacity:1}      /* only once the field itself is showing */
 .attn .ft-day{font-family:var(--display); font-size:clamp(1rem,3.4cqw,2rem); color:rgba(170,16,18,.95); letter-spacing:.06em}
 .attn .ft-time{font-family:"VCR OSD Mono",var(--type); font-size:clamp(2rem,8cqw,4.6rem); color:rgba(196,18,20,.96); letter-spacing:.1em; text-shadow:0 0 18px rgba(170,10,12,.45), 0 3px 0 #000}
 .attn .ft-again{pointer-events:auto; margin-top:6px; font-family:"VCR OSD Mono",var(--type); font-size:clamp(.65rem,1.5cqw,.9rem); letter-spacing:.14em; color:rgba(232,227,214,.8); background:rgba(0,0,0,.35); border:1px solid rgba(232,227,214,.35); padding:.45em 1.1em; cursor:pointer}
@@ -7863,10 +7863,15 @@ const ATTN = (function(){
   }
   // the field's clock: down to the next Halloween, at the top of the screen (and a way to start again)
   let fieldClock = null;
+  const FIELD_IMG = new Image(); FIELD_IMG.src = 'bleood_field.jpg';      // fetched early, so the field is there when you walk into it
   function fieldTimer(){
     if(!roomEl) return; let el = roomEl.querySelector('.field-timer');
     if(!el){ el = document.createElement('div'); el.className = 'field-timer'; el.innerHTML = '<div class="ft-time"></div>'; roomEl.appendChild(el); }
-    clearInterval(fieldClock); if(roomNow !== 'field') return;
+    clearInterval(fieldClock); el.classList.remove('ready'); if(roomNow !== 'field') return;
+    const show = () => setTimeout(()=> el.isConnected && roomNow === 'field' && el.classList.add('ready'), 450);      // after the room has faded in
+    const pic = roomEl.querySelector('.room-img');      // the room's own picture of the field: wait until it is really there
+    const wait = () => { if(!el.isConnected || roomNow !== 'field') return; if(pic && pic.complete && pic.naturalWidth && /bleood_field/.test(pic.src)) show(); else setTimeout(wait, 120); };
+    wait();
     const tm = el.querySelector('.ft-time'), pad = n => String(n).padStart(2, '0');
     const tick = () => { const now = new Date(); let target = new Date(now.getFullYear(), 9, 31); if(now >= new Date(now.getFullYear(), 10, 1)) target = new Date(now.getFullYear() + 1, 9, 31);
       let d = Math.max(0, target - now) / 1000; const D = Math.floor(d / 86400); d -= D * 86400; const H = Math.floor(d / 3600); d -= H * 3600; const M = Math.floor(d / 60), S = Math.floor(d - M * 60);
