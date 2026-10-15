@@ -5970,7 +5970,7 @@ const ATTN = (function(){
         }
       }
       // after her: out of the glass, floating right in front of the mirror, facing you
-      if(herAt && now > herAt && gated() && !STATE.epilogue){                                // after she breaks free she is gone: she only waits here when she wants you (2 and 5 artifacts)
+      if(herAt && now > herAt && gated() && !STATE.epilogue){                                // after she breaks free she is gone: she only waits here when she wants you (at the 4th artifact)
         const dz = 1.15 * W / (.764 * MH * 1.05), z = 6 - dz, ppu = W / (.764 * dz), yc = (H / 2 - (MY + MH * .7)) / ppu;
         const out = GIRL.render(0, yc + Math.sin(now / 900) * .04, 1, z / 5.2, now / 1000, .25);
         if(out){
@@ -7068,9 +7068,9 @@ const ATTN = (function(){
   // what is behind a thing, shown when you hover it: [where it sits, in PSD pixels], the picture (house PSD, Layer 16 hidden)
   // the house stays shut until the mirror is done (shattered, shard taken) and you have spoken to her
   const TEMP_NO_CUTS = true, TEMP_HOUSE_OPEN = false;                 // TEMPORARY (user, Oct 13): no flash-cuts between rooms, house always open. set both false to bring them back
-  // ---- the gates: after the 2nd artifact, and again after the 5th, nothing more can be collected until you visit the girl in the mirror
+  // ---- the gate: after the 4th artifact nothing more can be collected until you visit the girl in the mirror (was [2, 5]: the 2nd gate's words are gone)
   // and play her game. you can still walk the rooms and pick things up (the rag for the mirror); every other game stays shut
-  const GATES = [2, 5];
+  const GATES = [4];
   const artifactCount = ()=> Object.keys(have).filter(k => have[k]).length;
   const gated = ()=> GATES.some((n, i) => artifactCount() >= n && (STATE.gate || 0) <= i);
   let gateTold = -1;
@@ -7086,9 +7086,9 @@ const ATTN = (function(){
   // at a gate, she offers you a memory: a black screen with her words; once it is over you can go on collecting
   // (her two minigames, dotsTask and mazeTask, are still in the code but no longer used)
   // the first memory is a film now (Cut Scene 1); the second is still her words on black
-  const MEMORY_FILMS = ['bleood_cutscene_1.mp4', null];
+  const MEMORY_FILMS = ['bleood_cutscene_1.mp4'];
   function herGame(){
-    const g = Math.min(1, STATE.gate || 0), next = ()=>{ STATE.gate = (STATE.gate || 0) + 1; gateTold = -1; };
+    const g = Math.min(GATES.length - 1, STATE.gate || 0), next = ()=>{ STATE.gate = (STATE.gate || 0) + 1; gateTold = -1; };
     askYesNo('RELIVE MEMORY?', ()=> MEMORY_FILMS[g] ? memoryFilm(MEMORY_FILMS[g], next, ()=> memory(HER_LINES[g], next)) : memory(HER_LINES[g], next));
   }
   // a film, over the whole game, then back to where you were. if it can't play at all, `fallback` runs instead (her words on black)
@@ -7734,7 +7734,7 @@ const ATTN = (function(){
     if(!on && girlEv && girlEv.safeAt) scare();                          // took it off while she was still there
   }
   const girlMayCome = ()=> root && root.classList.contains('on') && roomEl && STATE.mask && STATE.mirror && STATE.mirror.scared && !popup && !talking && !(ask && ask.isConnected) &&
-    roomNow !== 'mirror' && !fading && !document.hidden && !document.querySelector('.at-memory, .attn-intro, .ug-obtain, .ug-freeze') && !gated() && !STATE.epilogue && GIRL.ready();      /* never while she is asking for you (the 2nd and 5th artifact) */
+    roomNow !== 'mirror' && !fading && !document.hidden && !document.querySelector('.at-memory, .attn-intro, .ug-obtain, .ug-freeze') && !gated() && !STATE.epilogue && GIRL.ready();      /* never while she is asking for you (the 4th artifact) */
   // her arms, cut from her picture once (1100 x 733): the body without them, and each side's pair, to turn at the shoulders
   let girlParts = null, girlIm = null;
   function girlLayers(){
