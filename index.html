@@ -655,7 +655,7 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
   background:radial-gradient(circle, rgba(255,248,225,.85) 0 12%, rgba(255,248,225,0) 45%), linear-gradient(90deg, transparent 47%, rgba(255,250,232,.95) 50%, transparent 53%), linear-gradient(0deg, transparent 47%, rgba(255,250,232,.95) 50%, transparent 53%)}
 @keyframes roomshine{0%,55%,100%{opacity:0; transform:translate(-50%,-50%) scale(.5) rotate(0)} 72%{opacity:1; transform:translate(-50%,-50%) scale(1) rotate(25deg)}}
 .crt:fullscreen .attn .at-inv{top:42px}
-.crt:fullscreen .attn .room-talk{top:calc(42px + clamp(44px,7vw,58px))}
+.crt:fullscreen .attn .room-talk{top:calc(var(--vt,0px) + 42px + clamp(44px,7vw,58px))}
 .attn .desk-live{position:absolute; pointer-events:none; z-index:3}      /* in front of the painting, so what you lift never slips behind it */
 .attn .room-lprop.lantern-lit{z-index:4}      /* the things on the desk, live in the room */
 .attn .at-room[data-desk="1"]{cursor:grab !important} .attn .at-room[data-desk="2"]{cursor:grabbing !important}
@@ -795,10 +795,10 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .attn .room-blur{position:absolute; inset:0; z-index:4; pointer-events:none; -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px);
   -webkit-mask-image:radial-gradient(ellipse 46% 40% at var(--mx,50%) var(--my,50%), transparent 55%, #000 95%); mask-image:radial-gradient(ellipse 46% 40% at var(--mx,50%) var(--my,50%), transparent 55%, #000 95%)}
 .attn .room-dark, .attn .room-blur{display:none}   /* the pointer 'flashlight' is OFF: the whole room is visible (delete this line to bring it back) */
-.attn .room-edge{position:absolute; top:0; bottom:0; left:0; width:22%; z-index:4; pointer-events:none; opacity:0; transition:opacity .3s; mix-blend-mode:screen;
+.attn .room-edge{position:absolute; top:var(--vt,0px); bottom:var(--vb,0px); left:var(--vl,0px); width:22%; z-index:4; pointer-events:none; opacity:0; transition:opacity .3s; mix-blend-mode:screen;
   background:linear-gradient(90deg, rgba(255,232,190,.95), rgba(255,220,170,.55) 22%, rgba(255,210,150,.2) 55%, rgba(255,210,150,0))}
-.attn .room-edge.right{left:auto; right:0; background:linear-gradient(270deg, rgba(255,232,190,.95), rgba(255,220,170,.55) 22%, rgba(255,210,150,.2) 55%, rgba(255,210,150,0))}
-.attn .room-edge.bottom{left:0; right:0; top:auto; bottom:0; width:auto; height:26%; background:linear-gradient(0deg, rgba(255,232,190,.95), rgba(255,220,170,.55) 22%, rgba(255,210,150,.2) 55%, rgba(255,210,150,0))}
+.attn .room-edge.right{left:auto; right:var(--vr,0px); background:linear-gradient(270deg, rgba(255,232,190,.95), rgba(255,220,170,.55) 22%, rgba(255,210,150,.2) 55%, rgba(255,210,150,0))}
+.attn .room-edge.bottom{left:var(--vl,0px); right:var(--vr,0px); top:auto; bottom:var(--vb,0px); width:auto; height:26%; background:linear-gradient(0deg, rgba(255,232,190,.95), rgba(255,220,170,.55) 22%, rgba(255,210,150,.2) 55%, rgba(255,210,150,0))}
 .attn .at-room.near-edge .room-edge{opacity:1; animation:edgeglow 1.8s ease-in-out infinite}
 @keyframes darkedge{0%,100%{opacity:.3} 50%{opacity:.45}}
 @keyframes edgeglow{0%,100%{opacity:.8} 50%{opacity:1}}
@@ -818,7 +818,7 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .fs-btn.out i:nth-child(4){border:2px solid #e9e8e4; border-right:0; border-bottom:0}
 
 /* the doll's words, over the room: a dark band, her face in a box, the line fading in letter by letter */
-.attn .room-talk{position:absolute; left:0; right:0; top:clamp(44px,7vw,58px); z-index:6; display:flex; gap:14px; align-items:flex-start; padding:12px 16px 26px; pointer-events:none;
+.attn .room-talk{position:absolute; left:var(--vl,0px); right:var(--vr,0px); top:calc(var(--vt,0px) + clamp(44px,7vw,58px)); z-index:6; display:flex; gap:14px; align-items:flex-start; padding:12px 16px 26px; pointer-events:none;
   background:linear-gradient(rgba(6,6,8,.82), rgba(6,6,8,.68) 70%, rgba(6,6,8,0)); opacity:0; transition:opacity .35s}
 .attn .room-talk.on{opacity:1}
 .attn .room-talk canvas{width:clamp(64px,13vw,104px); aspect-ratio:144/156; border:1px solid rgba(192,188,178,.8); background:#000; flex:none}
@@ -7128,6 +7128,10 @@ const ATTN = (function(){
     if(W / H < 1.15){ h = H; w = H / .75; }
     const maxPan = Math.max(0, (w - W) / 2); pan = Math.max(-maxPan, Math.min(maxPan, pan));
     img.style.width = w + 'px'; img.style.height = h + 'px'; img.style.left = ((W - w) / 2 + pan) + 'px'; img.style.top = ((H - h) / 2) + 'px';
+    { const sl = (W - w) / 2 + pan, st = (H - h) / 2, vl = Math.max(0, sl), vt = Math.max(0, st), vr = Math.max(0, W - (sl + w)), vb = Math.max(0, H - (st + h));      // the part of the screen the scene covers
+      v.style.setProperty('--vl', vl + 'px'); v.style.setProperty('--vt', vt + 'px'); v.style.setProperty('--vr', vr + 'px'); v.style.setProperty('--vb', vb + 'px');
+      v.style.clipPath = vl || vt || vr || vb ? 'inset(' + vt + 'px ' + vr + 'px ' + vb + 'px ' + vl + 'px)' : '';       // a screen wider than the scene (full screen on a wide monitor): nothing shows past its edges
+    }
     const bk = v.querySelector('.room-back'); bk.style.display = TOUCH && ROOMS[roomNow].back && ROOMS[roomNow].backSide === 'bottom' && !talking ? '' : 'none';      // (the house goes back by its right edge)
     v.querySelector('.room-pan.l').classList.toggle('on', maxPan > 2 && pan < maxPan - 2); v.querySelector('.room-pan.r').classList.toggle('on', maxPan > 2 && pan > -maxPan + 2);   // more to see that way
     if(TOUCH && maxPan > 2 && !panHinted && !(ask && ask.isConnected)){ panHinted = true; const hn = v.querySelector('.room-hint'); hn.classList.add('on'); setTimeout(()=> hn.classList.remove('on'), 4200); }
@@ -7319,7 +7323,8 @@ const ATTN = (function(){
   function atEdge(clientX, clientY){
     if(!ROOMS[roomNow].back) return false;
     if(clientY !== undefined && roomSpot(clientX, clientY)) return false;      // a thing right at the edge (the poster) wins over the way back
-    const r = roomEl.getBoundingClientRect(), side = ROOMS[roomNow].backSide;
+    const R0 = roomEl.getBoundingClientRect(), cs = getComputedStyle(roomEl), px = n => parseFloat(cs.getPropertyValue(n)) || 0, side = ROOMS[roomNow].backSide;
+    const r = {left: R0.left + px('--vl'), top: R0.top + px('--vt'), width: R0.width - px('--vl') - px('--vr'), height: R0.height - px('--vt') - px('--vb')};      // (only the part the scene covers)
     if(side === 'bottom') return clientY !== undefined && (clientY - r.top) / r.height > .8;      // the strip along the bottom, above the artifact bar
     const f = (clientX - r.left) / r.width;
     return side === 'right' ? f > .88 : f < .12;
