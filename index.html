@@ -7725,6 +7725,7 @@ const ATTN = (function(){
   // back to the very beginning: nothing found, nothing carried, standing in the forest
   // ---------- the mask: the captured man gives it to you. she comes for you in the rooms; wear it within two seconds or she takes you ----------
   let maskView = null, girlEv = null, girlNext = 0;
+  const GIRL_GRACE = 3000;      // after a game or an item closes while she is there: this long to get the mask on
   const GIRL_EVERY = 15000;      // how long between her visits (TEMPORARY, Oct 15: every 15 s for testing; it was 30-70 s, and 20-45 s for the first)
   function giveMask(){
     if(STATE.mask) return; GIRL.load();
@@ -7826,6 +7827,9 @@ const ATTN = (function(){
     const now = performance.now();
     if(girlEv){
       if(!root || !root.classList.contains('on')){ girlGone(true); return; }
+      // something is open over the room (a game, an item being handed to you, a question, words, a film): her clock waits,
+      // and once it is closed you still get GIRL_GRACE to put the mask on
+      if(!girlEv.safeAt && (popup || talking || (ask && ask.isConnected) || fading || document.querySelector('.at-memory, .attn-intro, .ug-obtain, .ug-freeze, .at-scare'))){ girlEv.t0 = Math.max(girlEv.t0, now - 2000 + GIRL_GRACE); return; }
       const t = now - girlEv.t0;
       if(!girlEv.safeAt && t > 2000){ if(STATE.masked) girlEv.safeAt = now; else scare(); }      // two seconds to get the mask on
       else if(girlEv.safeAt && now - girlEv.safeAt > 1600) girlGone();                       // it is on: she looks, and goes
