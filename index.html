@@ -7235,7 +7235,7 @@ const ATTN = (function(){
     }
     const bk = v.querySelector('.room-back'); bk.style.display = TOUCH && ROOMS[roomNow].back && ROOMS[roomNow].backSide === 'bottom' && !talking ? '' : 'none';      // (the house goes back by its right edge)
     v.querySelector('.room-pan.l').classList.toggle('on', maxPan > 2 && pan < maxPan - 2); v.querySelector('.room-pan.r').classList.toggle('on', maxPan > 2 && pan > -maxPan + 2);   // more to see that way
-    if(TOUCH && maxPan > 2 && !panHinted && !(ask && ask.isConnected)){ panHinted = true; const hn = v.querySelector('.room-hint'); hn.classList.add('on'); setTimeout(()=> hn.classList.remove('on'), 4200); }
+    if(false && TOUCH && maxPan > 2 && !panHinted && !(ask && ask.isConnected)){      /* the 'drag to look around' hint on phones: off (user, Oct 15) */ panHinted = true; const hn = v.querySelector('.room-hint'); hn.classList.add('on'); setTimeout(()=> hn.classList.remove('on'), 4200); }
     const ed = v.querySelector('.room-edge'); ed.style.display = ROOMS[roomNow].back ? '' : 'none'; ed.classList.toggle('right', ROOMS[roomNow].backSide === 'right'); ed.classList.toggle('bottom', ROOMS[roomNow].backSide === 'bottom');      // the way back is the side you came in from
   }
   // FLASH-CUT montage (after the reference): white flash, black, then split-second graded close-ups of the next
