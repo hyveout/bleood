@@ -5521,7 +5521,7 @@ const ATTN = (function(){
     // the pages are drawn with what lies on them (so things turn over with their page, not appear after it)
     const BLANK = [];
     const makeBlank = () => { if(texReady() && BOOK_PAGES){ BLANK.length = 0; BLANK.push(...BOOK_PAGES.b); under = BOOK_PAGES.u; return; }
-      BLANK.length = 0; for(let i = 0; i < 5; i++) BLANK.push([blackPage(true, i * 2 + 3), blackPage(false, i * 2 + 4, i === 1)]);      // (no blood on the candle page) under = blackPage(true, 99);
+      BLANK.length = 0; for(let i = 0; i < 5; i++) BLANK.push([blackPage(true, i * 2 + 3, i === 4), blackPage(false, i * 2 + 4, i === 1 || i === 4)]);      // (no blood on the candle page, nor on the credits) under = blackPage(true, 99);
       if(texReady()) BOOK_PAGES = {b: BLANK.slice(), u: under}; };
     makeBlank();
     PAPERS.concat(BLOODS).forEach(i => { if(!(i.complete && i.naturalWidth)) i.addEventListener('load', () => { if(texReady()){ makeBlank(); if(typeof build === 'function') build(); } }); });
@@ -5599,7 +5599,7 @@ const ATTN = (function(){
           p.fillStyle = col; p.strokeStyle = col; p.lineWidth = lw; p.strokeText(t, 0, yy); p.fillText(t, 0, yy); yy += lh; }); return yy; };
         const h = ink(role, 14, 'rgba(58,34,24,.92)', .7, 16); p.translate(0, h + 4); ink(who, 22, 'rgba(150,14,16,.95)', 1.3, 22);
         p.restore(); };
-      SPREADS[4][0] = withOn(BLANK[4][0], p => { credit(p, PH * .14, ['designed and', 'developed by'], ['hyveout'], -.03); credit(p, PH * .58, ['assets and', 'scenery by'], ['foolveil'], .02); });
+      SPREADS[4][0] = withOn(BLANK[4][0], p => { credit(p, PH * .09, ['designed and', 'developed by'], ['HYVEOUT'], -.03); credit(p, PH * .47, ['assets by'], ['FOOLVEIL'], .02); credit(p, PH * .74, ['voice acting by'], ['ANNIE'], -.02); });
       if(!gotIt) SPREADS[GIFT][1] = withOn(BLANK[GIFT][1], p => drawGift(p, PW / 2, PH / 2));
       // the last page: the credits, written in under where the bookmark lies (they stay once it is taken)
       const CREDITS = [['designed and developed by', 'hyveout'], ['assets and scenery by', 'foolveil'], ['cutscenes by', 'b1eed0ut and happy'], ['sound design by', 'shadx2']];
@@ -5610,7 +5610,7 @@ const ATTN = (function(){
           fit(role, 8.2); p.fillStyle = 'rgba(70,46,32,.85)'; p.fillText(role, PW / 2, y);      // in the site's font, inked into the paper
           fit(who, 11.5); p.fillStyle = 'rgba(40,22,16,.95)'; p.fillText(who, PW / 2, y + 11); });
         p.restore(); };
-      SPREADS[MARK][1] = withOn(BLANK[MARK][1], p => { credit(p, PH * .3, ['cutscenes by'], ['b1eed0ut', 'and happy'], .03); credit(p, PH * .74, ['sound design by'], ['shadx2'], -.02); if(gotMark) return;
+      SPREADS[MARK][1] = withOn(BLANK[MARK][1], p => { credit(p, PH * .37, ['cutscenes by'], ['B1EED0UT', 'AND HAPPY'], .03); credit(p, PH * .74, ['sound design by'], ['SHADX2'], -.02); if(gotMark) return;
         p.save(); p.translate(MARK_R[0] + MARK_R[2] / 2, MARK_R[1] + MARK_R[3] / 2); p.rotate(.06);
         if(markImg.complete && markImg.naturalWidth){
           const [mx, my, mw, mh] = [-MARK_R[2] / 2, -MARK_R[3] / 2, MARK_R[2], MARK_R[3]];
