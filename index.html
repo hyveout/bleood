@@ -7403,8 +7403,8 @@ const ATTN = (function(){
   // a word in the middle of the screen as you walk in, when something is in your way (the hints)
   function roomHint(){
     if(!root || !root.classList.contains('on') || STATE.epilogue) return;
-    if(roomNow === 'mirror' && !STATE.used.rag && !(STATE.mirror && STATE.mirror.scared)) hintText('mirror', 'The mirror is filthy');
-    else if(roomNow === 'cave' && ROOMS.cave.dark && ROOMS.cave.dark()) hintText('cave', 'The darkness is too much');
+    if(roomNow === 'mirror' && !STATE.used.rag && !(STATE.mirror && STATE.mirror.scared)) hintText('mirror', 'This mirror is dirty, it needs to be wiped down');
+    else if(roomNow === 'cave' && ROOMS.cave.dark && ROOMS.cave.dark()) hintText('cave', 'The darkness is too much, I need a light source');
   }
   // a hint: only words, in the middle of the screen, fading in and out. each one only the first time
   function hintText(key, text){
