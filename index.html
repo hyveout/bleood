@@ -7368,6 +7368,13 @@ const ATTN = (function(){
     if(document.hidden || !window.__KYI_BUTTON) return;
     try{ const a = new Audio(window.__KYI_BUTTON); a.volume = .35; const p = a.play(); if(p && p.catch) p.catch(()=>{}); }catch(e){}
   }
+  // waits until every picture in the room (its background and each thing laid over it) has loaded, then `then` (at most 4 s, so a missing file never holds you in the dark)
+  function whenPics(el, then){
+    let done = false; const fin = ()=>{ if(!done){ done = true; then(); } }, t0 = performance.now();
+    const check = ()=>{ if(done) return; const pics = [...el.querySelectorAll('img')].filter(i => i.getAttribute('src') && getComputedStyle(i).display !== 'none');
+      if(pics.every(i => i.complete) || performance.now() - t0 > 4000) fin(); else setTimeout(check, 60); };
+    check();
+  }
   function toRoom(id){
     { const ft = roomEl && roomEl.querySelector('.field-timer'); if(ft) ft.classList.remove('ready'); }      // the field's clock goes the moment you walk away
     if(fading || !ROOMS[id]) return;
@@ -7379,7 +7386,7 @@ const ATTN = (function(){
       return;
     }
     fading = true; light(null); roomEl.classList.add('dark');
-    setTimeout(()=>{ roomNow = id; pan = 0; if(ROOMS[id].src) roomEl.querySelector('.room-img').src = ROOMS[id].src; glows(); roomLayout(); setTimeout(()=>{ roomEl.classList.remove('dark'); setTimeout(()=> fading = false, 500); }, 120); }, 520);
+    setTimeout(()=>{ roomNow = id; pan = 0; if(ROOMS[id].src) roomEl.querySelector('.room-img').src = ROOMS[id].src; glows(); roomLayout(); whenPics(roomEl, ()=> setTimeout(()=>{ roomEl.classList.remove('dark'); setTimeout(()=> fading = false, 500); }, 120)); }, 520);      // it lights up only once every picture in it is there
   }
   let fullStop = null;
   function fullRoom(){
@@ -7679,8 +7686,7 @@ const ATTN = (function(){
       const veil = document.createElement('div'); veil.className = 'intro-veil'; host.appendChild(veil);
       stopIntro(); start(host);
       let lifted = false; const lift = ()=>{ if(lifted) return; lifted = true; requestAnimationFrame(()=> requestAnimationFrame(()=> veil.classList.add('off'))); setTimeout(()=> veil.remove(), 2200); };
-      const pic = host.querySelector('.room-img'); if(pic && !(pic.complete && pic.naturalWidth)) pic.addEventListener('load', lift, {once: true}); else setTimeout(lift, 120);
-      setTimeout(lift, 900);
+      setTimeout(()=> whenPics(host, lift), 60);      // once everything in the first room is there
     };
     v.addEventListener('ended', go); v.addEventListener('error', go);                       // if it can't play (missing file), straight into the game
     const p = v.play(); if(p && p.catch) p.catch(()=>{ v.muted = true; v.play().catch(go); });  // if sound is refused, play it muted rather than not at all
