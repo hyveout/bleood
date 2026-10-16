@@ -774,6 +774,8 @@ body.mob-full .attn .mob-mask.on{border-color:#f0c868; box-shadow:inset 0 0 0 2p
 .attn .at-room .room-live{position:absolute; inset:0; width:100%; height:100%; pointer-events:none}
 .attn-intro{position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000; z-index:90}   /* game 2's intro film */
 .film-skip{position:absolute; right:max(14px, env(safe-area-inset-right)); bottom:max(14px, env(safe-area-inset-bottom)); z-index:91; font-family:"VCR OSD Mono",var(--type); font-size:.75rem; letter-spacing:.16em; color:rgba(232,227,214,.8); background:rgba(0,0,0,.5); border:1px solid rgba(232,227,214,.35); padding:.6em 1.1em; border-radius:2px; cursor:pointer; opacity:0; transition:opacity .6s; touch-action:manipulation}
+.film-wait{position:absolute; left:0; right:0; top:50%; transform:translateY(-50%); z-index:91; text-align:center; pointer-events:none; font-family:"VCR OSD Mono",var(--type); font-size:clamp(.8rem,2.2cqw,1.1rem); letter-spacing:.4em; padding-left:.4em; color:rgba(232,227,214,.6); text-shadow:0 0 6px #000; opacity:0; transition:opacity .3s}      /* a film waiting for its data */
+.film-wait.on{opacity:1; animation:pgload 1.4s steps(2) infinite}
 .film-skip.on{opacity:.75} .film-skip:hover{opacity:1; border-color:rgba(240,200,104,.7)}      /* a cutscene you have already watched once */
 .attn .at-memory{position:absolute; inset:0; z-index:70; background:#000; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .8s; cursor:pointer}
 .attn .at-memory.on{opacity:1}
@@ -7168,6 +7170,16 @@ const ATTN = (function(){
   // the cutscenes: the first time through you have to watch each one. once you have seen it to the end (on this device), a SKIP CUTSCENE button comes up
   const SEEN = (()=>{ let a = []; try{ a = JSON.parse(localStorage.getItem('bleood_seen') || '[]'); }catch(_){ } return new Set(Array.isArray(a) ? a : []); })();
   function sawFilm(src){ SEEN.add(src); try{ localStorage.setItem('bleood_seen', JSON.stringify([...SEEN])); }catch(_){ } }
+  // a film still waiting for its data (a slow connection): a blinking LOADING in the middle, only after a moment, gone the moment it plays
+  function filmWait(v){
+    const w = document.createElement('div'); w.className = 'film-wait'; w.textContent = 'LOADING'; v.after(w);
+    let t = 0; const show = () => { clearTimeout(t); t = setTimeout(()=> w.isConnected && w.classList.add('on'), 700); }, hide = () => { clearTimeout(t); w.classList.remove('on'); };
+    show();      // (from the start: until the first frame plays)
+    v.addEventListener('waiting', show); v.addEventListener('stalled', () => { if(!v.paused && v.readyState < 3) show(); });
+    v.addEventListener('playing', hide); v.addEventListener('ended', hide); v.addEventListener('error', hide);
+    const orig = w.remove.bind(w); w.remove = () => { clearTimeout(t); orig(); };
+    return w;
+  }
   function skipButton(v, src){
     v.addEventListener('ended', e => { if(!e.__skipped) sawFilm(src); });      // watched to the end: next time it can be skipped
     if(!SEEN.has(src)) return null;
@@ -7191,8 +7203,8 @@ const ATTN = (function(){
     const block = e => { e.preventDefault(); e.stopPropagation(); };                 // nothing behind it can be touched while it plays
     ['pointerdown', 'click', 'touchstart'].forEach(ev => v.addEventListener(ev, block, {passive: false}));
     let over = false, started = false;
-    const skip = skipButton(v, src);
-    const end = ok => { if(over) return; over = true; if(skip) skip.remove(); v.pause(); v.removeAttribute('src'); v.load(); v.remove(); (ok || !fallback ? then : fallback)(); };
+    const skip = skipButton(v, src), wait = filmWait(v);
+    const end = ok => { if(over) return; over = true; if(skip) skip.remove(); wait.remove(); v.pause(); v.removeAttribute('src'); v.load(); v.remove(); (ok || !fallback ? then : fallback)(); };
     v.addEventListener('playing', ()=> started = true);
     v.addEventListener('ended', ()=> end(true)); v.addEventListener('error', ()=> end(started));
     const p = v.play(); if(p && p.catch) p.catch(()=>{ v.muted = true; v.play().catch(()=> end(false)); });   // sound refused: play it muted rather than not at all
@@ -7825,16 +7837,16 @@ const ATTN = (function(){
   const EXTRA_IMGS = ['bleood_epi_forest.jpg', 'porch_rag.webp', 'porch_vhs.webp', 'porch_lamp.webp', 'inside_wall.webp', 'bleood_porch_notrike.webp', 'bleood_field.jpg', 'jumpscare_cat.webp', 'jumpscare_idol.webp'].map(src => { const i = new Image(); i.decoding = 'async'; i.src = src; if(i.decode) i.decode().catch(()=>{}); return i; });
   const INTRO_VIDEO = 'bleood_intro.mp4';      // (new intro, Oct 15; the old one was bleood_game_2_intro.mp4)
   let introEl = null;
-  function stopIntro(){ document.querySelectorAll('.film-skip').forEach(b => b.remove()); if(introEl){ introEl.pause(); introEl.removeAttribute('src'); introEl.load(); introEl.remove(); introEl = null; } }
+  function stopIntro(){ document.querySelectorAll('.film-skip, .film-wait').forEach(b => b.remove()); if(introEl){ introEl.pause(); introEl.removeAttribute('src'); introEl.load(); introEl.remove(); introEl = null; } }
   function startWithIntro(host){
     AMB.unlock();      // (inside the PLAY tap)
     setTimeout(()=>{ MON.ready(); WIPE.ready(); CUT.ready(); sfxPreload(); }, 0);      // (every one-shot sound too: ready to fire instantly)      // her drone and the rag's sound, fetched and ready before they are needed
     document.body.classList.add('attn-playing'); setTimeout(()=> dispatchEvent(new Event('resize')), 50);
     stopIntro();
     const v = introEl = document.createElement('video'); v.className = 'attn-intro intro-film'; v.src = INTRO_VIDEO; v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'auto';
-    host.appendChild(v); const skip = skipButton(v, INTRO_VIDEO);
+    host.appendChild(v); const skip = skipButton(v, INTRO_VIDEO), wait = filmWait(v);
     // into the game: a black veil over it that lifts slowly, once the first room's picture is there (or after a moment, whatever happens)
-    let went = false; const go = ()=>{ if(went || introEl !== v) return; went = true; if(skip) skip.remove();
+    let went = false; const go = ()=>{ if(went || introEl !== v) return; went = true; if(skip) skip.remove(); wait.remove();
       const veil = document.createElement('div'); veil.className = 'intro-veil'; host.appendChild(veil);
       stopIntro(); start(host);
       let lifted = false; const lift = ()=>{ if(lifted) return; lifted = true; requestAnimationFrame(()=> requestAnimationFrame(()=> veil.classList.add('off'))); setTimeout(()=> veil.remove(), 2200); };
