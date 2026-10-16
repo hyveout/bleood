@@ -7171,7 +7171,16 @@ const ATTN = (function(){
     const b = document.createElement('button'); b.type = 'button'; b.className = 'film-skip'; b.textContent = 'SKIP CUTSCENE';
     ['pointerdown', 'touchstart'].forEach(ev => b.addEventListener(ev, e => e.stopPropagation(), {passive: true}));
     b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); b.remove(); const ev = new Event('ended'); ev.__skipped = true; v.dispatchEvent(ev); });
-    v.after(b); setTimeout(()=> b.classList.add('on'), 700); return b;
+    v.after(b); setTimeout(()=> b.classList.add('on'), 700);
+    // right under the picture, in the middle; if the film fills the screen (a phone on its side), in its bottom corner instead
+    const place = () => { if(!b.isConnected) return removeEventListener('resize', place); const P = v.parentElement; if(!P) return;
+      const W = P.clientWidth, H = P.clientHeight, ar = v.videoWidth && v.videoHeight ? v.videoWidth / v.videoHeight : 16 / 9;
+      let vw = W, vh = W / ar; if(vh > H){ vh = H; vw = H * ar; }
+      const below = (H - vh) / 2, bh = b.offsetHeight || 34;
+      if(below >= bh + 24){ b.style.cssText = 'left:50%; right:auto; bottom:auto; transform:translateX(-50%); top:' + Math.round((H + vh) / 2 + 14) + 'px'; }
+      else b.style.cssText = 'right:' + Math.round((W - vw) / 2 + 14) + 'px; bottom:14px; left:auto; top:auto; transform:none'; };
+    place(); v.addEventListener('loadedmetadata', place); addEventListener('resize', place);
+    return b;
   }
   function memoryFilm(src, then, fallback){
     const v = PRIMED[src] || document.createElement('video'); delete PRIMED[src]; v.volume = 1; v.className = 'attn-intro'; if(!v.src) v.src = src; v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'auto';
