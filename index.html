@@ -626,6 +626,8 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .ug-obtain img{width:min(34%,220px); max-height:46%; object-fit:contain; filter:drop-shadow(0 0 18px rgba(255,240,200,.35))}
 .ug-obtain .ob-t{font-family:"VCR OSD Mono",var(--type); font-size:clamp(.9rem,2.6vw,1.5rem); color:#efece1; letter-spacing:.06em; text-align:center; opacity:0; transition:opacity .5s .55s; text-shadow:0 2px 0 #000}
 .ug-obtain.on .ob-t{opacity:1}
+.ug-obtain .ob-d{font-family:"VCR OSD Mono",var(--type); font-size:clamp(.7rem,1.8vw,1rem); color:#c9c3b2; letter-spacing:.08em; text-align:center; margin-top:.5em; opacity:0; transition:opacity .5s .9s; text-shadow:0 2px 0 #000}
+.ug-obtain.on .ob-d{opacity:1}
 .attn .at-slots i{width:clamp(30px,6vw,46px); aspect-ratio:1; border:2px solid #c8963e; background:#10121a; box-shadow:inset 0 0 0 2px #3b0d10}
 .attn .at-slots i.on{pointer-events:auto; cursor:pointer}
 .attn .at-slots i.on:hover{border-color:#ffe2a0}
@@ -778,7 +780,7 @@ body.mob-full .attn .mob-mask.on{border-color:#f0c868; box-shadow:inset 0 0 0 2p
 .attn .at-room[data-room=tunnel], .attn .at-room[data-room=mirror]{--pf:brightness(.8) saturate(.72) sepia(.06)}
 .attn .desk-live{filter:blur(.3px) saturate(.88) sepia(.12)}      /* the desk things: the same soft edge and the cave's warm cast */
 .attn .room-prop.patch{filter:none}
-.attn .room-prop.sharp{filter:var(--pf, none)}      /* the wall pieces and the lamp: the room's grade only, no blur and no live shadow (they blurred and flickered on phones); their shadow is in the picture      /* a piece of the room itself: no grade, no shadow */
+.attn .room-prop.sharp{filter:none}      /* the wall pieces and the lamp: the room's grade only, no blur and no live shadow (they blurred and flickered on phones); their shadow is in the picture      /* a piece of the room itself: no grade, no shadow */
 .attn .room-prop.sway{transform-origin:10.5% 100%; animation:headsway 5s ease-in-out infinite}
 @keyframes headsway{0%,100%{transform:rotate(-1.4deg)} 50%{transform:rotate(1.4deg)}}
 /* the flash-cut montage between scenes */
@@ -7451,6 +7453,12 @@ const ATTN = (function(){
     fullStop = RUN[R.full](box, (o)=>{ const fin = ()=>{ have[R.full] = true; paint(); checkGate(); }; if(o && o.item){ obtain(null, o.at, ()=> paint(), o.item); return; } if(o && o.at) obtain(R.full, o.at, fin); else fin(); }, {full: true, say, busy});
   }
   function liveRoom(){ if(!roomEl) return; const stage = roomEl.querySelector('.room-stage'); if(roomNow === 'forest' && root.classList.contains('on')) LIVE.start(stage); else LIVE.stop(); }
+  // redraw a box of pictures but keep the ones that are still there (same picture, same place): a fresh copy flashes on phones while it decodes
+  function keepPics(box, build){
+    const old = new Map(); box.querySelectorAll('img').forEach(im => { const k = im.getAttribute('src') + '|' + im.style.cssText; (old.get(k) || old.set(k, []).get(k)).push(im); });
+    build();
+    box.querySelectorAll('img').forEach(im => { const l = old.get(im.getAttribute('src') + '|' + im.style.cssText); const o = l && l.shift(); if(!o || o === im) return; o.className = im.className; if(im.dataset.i !== undefined) o.dataset.i = im.dataset.i; im.replaceWith(o); });
+  }
   function glows(){
     if(roomEl) roomEl.dataset.room = roomNow; fieldTimer();
     if(root) root.classList.toggle('ended', !!STATE.epilogue);      // after the end: no boxes
@@ -7458,7 +7466,7 @@ const ATTN = (function(){
     // one glow per spot in this room, placed as a share of the scene so it scales with it
     lit = null; liveRoom(); fullRoom();
     roomDark(); deskLive();
-    roomEl.querySelector('.room-glows').innerHTML = ROOMS[roomNow].spots.map((s, i) => {
+    keepPics(roomEl.querySelector('.room-glows'), ()=>{ roomEl.querySelector('.room-glows').innerHTML = ROOMS[roomNow].spots.map((s, i) => {
       if(s.when && !s.when()) return '';                                       // e.g. the key, once it has been taken
       const key = roomNow + ':' + (s.glow || s.task || s.go || s.talk), G = ROOM_GLOW[key], V = key === 'tunnel:cave' && !STATE.lantern ? null : ROOM_REVEAL[key];      // the dark room shows nothing through its arch until you have a light
       const at = b => 'left:' + (b[0] / 16) + '%;top:' + (b[1] / 12) + '%;width:' + ((b[2] - b[0]) / 16) + '%;height:' + ((b[3] - b[1]) / 12) + '%';
@@ -7469,17 +7477,18 @@ const ATTN = (function(){
              (V ? '<img class="room-reveal' + (shut ? ' faint' : '') + (s.go === 'inside' && !shut ? ' open' : '') + '" data-i="' + i + '" alt="" src="' + V.src + '" style="' + at(V.box) + '">' : '') +
              (G ? '<img class="room-glow" data-i="' + i + '" alt="" src="' + G.src + '" style="' + at(G.box) + '">' : '');
     }).join('');
-    paintProps();
+    paintProps(); });
   }
   // things in the room that are not tied to a spot (the cat in the tunnel, her head in the pot): redrawn whenever the room or what you have done changes
   function paintProps(){
     if(!roomEl || !ROOMS[roomNow]) return; const box = roomEl.querySelector('.room-glows');
+    keepPics(box, ()=>{
     box.querySelectorAll('.room-lprop').forEach(p => p.remove());
     (ROOMS[roomNow].props || []).filter(p => !p.when || p.when()).forEach(p => {
       const im = document.createElement('img'); im.className = 'room-prop room-lprop' + (p.cls ? ' ' + p.cls : ''); im.alt = ''; im.src = p.srcFn ? p.srcFn() : p.src;
       im.style.cssText = 'left:' + (p.box[0] / 16) + '%;top:' + (p.box[1] / 12) + '%;width:' + ((p.box[2] - p.box[0]) / 16) + '%;height:' + ((p.box[3] - p.box[1]) / 12) + '%';
       box.insertBefore(im, box.firstChild);                                 // under the hover glows
-    });
+    }); });
   }
   function light(s){
     const i = s ? ROOMS[roomNow].spots.indexOf(s) : -1; if(i === lit) return; lit = i;
@@ -7647,7 +7656,7 @@ const ATTN = (function(){
     if(jk && !scared){ jumpscare(jk, ()=> obtain(id, at, then, item, true)); return; }
     const A = item ? ITEMS[item] : ARTIFACT[id], el = document.createElement('div'); el.className = 'ug-obtain';
     const isBit = item === 'bit', icon = isBit ? KEY_SRC : A.icon, label = isBit ? 'KEY FRAGMENT ' + Math.min(STATE.bits.length, KEY_BITS.length) + '/' + KEY_BITS.length + ' COLLECTED' : (item ? 'OBTAINED' : 'ARTIFACT OBTAINED') + (A.name ? ': ' + A.name : '');
-    el.innerHTML = (icon ? '<img src="' + icon + '" alt="">' : '') + '<div class="ob-t">' + label + '</div>';
+    el.innerHTML = (icon ? '<img src="' + icon + '" alt="">' : '') + '<div class="ob-t">' + label + '</div>' + (item === 'mask' ? '<div class="ob-d">' + (matchMedia('(hover: none)').matches ? 'TAP THE MASK TO PUT IT ON' : 'PRESS E OR CLICK THE MASK TO PUT IT ON') + '</div>' : '');
     (popup || roomEl).appendChild(el);
     // while it is being handed to you, nothing else can be touched (no spam clicks starting things twice)
     const freeze = document.createElement('div'); freeze.className = 'ug-freeze'; (root || document.body).appendChild(freeze);
@@ -7977,6 +7986,12 @@ const ATTN = (function(){
   }, 100);
   // ---------- DEVELOPER: Shift + D. during a film or a memory: skip it. otherwise: the house opens (and you get the mask if you don't have it) ----------
   addEventListener('keydown', e => { if(e.shiftKey && (e.key === 'E' || e.key === 'e') && root && root.classList.contains('on') && !(e.target && e.target.matches && e.target.matches('input, textarea'))){ TASKS.forEach(t => { have[t.id] = true; }); Object.keys(STATE.used).forEach(k => STATE.used[k] = true); ['rag', 'key', 'shard', 'can', 'lantern', 'knob', 'cat', 'vhs'].forEach(k => STATE[k] = true); STATE.watered = true; STATE.cutOpen = true; STATE.bookOpen = true; STATE.bits = KEY_BITS.slice(); epilogue(); tellNote('DEV: THE END'); } });      /* DEVELOPER: Shift + E: straight to the end */
+  addEventListener('keydown', e => {      // E: put the mask on / take it off
+    if(e.shiftKey || e.ctrlKey || e.metaKey || e.altKey || e.repeat || (e.key !== 'e' && e.key !== 'E')) return;
+    if(e.target && e.target.matches && e.target.matches('input, textarea')) return;
+    if(!root || !root.classList.contains('on') || !STATE.mask || STATE.epilogue || document.querySelector('.ug-obtain, .at-memory, .attn-intro')) return;
+    e.preventDefault(); wearMask(!STATE.masked);
+  });
   addEventListener('keydown', e => {
     if(!(e.shiftKey && (e.key === 'D' || e.key === 'd'))) return;
     if(e.target && e.target.matches && e.target.matches('input, textarea')) return;
