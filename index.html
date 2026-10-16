@@ -7729,10 +7729,12 @@ const ATTN = (function(){
   })();
   // her sound: a low drone that loops while she is in the room, louder and a little higher the closer she is to getting you (its own file)
   const MON = (function(){
-    let buf = null, loading = null, src = null, g = null, want = false;
+    let buf = null, loading = null, src = null, g = null, want = false, sting = null;
+    const get = (c, f) => fetch(f).then(r => r.ok ? r.arrayBuffer() : Promise.reject()).then(a => new Promise((ok, no) => c.decodeAudioData(a, ok, no))).catch(()=> null);
     function ready(){ const c = AMB.ctx(); if(!c) return Promise.resolve(null); if(buf) return Promise.resolve(buf);
-      return loading || (loading = fetch('sfx_monster.mp3').then(r => r.ok ? r.arrayBuffer() : Promise.reject()).then(a => new Promise((ok, no) => c.decodeAudioData(a, ok, no))).then(b => buf = b).catch(()=> null)); }
-    function start(){ want = true; ready().then(b => { const c = AMB.ctx(); if(!b || !c || !want || src) return; if(c.state === 'suspended') c.resume().catch(()=>{});
+      return loading || (loading = Promise.all([get(c, 'sfx_monster.mp3'), get(c, 'sfx_sting.mp3')]).then(([b, st]) => { sting = st; return buf = b; })); }
+    function chime(){ const c = AMB.ctx(); if(!c || !sting) return; const s = c.createBufferSource(), v = c.createGain(); v.gain.value = .9; s.buffer = sting; s.connect(v); v.connect(c.destination); s.start(); }      // the sting, once, the moment she shows herself
+    function start(){ want = true; ready().then(b => { chime(); const c = AMB.ctx(); if(!b || !c || !want || src) return; if(c.state === 'suspended') c.resume().catch(()=>{});
       g = c.createGain(); g.gain.value = 0; g.connect(c.destination);
       src = c.createBufferSource(); src.buffer = b; src.loop = true; src.loopStart = .05; src.loopEnd = b.duration - .05; src.connect(g); src.start(0, .05);      // (the ends trimmed: no gap where it loops)
       g.gain.setTargetAtTime(.35, c.currentTime, .08); }); }
