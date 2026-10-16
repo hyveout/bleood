@@ -762,6 +762,9 @@ body.mob-full .attn .mob-mask.on{border-color:#f0c868; box-shadow:inset 0 0 0 2p
 .attn .at-room{position:absolute; inset:0; z-index:3; overflow:hidden; background:#000; touch-action:none}
 .attn .room-curtain{position:absolute; inset:0; z-index:5; background:#000; opacity:0; pointer-events:none; transition:opacity .5s ease}
 .attn .at-room.dark .room-curtain{opacity:1}
+.attn .at-room.slowfade .room-curtain{transition:opacity 2.6s ease}      /* after the end: the forest comes up slowly out of black */
+.attn.ended video.attn-intro.color-film{filter:none}
+.attn .at-room.dark .field-timer{opacity:0 !important}      /* the clock waits for the room to come up */      /* the mirror's film keeps its colour */
 .attn .at-room .room-stage{position:absolute; pointer-events:none}
 /* the scary grade: deeper blacks, a bit more contrast, a little less colour (reds still read). one place to tune it; delete these two lines to turn it off */
 .attn .at-room .room-stage{filter:var(--grade, none)}
@@ -8076,7 +8079,9 @@ const ATTN = (function(){
   function epilogue(){
     closeTask(); wearMask(false); girlGone(true);
     STATE.epilogue = true; STATE.mask = true; STATE.metHer = true; STATE.mirror = {scared: true, glass: true}; STATE.gate = GATES.length; STATE.key = true;      // everything stays as you left it
+    if(roomEl){ const cu = roomEl.querySelector('.room-curtain'); cu.style.transition = 'none'; roomEl.classList.add('dark'); void cu.offsetWidth; cu.style.transition = ''; roomEl.classList.add('slowfade'); fading = true; }      // black at once: it lifts slowly once the forest is really there, then the way on is named
     roomNow = 'forest'; pan = 0; talking = null; if(roomEl){ roomEl.querySelector('.room-talk').classList.remove('on'); roomEl.querySelector('.room-img').src = ROOMS.forest.src;      /* after the end: the forest, the idol with the trike, the clock above */ glows(); paintProps(); roomLayout(); liveRoom(); } paint();
+    const t0 = performance.now(); if(roomEl) setTimeout(()=> whenPics(roomEl, ()=> setTimeout(()=>{ roomEl.classList.remove('dark'); setTimeout(()=>{ roomEl.classList.remove('slowfade'); fading = false; hintText(null, 'Enter the cave to proceed'); }, 2700); }, Math.max(400, 1400 - (performance.now() - t0)))), 120);      // (black for at least a moment and a half)
   }
   // the field's clock: down to the next Halloween, at the top of the screen (and a way to start again)
   let fieldClock = null;
@@ -8106,6 +8111,12 @@ const ATTN = (function(){
     el.querySelector('.cd-again').addEventListener('click', () => { el.classList.remove('on'); setTimeout(()=> el.remove(), 600); if(roomEl){ glows(); paintProps(); liveRoom(); } });
   }
   function enterMirror(){
+    if(!root) return;
+    const after = () => mirrorEnd();
+    memoryFilm(MIRROR_FILM, after, after); const fv = root.querySelector('video.attn-intro:last-of-type'); if(fv) fv.classList.add('color-film');      // her film, in colour, then the end
+  }
+  const MIRROR_FILM = 'bleood_mirror_film.mp4';
+  function mirrorEnd(){
     if(!root) return; const el = document.createElement('div'); el.className = 'at-countdown at-entered';
     el.innerHTML = '<button type="button" class="cd-again">PLAY AGAIN</button>'; root.appendChild(el); requestAnimationFrame(()=> el.classList.add('on'));
     ['pointerdown', 'pointerup', 'click'].forEach(ev => el.addEventListener(ev, e => e.stopPropagation()));
