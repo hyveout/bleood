@@ -7804,7 +7804,7 @@ const ATTN = (function(){
   // ---------- the mask: the captured man gives it to you. she comes for you in the rooms; wear it within two seconds or she takes you ----------
   let maskView = null, girlEv = null, girlNext = 0;
   const GIRL_GRACE = 3000;      // after a game or an item closes while she is there: this long to get the mask on
-  const GIRL_EVERY = 15000;      // how long between her visits (TEMPORARY, Oct 15: every 15 s for testing; it was 30-70 s, and 20-45 s for the first)
+  const GIRL_EVERY = 30000;      // how long between her visits: 30 s (Oct 16, doubled from the 15 s test value; it was once 30-70 s, and 20-45 s for the first)
   function giveMask(){
     if(STATE.mask) return; GIRL.load();
     STATE.mask = true; obtain(null, [innerWidth / 2, innerHeight / 2], ()=>{ paintInv(); girlNext = performance.now() + GIRL_EVERY; }, 'mask');
