@@ -6626,8 +6626,11 @@ const ATTN = (function(){
     if(!want){ if(deskLiveStop){ deskLiveStop(); deskLiveStop = null; } if(deskLiveEl){ deskLiveEl.remove(); deskLiveEl = null; } return; }
     if(deskLiveEl && deskLiveEl.isConnected) return;
     const W = 1110, H = 600, stage = roomEl.querySelector('.room-stage');
-    const cv = deskLiveEl = document.createElement('canvas'); cv.width = W; cv.height = H; cv.className = 'desk-live';
-    const b = DESK_RECT; cv.style.cssText = 'left:' + (b[0] / 16) + '%;top:' + (b[1] / 12) + '%;width:' + ((b[2] - b[0]) / 16) + '%;height:' + ((b[3] - b[1]) / 12) + '%';
+    // the canvas reaches past the desk on every side (MT/ML/MR/MB, in desk pixels), so a thing lifted off its edge is never cut off; inside, everything is still in desk pixels
+    const MT = 320, ML = 250, MR = 250, MB = 300;
+    const cv = deskLiveEl = document.createElement('canvas'); cv.width = W + ML + MR; cv.height = H + MT + MB; cv.className = 'desk-live';
+    const b = DESK_RECT, kx = (b[2] - b[0]) / W, ky = (b[3] - b[1]) / H, B = [b[0] - ML * kx, b[1] - MT * ky, b[2] + MR * kx, b[3] + MB * ky];
+    cv.style.cssText = 'left:' + (B[0] / 16) + '%;top:' + (B[1] / 12) + '%;width:' + ((B[2] - B[0]) / 16) + '%;height:' + ((B[3] - B[1]) / 12) + '%';
     stage.querySelector('.room-glows').after(cv);
     const g = cv.getContext('2d'), img = s => { const i = new Image(); i.src = s; return i; };
     const pics = {}; Object.keys(DESK_THINGS).forEach(k => { pics[k] = img(DESK_THINGS[k].src); });
@@ -6641,7 +6644,7 @@ const ATTN = (function(){
     const here = k => !!DESK_THINGS[k] && !(DESK_THINGS[k].when && !DESK_THINGS[k].when()) && !(KEY_BITS.includes(k) && (STATE.key || STATE.bits.includes(k))) && !(k === 'knob' && STATE.knob);
     const hit = (k, x, y) => { const A = alphaOf[k], lx = Math.round(x - D.pos[k][0]), ly = Math.round(y - D.pos[k][1]); return lx >= 0 && ly >= 0 && lx < A.w && ly < A.h && A.a[(ly * A.w + lx) * 4 + 3] > 60; };
     const topAt = (x, y) => { for(let i = D.z.length - 1; i >= 0; i--){ const k = D.z[i]; if(here(k) && hit(k, x, y)) return k; } return null; };
-    const toPic = e => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * W, (e.clientY - r.top) / r.height * H]; };
+    const toPic = e => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * cv.width - ML, (e.clientY - r.top) / r.height * cv.height - MT]; };
     const off = () => !!(popup || talking || (ask && ask.isConnected) || (ROOMS.cave.dark && ROOMS.cave.dark()) || document.querySelector('.ug-freeze, .at-memory'));
     // what is under the pointer: a thing on the desk, or (close enough) a key piece / the knob that shows
     function pick(e){
@@ -6658,7 +6661,7 @@ const ATTN = (function(){
     }
     function draw(now){
       if(!ready()) return; if(!built) build();
-      g.clearRect(0, 0, W, H);
+      g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height); g.setTransform(1, 0, 0, 1, ML, MT);
       D.z.forEach(k => {
         if(!here(k)) return;
         if(!(drag && drag.k === k) && !KEY_BITS.includes(k) && k !== 'knob'){ const A = alphaOf[k], cx = D.pos[k][0] + A.w / 2, cy = D.pos[k][1] + A.h * .97, rx = A.w * .46, ry = Math.max(5, A.h * .045);      // where it touches the desk: a soft dark patch, so it sits on it
