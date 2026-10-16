@@ -799,7 +799,9 @@ body.mob-full .attn .mob-mask.on{border-color:#f0c868; box-shadow:inset 0 0 0 2p
 .attn .room-glow{position:absolute; opacity:0; pointer-events:none; mix-blend-mode:screen; transition:opacity .35s; z-index:3;
   filter:blur(2.5px)}   /* a faint warm light round the edge of the thing (a wide blur washed everything out in a grey haze) */
 .attn .room-glow.on{opacity:1; animation:roomglow 2.4s ease-in-out infinite}
-@keyframes roomglow{0%,100%{opacity:.12} 50%{opacity:.26}}   /* very faint on purpose: things should be hard to spot */
+@keyframes roomglow{0%,100%{opacity:.12} 50%{opacity:.26}}
+@media (hover: none), (pointer: coarse){ .attn .room-glow.way:not(.on){animation:wayglow 3.8s ease-in-out infinite} }      /* phones: the house and the cave breathe faintly, so you can see where you can go */
+@keyframes wayglow{0%,100%{opacity:.04} 50%{opacity:.26}}   /* very faint on purpose: things should be hard to spot */
 .attn .room-back{position:absolute; left:50%; transform:translateX(-50%); bottom:calc(16px + clamp(30px,6vw,46px)); z-index:12; cursor:pointer; padding:6px 14px; border:0; background:none;
   font-family:"VCR OSD Mono",var(--type); font-size:12px; letter-spacing:.32em; color:#e6dcc4; text-shadow:0 0 6px rgba(0,0,0,.9), 0 0 2px #000; touch-action:manipulation; -webkit-tap-highlight-color:transparent}       /* phones, in the cave rooms and inside the house: GO BACK, just above the artifacts */
 .attn .at-room.in-task .room-back{visibility:hidden}
@@ -7500,7 +7502,7 @@ const ATTN = (function(){
              (s.shine ? '<i class="room-shine" style="left:' + (s.shine[0] / 16) + '%;top:' + (s.shine[1] / 12) + '%"></i>' : '') +
              (!s.shine && s.task && RUN[s.task] && ARTIFACT[s.task] && !have[s.task] && !STATE.epilogue ? '<i class="room-shine faint" style="left:' + ((s.box[0] + s.box[2]) / 32) + '%;top:' + ((s.box[1] + s.box[3]) / 24) + '%;animation-delay:-' + (i * .83 % 2.4).toFixed(2) + 's"></i>' : '') +      // a fainter glint on each game you have not finished yet
              (V ? '<img class="room-reveal' + (shut ? ' faint' : '') + (s.go === 'inside' && !shut ? ' open' : '') + '" data-i="' + i + '" alt="" src="' + V.src + '" style="' + at(V.box) + '">' : '') +
-             (G ? '<img class="room-glow" data-i="' + i + '" alt="" src="' + G.src + '" style="' + at(G.box) + '">' : '');
+             (G ? '<img class="room-glow' + (roomNow === 'forest' && s.go ? ' way' : '') + '" data-i="' + i + '" alt="" src="' + G.src + '" style="' + at(G.box) + '">' : '');
     }).join('');
     paintProps(); });
   }
