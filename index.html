@@ -7613,7 +7613,7 @@ const ATTN = (function(){
       im.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(.12)';
       void im.offsetWidth; im.style.transition = 'transform .9s cubic-bezier(.2,.85,.25,1)'; im.style.transform = 'none';
     }
-    requestAnimationFrame(()=> el.classList.add('on')); sfx(item ? 'pick' : 'artifact');      // an artifact has its own sound
+    requestAnimationFrame(()=> el.classList.add('on')); sfx(item && item !== 'mask' ? 'pick' : 'artifact');      // an artifact (and the mask) has its own sound
     setTimeout(()=>{ el.classList.add('off'); }, 2400);
     setTimeout(()=>{ el.remove(); freeze.remove(); sfx('put'); then(); }, 2900);
   }
