@@ -7575,12 +7575,13 @@ const ATTN = (function(){
   // jumpscares: the cat's and the idol's heads fill the screen, eyes gone black, just before they are handed to you
   const JUMPSCARE = {cat: 'jumpscare_cat.webp', idol: 'jumpscare_idol.webp'};
   Object.values(JUMPSCARE).forEach(src => { const im = new Image(); im.src = src; });      // ready before it is needed
+  const SCREAM_ON = false;      // the loud scream on the jumpscares: off for now (user, Oct 15). true brings it back
   const SCREAM_VOL = .5;      // the scream is clipped flat at full level: half volume is still by far the loudest thing in the game
   function jumpscare(k, then){
     const el = document.createElement('div'); el.className = 'at-scare'; el.innerHTML = '<i style="background-image:url(\'' + JUMPSCARE[k] + '\')"></i>';
     ['pointerdown', 'pointerup', 'click', 'touchstart'].forEach(ev => el.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); }, {passive: false}));
     (root || document.body).appendChild(el);      // just a still frame, all at once (no zoom, no shake)
-    sfx(SFX[k + 'scream'] ? k + 'scream' : 'scream', SCREAM_VOL);      // (a temporary scream for all of them, until each gets its own)
+    if(SCREAM_ON) sfx(SFX[k + 'scream'] ? k + 'scream' : 'scream', SCREAM_VOL);      // (a temporary scream for all of them, until each gets its own)
     setTimeout(()=>{ el.remove(); then(); }, 1250);
   }
   function obtain(id, at, then, item, scared){
@@ -7859,7 +7860,7 @@ const ATTN = (function(){
     girlNext = performance.now() + GIRL_EVERY;
   }
   function scare(){
-    sfx('scream', SCREAM_VOL);      // she got you
+    if(SCREAM_ON) sfx('scream', SCREAM_VOL);      // she got you
     const ev = girlEv; girlGone(true); girlNext = performance.now() + GIRL_EVERY;
     if(!root) return;
     const cv = document.createElement('canvas'), r = root.getBoundingClientRect(), cw = Math.min(800, Math.round(r.width)), ch = Math.round(cw * r.height / Math.max(1, r.width));
