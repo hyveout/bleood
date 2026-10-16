@@ -672,7 +672,7 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .attn .at-inv .at-mask.on{border-color:#f0c868; box-shadow:inset 0 0 0 2px #3b0d10, 0 0 10px rgba(240,200,104,.6)}
 .attn .mask-view{position:absolute; inset:0; width:100%; height:100%; z-index:6; opacity:0; transition:opacity .22s; cursor:default; touch-action:none}   /* wearing it: only the eye holes to see through */   /* wearing it: only the eye holes to see through */
 .attn .mask-view.on{opacity:1}
-.attn .room-girl{position:absolute; bottom:4%; height:var(--gh, 60%); translate:-50% 0; transform-origin:50% 100%; z-index:4; pointer-events:none; opacity:0; filter:brightness(.8) contrast(1.1); transition:opacity .25s, height 2.4s cubic-bezier(.5,0,.9,.6);
+.attn .room-girl{position:absolute; bottom:4%; height:var(--gh, 60%); translate:-50% 0; transform-origin:50% 100%; z-index:6; pointer-events:none; opacity:0; filter:brightness(.8) contrast(1.1); transition:opacity .25s, height 2.4s cubic-bezier(.5,0,.9,.6);
   animation:girlsway 3.3s ease-in-out infinite, girlbreathe 2.1s ease-in-out infinite, girltwitch 2.9s linear infinite}
 .attn .room-girl.on{opacity:.95; height:calc(var(--gh, 60%) * 1.15)}      /* she creeps closer the longer she stands there */
 .attn .room-girl{aspect-ratio:1100/733}
@@ -683,7 +683,7 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .attn .room-girl .rg-arm.r{transform-origin:56.2% 35.7%; animation:armsr 2.3s ease-in-out infinite}
 @keyframes armsl{0%,100%{rotate:0deg} 22%{rotate:-13deg} 45%{rotate:8deg} 60%{rotate:-4deg} 62%{rotate:11deg} 65%{rotate:2deg} 82%{rotate:-9deg}}      /* reaching, slowly, with a jerk now and then */
 @keyframes armsr{0%,100%{rotate:0deg} 28%{rotate:14deg} 50%{rotate:-7deg} 70%{rotate:5deg} 72%{rotate:-12deg} 75%{rotate:-2deg} 90%{rotate:9deg}}
-.attn .room-girl.deep{z-index:1; filter:brightness(.62) contrast(1.15)}      /* further in: behind things, darker */
+.attn .room-girl.deep{filter:brightness(.62) contrast(1.15)}      /* further in: darker (but never behind anything) */
 .attn .room-occ{position:absolute; inset:0; width:100%; height:100%; z-index:1; pointer-events:none}      /* a piece of the room itself, laid back over her so she stands behind it */
 /* she is never quite still: a slow sway from the feet, shallow breathing, and now and then a jerk of the head and shoulders */
 @keyframes girlsway{0%,100%{rotate:-1.6deg} 50%{rotate:1.8deg}}
@@ -7844,17 +7844,13 @@ const ATTN = (function(){
       l: mk(g => { path(g, L); g.clip(); g.drawImage(im, 0, 0); }), r: mk(g => { path(g, R); g.clip(); g.drawImage(im, 0, 0); })};
     return girlParts;
   }
+  // where she can stand: never behind anything (user, Oct 15: nothing in the room may cover her). far back only where nothing is in front of her
+  // (the old hiding spots behind the gate posts, the paper doors, the post, the iron maiden, the bench and the desk are gone; see keyorig/template_before_girl_uncovered.html)
   const GIRL_SPOTS = {
-    forest: [{x: 230, b: 38, h: 22, deep: true, occ: [[143, 195, 172, 392], [278, 195, 306, 392]]},      // far off, between the shrine gate's posts
-             {x: 625, b: 44, h: 22, deep: true}, {front: true}, {front: true}],                   // in the cave mouth across the clearing
-    house:  [{x: 310, b: 33, h: 52, deep: true, occ: [[165, 92, 462, 410, .5]]},             // behind the paper doors, a shape through the glass
-             {x: 735, b: 12, h: 56, deep: true, occ: [[638, 0, 670, 560]]},                    // down the side of the house, past the post
-             {front: true}],
-    inside: [{x: 333, b: 22, h: 44, deep: true, occ: [[198, 196, 268, 472], [342, 196, 410, 472]]},      // in the iron maiden, between its doors
-             {x: 560, b: 33, h: 40, deep: true, occ: [[412, 384, 702, 472]]},                  // behind the bench
-             {front: true}],
-    cave:   [{x: 0, b: 20, h: 92, deep: true, occ: [[0, 326, 800, 600]]},                    // standing behind the desk (x: anywhere)
-             {front: true}],
+    forest: [{x: 625, b: 44, h: 22, deep: true}, {front: true}, {front: true}],                   // in the cave mouth across the clearing
+    house:  [{front: true}],
+    inside: [{front: true}],
+    cave:   [{front: true}],
     tunnel: [{x: 268, b: 46, h: 30, deep: true}, {x: 538, b: 46, h: 30, deep: true},          // far back in either archway
              {front: true}]
   };
