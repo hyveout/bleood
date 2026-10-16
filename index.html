@@ -7536,7 +7536,7 @@ const ATTN = (function(){
         return;
       }
       light(null); if(s.go && roomNow === 'forest' && !STATE.mask && !STATE.epilogue){ roomTalk(null, {lines: ['wait...'], auto: 1200}); return; }      // he won't let you go without it
-      if(s.go) toRoom(s.go); else if(s.talk && s.talk === 'doll' && TASKS.every(t => have[t.id])) askYesNo('GIVE ARTIFACTS?', ()=> memoryFilm('bleood_final_cutscene.mp4', ()=> epilogue(), ()=> memory(END_LINES, ()=> epilogue()))); else if(s.talk === 'doll' && !STATE.mask) roomTalk(null, {lines: FIRST_TALK, then: giveMask}); else if(s.talk) roomTalk(s.talk); else if(s.task && RUN[s.task]){ if(gated() && s.task !== 'poster' && s.task !== 'note'){ gateNote(); return; } openTask(s.task); }   // (all seven found: the trapped man asks for them back; after her last words a new game starts)
+      if(s.go) toRoom(s.go); else if(s.talk && s.talk === 'doll' && TASKS.every(t => have[t.id])) askYesNo('GIVE ARTIFACTS?', ()=> memoryFilm('bleood_final_cutscene.mp4', ()=> epilogue(), ()=> memory(END_LINES, ()=> epilogue()))); else if(s.talk === 'doll' && !STATE.mask){ sfx('tick', .9); roomTalk(null, {lines: FIRST_TALK, then: giveMask}); } else if(s.talk){ sfx('tick', .9); roomTalk(s.talk); } else if(s.task && RUN[s.task]){ if(gated() && s.task !== 'poster' && s.task !== 'note'){ gateNote(); return; } openTask(s.task); }   // (all seven found: the trapped man asks for them back; after her last words a new game starts)
     });
     addEventListener('resize', ()=>{ if(root.classList.contains('on')) roomLayout(); });
   }
@@ -7775,7 +7775,7 @@ const ATTN = (function(){
         if(roomNow === 'forest' && !popup){                                // in front of him: he tells you what it is
           const word = ARTIFACT_WORD[s.dataset.art] || '...';
           if(talking && talking.close) talking.close();
-          roomTalk(null, {lines: [ARTIFACT_QUOTE[word] || '...']});      // only its quote (the sin is not named)
+          sfx('tick', .9); roomTalk(null, {lines: [ARTIFACT_QUOTE[word] || '...']});      // only its quote (the sin is not named)
         } else tellNote('RETURN TO THE CAPTURED MAN TO LEARN MORE');
       });
       root.querySelector('.at-slots').addEventListener('pointerdown', e=>{ if(e.target.closest('i.on')) e.stopPropagation(); });
