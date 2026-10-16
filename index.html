@@ -1183,6 +1183,7 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 @media (pointer:coarse) and (orientation:landscape) and (max-height:540px){
   body.attn-playing .crt{position:fixed !important; inset:0 !important; width:100vw !important; height:100vh !important; height:100dvh !important; max-width:none !important; margin:0 !important; aspect-ratio:auto !important; border-radius:0 !important; z-index:9000}
   body.attn-playing .home-link{visibility:hidden}      /* (turn the phone upright again to get back to the site) */
+  body.attn-playing #grain{z-index:9500}      /* the site's film grain stays over the game when it fills the phone */
 }
 
 /* narrower windows get a squarer tube, phones a tall one; none taller than the window */
@@ -7677,6 +7678,7 @@ const ATTN = (function(){
   let introEl = null;
   function stopIntro(){ if(introEl){ introEl.pause(); introEl.removeAttribute('src'); introEl.load(); introEl.remove(); introEl = null; } }
   function startWithIntro(host){
+    AMB.unlock();      // (inside the PLAY tap)
     document.body.classList.add('attn-playing'); setTimeout(()=> dispatchEvent(new Event('resize')), 50);
     stopIntro();
     const v = introEl = document.createElement('video'); v.className = 'attn-intro intro-film'; v.src = INTRO_VIDEO; v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'auto';
@@ -7712,8 +7714,17 @@ const ATTN = (function(){
     function level(v, slow){ if(v === lastV && !slow) return; lastV = v; want = v;      // (slow: a long fade, e.g. the fade-in at the start)
       if(gain && ctx){ const t = ctx.currentTime; gain.gain.cancelScheduledValues(t); gain.gain.setValueAtTime(gain.gain.value, t); gain.gain.setTargetAtTime(v, t, slow || .35); }
       if(el){ const from = el.volume, t0 = performance.now(), dur = (slow || .35) * 3000; const step = ()=>{ if(!el || want !== v) return; const k = Math.min(1, (performance.now() - t0) / dur); el.volume = from + (v - from) * k; if(k < 1) requestAnimationFrame(step); }; step(); } }
+    // phones only let sound start inside a tap: this runs in the PLAY tap, so the ambience can come in later (after the intro).
+    // on iPhone it also asks to play like media, so the silent switch doesn't mute it
+    function unlock(){
+      try{ if(navigator.audioSession) navigator.audioSession.type = 'playback'; }catch(_){ }
+      load(); if(!ctx) return;
+      if(ctx.state === 'suspended') ctx.resume().catch(()=>{});
+      try{ const b = ctx.createBuffer(1, 1, 22050), s = ctx.createBufferSource(); s.buffer = b; s.connect(ctx.destination); s.start(0); }catch(_){ }
+    }
     function end(){ lastV = -1; level(0); setTimeout(()=>{ if(want) return; if(src){ try{ src.stop(); }catch(_){ } src = null; } if(el){ el.pause(); el = null; } }, 1500); }
-    return {begin, level, end, VOL};
+    ['pointerdown', 'touchend'].forEach(ev => document.addEventListener(ev, ()=>{ if(ctx && ctx.state !== 'running' && want) ctx.resume().catch(()=>{}); }, {passive: true}));      // a phone that paused it (another app, the lock screen): any tap brings it back
+    return {begin, level, end, unlock, VOL};
   })();
   function start(host){
     document.body.classList.add('attn-playing'); setTimeout(()=> dispatchEvent(new Event('resize')), 50);
