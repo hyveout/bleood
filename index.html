@@ -7818,7 +7818,7 @@ const ATTN = (function(){
     if(!on && girlEv && girlEv.safeAt) scare();                          // took it off while she was still there
   }
   const girlMayCome = ()=> root && root.classList.contains('on') && roomEl && STATE.mask && STATE.mirror && STATE.mirror.scared && !popup && !talking && !(ask && ask.isConnected) &&
-    roomNow !== 'mirror' && !fading && !document.hidden && !document.querySelector('.at-memory, .attn-intro, .ug-obtain, .ug-freeze') && !gated() && !STATE.epilogue && GIRL.ready();      /* never while she is asking for you (the 4th artifact) */
+    roomNow !== 'mirror' && !(ROOMS[roomNow] && ROOMS[roomNow].dark && ROOMS[roomNow].dark()) && !fading && !document.hidden && !document.querySelector('.at-memory, .attn-intro, .ug-obtain, .ug-freeze') && !gated() && !STATE.epilogue && GIRL.ready();      /* never while she is asking for you (the 4th artifact) */
   // her arms, cut from her picture once (1100 x 733): the body without them, and each side's pair, to turn at the shoulders
   let girlParts = null, girlIm = null;
   function girlLayers(){
