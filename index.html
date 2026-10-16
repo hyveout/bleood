@@ -5901,7 +5901,7 @@ const ATTN = (function(){
     const mirror = img(MIRROR_SRC), glassImg = img(GLASS_SRC), face = img(HEAD_SRC), cave = img(CAVE_SRC);
     // the fog: its own layer, the size of the mirror, that your finger wipes away
     const fog = document.createElement('canvas'); fog.width = MW; fog.height = MH; const fg = fog.getContext('2d');
-    let fogReady = false, clear = 0, revealAt = 0, giftAt = 0, gotIt = false, last = null, herAt = 0, hoverHer = false;
+    let fogReady = false, clear = 0, revealAt = 0, giftAt = 0, gotIt = false, last = null, herAt = 0, hoverHer = false, lunged = false;
     function makeFog(){
       fg.fillStyle = 'rgba(176,186,200,.93)';      /* cold breath on cold glass */ fg.fillRect(0, 0, MW, MH);
       for(let i = 0; i < 260; i++){ fg.fillStyle = 'rgba(235,238,230,' + (.2 + Math.random() * .4) + ')'; fg.beginPath(); fg.arc(Math.random() * MW, Math.random() * MH, .6 + Math.random() * 1.6, 0, Math.PI * 2); fg.fill(); }
@@ -5951,7 +5951,7 @@ const ATTN = (function(){
       const d = fg.getImageData(0, 0, MW, MH).data, m = glassMask; let tot = 0, cl = 0;
       for(let i = 0; i < m.length; i += 7){ if(m[i]){ tot++; if(d[i * 4 + 3] < 60) cl++; } }
       clear = tot ? cl / tot : 0;
-      if(clear > .9){ revealAt = now; talk = null; scareAt = now + 1000 * (.45 + 11 * .045 + .2 + .7); giftAt = scareAt + 2400; say('there is someone in the glass'); }
+      if(clear > .9){ MON.start(.75); revealAt = now; talk = null; scareAt = now + 1000 * (.45 + 11 * .045 + .2 + .7); giftAt = scareAt + 2400; say('there is someone in the glass'); }
       else if(clear > .08) say(clear > .6 ? 'almost clear' : 'keep wiping');
     }
     let glassMask = null;
@@ -6021,6 +6021,7 @@ const ATTN = (function(){
         const k = (now - scareAt) / 1000;
         if(k >= .42 && k < 1.32){
           // her head, at your face: it rushes in, burning eyes, and the screen strobes red and black like it does in Living
+          if(!lunged){ lunged = true; MON.stop(true); sfx('girlscream', .85); }      // she is at your face: the drone cuts, her scream
           const h = GIRL.lunge((k - .42) / .26, now / 1000);
           g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
           if(h) g.drawImage(h, 0, 0);
@@ -6059,7 +6060,7 @@ const ATTN = (function(){
       if(down){ const [x, y] = toScene(e); wipe(x, y); } });
     ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => pic.addEventListener(ev, ()=>{ down = false; last = null; }));
     let raf = 0; const loop = (now)=>{ draw(now); raf = requestAnimationFrame(loop); }; raf = requestAnimationFrame(loop);
-    return ()=> cancelAnimationFrame(raf);
+    return ()=>{ cancelAnimationFrame(raf); if(revealAt && !lunged && !STATE.mirror.scared) MON.stop(); };      // (leaving before she comes: her drone goes too)
   }
 
   // ---------- the candles: five on the floor of a cold stone room. light them in the right order; one wrong and they all go out ----------
@@ -7747,10 +7748,10 @@ const ATTN = (function(){
     function ready(){ const c = AMB.ctx(); if(!c) return Promise.resolve(null); if(buf) return Promise.resolve(buf);
       return loading || (loading = Promise.all([get(c, 'sfx_monster.mp3'), get(c, 'sfx_sting.mp3')]).then(([b, st]) => { sting = st; return buf = b; })); }
     function chime(){ const c = AMB.ctx(); if(!c || !sting) return; const s = c.createBufferSource(), v = c.createGain(); v.gain.value = .9; s.buffer = sting; s.connect(v); v.connect(c.destination); s.start(); }      // the sting, once, the moment she shows herself
-    function start(){ want = true; ready().then(b => { chime(); const c = AMB.ctx(); if(!b || !c || !want || src) return; if(c.state === 'suspended') c.resume().catch(()=>{});
+    function start(slow){ want = true; ready().then(b => { if(!slow) chime(); const c = AMB.ctx(); if(!b || !c || !want || src) return; if(c.state === 'suspended') c.resume().catch(()=>{});
       g = c.createGain(); g.gain.value = 0; g.connect(c.destination);
       src = c.createBufferSource(); src.buffer = b; src.loop = true; src.loopStart = .05; src.loopEnd = b.duration - .05; src.connect(g); src.start(0, .05);      // (the ends trimmed: no gap where it loops)
-      g.gain.setTargetAtTime(.35, c.currentTime, .08); }); }
+      if(slow){ g.gain.setTargetAtTime(.9, c.currentTime, slow); src.playbackRate.setTargetAtTime(1.1, c.currentTime, slow * 1.5); } else g.gain.setTargetAtTime(.35, c.currentTime, .08); }); }      // slow: no sting, it creeps up out of silence (the mirror)
     function ramp(k){ if(!src) return; const c = AMB.ctx(), t = c.currentTime; k = Math.max(0, Math.min(1, k));
       g.gain.setTargetAtTime(.35 + .65 * Math.pow(k, 1.6), t, .12); src.playbackRate.setTargetAtTime(1 + .14 * k, t, .25); }
     function calm(){ if(!g) return; const c = AMB.ctx(); g.gain.setTargetAtTime(0, c.currentTime, .45); src.playbackRate.setTargetAtTime(.92, c.currentTime, .6); }      // the mask is on: it sinks away
