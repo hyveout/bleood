@@ -5936,6 +5936,7 @@ const ATTN = (function(){
     }
     function wipe(x, y){
       if(!fogReady || revealAt) return;
+      WIPE.rub();      // (the sound of the rag, while you rub)
       const lx = x - MX, ly = y - MY;
       fg.globalCompositeOperation = 'destination-out';
       const step = (ax, ay)=>{ const gr = fg.createRadialGradient(ax, ay, 2, ax, ay, 16); gr.addColorStop(0, 'rgba(0,0,0,.9)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); fg.fillStyle = gr; fg.beginPath(); fg.arc(ax, ay, 16, 0, Math.PI * 2); fg.fill(); };
@@ -7680,7 +7681,7 @@ const ATTN = (function(){
   function stopIntro(){ if(introEl){ introEl.pause(); introEl.removeAttribute('src'); introEl.load(); introEl.remove(); introEl = null; } }
   function startWithIntro(host){
     AMB.unlock();      // (inside the PLAY tap)
-    setTimeout(()=> MON.ready(), 0);      // her drone, fetched and ready before she first comes
+    setTimeout(()=>{ MON.ready(); WIPE.ready(); }, 0);      // her drone and the rag's sound, fetched and ready before they are needed
     document.body.classList.add('attn-playing'); setTimeout(()=> dispatchEvent(new Event('resize')), 50);
     stopIntro();
     const v = introEl = document.createElement('video'); v.className = 'attn-intro intro-film'; v.src = INTRO_VIDEO; v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'auto';
@@ -7745,6 +7746,18 @@ const ATTN = (function(){
     function stop(fast){ want = false; if(!src) return; const c = AMB.ctx(), s = src, gg = g; src = null; g = null;
       gg.gain.cancelScheduledValues(c.currentTime); gg.gain.setTargetAtTime(0, c.currentTime, fast ? .015 : .18); setTimeout(()=>{ try{ s.stop(); }catch(_){ } }, fast ? 120 : 900); }
     return {ready, start, ramp, calm, stop};
+  })();
+  // the rag on the glass: a scrubbing sound that runs only while you are rubbing, and stops the moment you stop (its own file)
+  const WIPE = (function(){
+    let buf = null, loading = null, src = null, g = null, offT = 0;
+    function ready(){ const c = AMB.ctx(); if(!c) return Promise.resolve(null); if(buf) return Promise.resolve(buf);
+      return loading || (loading = fetch('sfx_wipe.mp3').then(r => r.ok ? r.arrayBuffer() : Promise.reject()).then(a => new Promise((ok, no) => c.decodeAudioData(a, ok, no))).then(b => buf = b).catch(()=> null)); }
+    function rub(){ const c = AMB.ctx(); if(!c) return; ready().then(b => { if(!b) return;
+      if(!src){ if(c.state === 'suspended') c.resume().catch(()=>{}); g = c.createGain(); g.gain.value = 0; g.connect(c.destination);
+        src = c.createBufferSource(); src.buffer = b; src.loop = true; src.loopStart = .05; src.loopEnd = b.duration - .05; src.connect(g); src.start(0, .05 + Math.random() * (b.duration - .4)); }
+      g.gain.setTargetAtTime(.9, c.currentTime, .04); clearTimeout(offT); offT = setTimeout(stop, 160); }); }
+    function stop(){ clearTimeout(offT); if(!src) return; const c = AMB.ctx(), s = src, gg = g; src = null; g = null; gg.gain.setTargetAtTime(0, c.currentTime, .06); setTimeout(()=>{ try{ s.stop(); }catch(_){ } }, 400); }
+    return {ready, rub, stop};
   })();
   function start(host){
     document.body.classList.add('attn-playing'); setTimeout(()=> dispatchEvent(new Event('resize')), 50);
