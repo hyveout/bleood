@@ -831,7 +831,7 @@ body.mob-full .attn .mob-mask.on{border-color:#f0c868; box-shadow:inset 0 0 0 2p
 @keyframes fieldway{0%,100%{opacity:.4} 50%{opacity:.7}}
 .attn .field-timer{display:none; position:absolute; left:0; right:0; top:calc(var(--vt,0px) + clamp(92px,15cqh,124px)); z-index:7; flex-direction:column; align-items:center; gap:4px; pointer-events:none; text-shadow:0 2px 0 #000}
 .intro-veil{position:absolute; inset:0; z-index:60; background:#000; pointer-events:none; opacity:1; transition:opacity 1.6s ease-in-out} .intro-veil.off{opacity:0}      /* the intro hands over to the game through black */
-.attn .at-room[data-room=field] .field-timer{display:flex; opacity:0; transition:none} .attn .at-room[data-room=field] .field-timer.ready{opacity:1; transition:opacity .6s}      /* fades in, but is gone at once when you leave */      /* only once the field itself is showing */
+.attn .at-room[data-room=field] .field-timer, .attn.ended .at-room[data-room=forest] .field-timer{display:flex; opacity:0; transition:none} .attn .at-room[data-room=field] .field-timer.ready, .attn.ended .at-room[data-room=forest] .field-timer.ready{opacity:1; transition:opacity .6s}      /* fades in, but is gone at once when you leave */      /* only once the field itself is showing */
 .attn .ft-day{font-family:var(--display); font-size:clamp(1rem,3.4cqw,2rem); color:rgba(170,16,18,.95); letter-spacing:.06em}
 .attn .ft-time{font-family:"VCR OSD Mono",var(--type); font-size:clamp(2rem,8cqw,4.6rem); color:rgba(196,18,20,.96); letter-spacing:.1em; text-shadow:0 0 18px rgba(170,10,12,.45), 0 3px 0 #000}
 .attn .ft-again{pointer-events:auto; margin-top:6px; font-family:"VCR OSD Mono",var(--type); font-size:clamp(.65rem,1.5cqw,.9rem); letter-spacing:.14em; color:rgba(232,227,214,.8); background:rgba(0,0,0,.35); border:1px solid rgba(232,227,214,.35); padding:.45em 1.1em; cursor:pointer}
@@ -6107,7 +6107,7 @@ const ATTN = (function(){
       .map((c, k) => Object.assign(c, {k})).sort((a, b) => a.x - b.x).map((c, i) => Object.assign(c, {i, tall: TALL[i], thick: THICK[i], lit:0, on:false, out:0}));      // k: its place round the ring (0 at the back, going clockwise)
     let rise = 0, twitch = 0;                                              // how far the cat has come back, and a jerk each time a candle takes
     const BODY_TOP = 18, FL_H = 18;                                       // in the sprite: the flame sits in the top 18 rows, the wax below
-    let next = 1, smoke = [], wonAt = 0, gotIt = false;
+    let next = 1, smoke = [], wonAt = 0, gotIt = false, wrongOrder = false, checking = false;
     say('a dead cat in a ring of candles');
     if(have.candles){                                                   // already solved: the ring still burns, the cat still hangs (unless you took it)
       C.forEach(c => { c.on = true; c.lit = -1e9; }); next = C.length + 1; rise = 1; wonAt = 1; gotIt = true;
@@ -6162,12 +6162,14 @@ const ATTN = (function(){
       say('the flames will take now');
     }
     function light(i, now){
-      const c = C[i]; if(c.on || wonAt) return;
+      const c = C[i]; if(c.on || wonAt || checking) return;
       if(!STATE.seance){ smoke.push({x: c.x, y: c.y - 46 * c.s * c.tall, t0: now, dx: (Math.random() - .5) * 6}); say('it will not catch'); return; }   // before the word: only a wisp of smoke
-      if(RING_ORDER[next - 1] !== c.k){ snuff(now); return; }          // the wrong one: they all go out (the order is drawn in the book)
+      if(RING_ORDER[next - 1] !== c.k) wrongOrder = true;               // any order lights: only once all seven burn do you find out (the order is drawn in the book)
       sfx('candlelight', 1); c.on = true; c.lit = now; next++; twitch = .5;
-      say(next > C.length ? 'it rises' : next === 2 ? 'it catches. something twitches' : 'it catches');
-      if(next > C.length){ wonAt = now + 2600; }                       // after it has risen
+      if(next <= C.length){ say(next === 2 ? 'it catches. something twitches' : 'it catches'); return; }
+      if(!wrongOrder){ say('it rises'); wonAt = now + 2600; return; }   // the right order: after it has risen
+      checking = true; say('...');                                      // the wrong order: a moment, then they all go out
+      setTimeout(()=>{ checking = false; wrongOrder = false; snuff(performance.now()); }, 900);
     }
     function draw(now){
       const t = now / 1000;
@@ -8029,7 +8031,7 @@ const ATTN = (function(){
     const wait = () => { if(!el.isConnected || !here()) return; if(pic && pic.complete && pic.naturalWidth && /bleood_field|bleood_epi_forest/.test(pic.src)) show(); else setTimeout(wait, 120); };
     wait();
     const tm = el.querySelector('.ft-time'), pad = n => String(n).padStart(2, '0');
-    const tick = () => { const now = new Date(); let target = new Date(now.getFullYear(), 9, 31); if(now >= new Date(now.getFullYear(), 10, 1)) target = new Date(now.getFullYear() + 1, 9, 31);
+    const tick = () => { const now = new Date(); let target = new Date(now.getFullYear(), 9, 30); if(now >= new Date(now.getFullYear(), 9, 31)) target = new Date(now.getFullYear() + 1, 9, 30);
       let d = Math.max(0, target - now) / 1000; const D = Math.floor(d / 86400); d -= D * 86400; const H = Math.floor(d / 3600); d -= H * 3600; const M = Math.floor(d / 60), S = Math.floor(d - M * 60);
       const W1 = ['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'], T = ['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
       const say = n => n < 20 ? W1[n] : n < 100 ? T[Math.floor(n / 10)] + (n % 10 ? ' ' + W1[n % 10] : '') : W1[Math.floor(n / 100)] + ' hundred' + (n % 100 ? ' ' + say(n % 100) : '');
@@ -8052,9 +8054,9 @@ const ATTN = (function(){
   }
   function countdown(){
     if(!root) return; const el = document.createElement('div'); el.className = 'at-countdown';
-    el.innerHTML = '<div class="cd-day">OCTOBER 31</div><div class="cd-time"></div><button type="button" class="cd-again">PLAY AGAIN</button>';
+    el.innerHTML = '<div class="cd-day">OCTOBER 30</div><div class="cd-time"></div><button type="button" class="cd-again">PLAY AGAIN</button>';
     root.appendChild(el); requestAnimationFrame(()=> el.classList.add('on'));
-    const now = new Date(); let target = new Date(now.getFullYear(), 9, 31); if(now >= new Date(now.getFullYear(), 10, 1)) target = new Date(now.getFullYear() + 1, 9, 31);
+    const now = new Date(); let target = new Date(now.getFullYear(), 9, 30); if(now >= new Date(now.getFullYear(), 9, 31)) target = new Date(now.getFullYear() + 1, 9, 30);
     const tm = el.querySelector('.cd-time'), pad = n => String(n).padStart(2, '0');
     const tick = () => { let d = Math.max(0, target - new Date()) / 1000; const D = Math.floor(d / 86400); d -= D * 86400; const H = Math.floor(d / 3600); d -= H * 3600; const M = Math.floor(d / 60), S = Math.floor(d - M * 60);
       tm.textContent = pad(D) + ':' + pad(H) + ':' + pad(M) + ':' + pad(S); };
