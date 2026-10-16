@@ -724,6 +724,10 @@ body.mob-full .attn .mob-mask.on{border-color:#f0c868; box-shadow:inset 0 0 0 2p
 .ug-keys.below button{width:calc((100% - 8 * 5px) / 9); aspect-ratio:1; font-size:16px}
 .ug-keys.below button.del{width:calc((100% - 8 * 5px) / 9); aspect-ratio:1; font-size:14px}
 .ug-keys.below button.wide{width:100%; aspect-ratio:auto; padding:9px 0; font-size:13px; letter-spacing:.3em}
+.ug-keys.few button, .ug-keys.few button.del{width:calc((100% - 5 * 3px) / 6); aspect-ratio:1.7; font-size:15px; padding:0}      /* just a few letters: six to a row, bigger */
+.ug-keys.few button.wide{width:100%; aspect-ratio:auto; padding:6px 0}
+.ug-keys.few.below button, .ug-keys.few.below button.del{width:calc((100% - 5 * 5px) / 6); aspect-ratio:1; font-size:20px}
+.ug-keys.few.below button.wide{padding:10px 0; font-size:14px}
 .ug-pop.ug-up{justify-content:flex-start; padding-top:clamp(86px,13vw,100px)}   /* clear of the inventory and the mask box */
 /* phones: no boxes at all. the letters float in the dark like a spirit board, and the word comes up on a single faint line */
 @media (hover: none), (pointer: coarse){
@@ -6126,7 +6130,9 @@ const ATTN = (function(){
       if(matchMedia('(hover: none), (pointer: coarse)').matches){
         field.readOnly = true; field.setAttribute('inputmode', 'none'); field.addEventListener('focus', () => field.blur());
         const keys = document.createElement('div'); keys.className = 'ug-keys';
-        keys.innerHTML = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(c => '<button type="button" data-k="' + c + '">' + c + '</button>').join('') +
+        const pool = 'ABCDFHKMPRSTUWY'.split('').sort(() => Math.random() - .5), letters = 'LEGION'.split('').concat(pool.slice(0, 5)).sort(() => Math.random() - .5);      // only LEGION's letters and five others, mixed up
+        keys.classList.add('few');
+        keys.innerHTML = letters.map(c => '<button type="button" data-k="' + c + '">' + c + '</button>').join('') +
           '<button type="button" data-k="del" class="del" aria-label="delete">&#9664;</button><button type="button" data-k="ok" class="wide" aria-label="speak">SPEAK</button>';
         if(innerHeight > innerWidth){                                    // upright: the game moves up the screen and the letters get the room under it, bigger
           keys.classList.add('below'); host.querySelector('.ug-frame').after(keys);
@@ -7055,7 +7061,7 @@ const ATTN = (function(){
   // ---------- the rooms: your scenes from Photoshop. tap a thing to open its game; tap the way out to walk somewhere else ----------
   // every box is in the PSD's own 1600 x 1200 pixels: [left, top, right, bottom]
   const ROOMS = {
-    forest: {src: '', get back(){ return STATE.epilogue ? 'field' : undefined; }, backSide: 'bottom', spots: [      /* after the end: GO BACK takes you to the field */                                              // (its picture is the live forest's own back layer, set below)
+    forest: {src: '', spots: [                                              // (its picture is the live forest's own back layer, set below)
       {box: [0, 300, 640, 800],    go: 'house', hint: 'the house', when: ()=> !STATE.epilogue},      // (after the end the house is gone)          // the old house and the torii gate, left
       {box: [800, 470, 1000, 1160], talk: 'doll', hint: 'the doll', when: ()=> !STATE.epilogue},        // the doll tied to the tree, just her head and body (not the hands or the air around her): she talks to you
       {box: [1095, 220, 1450, 760], get go(){ return STATE.epilogue ? 'mirror' : 'tunnel'; }, glow: 'cave', hint: 'the cave'}]},      // after the end the cave takes you straight to the mirror   // the cave mouth, right of her, through the trees
@@ -7260,7 +7266,7 @@ const ATTN = (function(){
     function stop(){ on = false; cancelAnimationFrame(raf); if(cvs) cvs.style.display = 'none'; }
     return {start, stop};
   })();
-  ROOMS.forest.src = FOREST_LIVE.base;                                     // the still forest is the live one's back: no second copy of the picture
+  const FOREST_BASE = FOREST_LIVE.base; Object.defineProperty(ROOMS.forest, 'src', {get: ()=> STATE.epilogue ? 'bleood_epi_forest.jpg' : FOREST_BASE});      // after the end: a still of the forest without the middle tree, the idol standing with the trike                                     // the still forest is the live one's back: no second copy of the picture
   let roomNow = 'forest', roomEl = null, pan = 0, fading = false, lit = null, talking = null;
   const TOUCH = matchMedia('(hover: none), (pointer: coarse)').matches;      // a phone or tablet: no hover, so show the way out and let you search by holding
   let panHinted = false, rotateHinted = false;
@@ -7452,7 +7458,7 @@ const ATTN = (function(){
     const say = (lines, auto, who, then)=> roomTalk(null, {lines, auto, who, then}), busy = ()=> !!talking;
     fullStop = RUN[R.full](box, (o)=>{ const fin = ()=>{ have[R.full] = true; paint(); checkGate(); }; if(o && o.item){ obtain(null, o.at, ()=> paint(), o.item); return; } if(o && o.at) obtain(R.full, o.at, fin); else fin(); }, {full: true, say, busy});
   }
-  function liveRoom(){ if(!roomEl) return; const stage = roomEl.querySelector('.room-stage'); if(roomNow === 'forest' && root.classList.contains('on')) LIVE.start(stage); else LIVE.stop(); }
+  function liveRoom(){ if(!roomEl) return; const stage = roomEl.querySelector('.room-stage'); if(roomNow === 'forest' && !STATE.epilogue && root.classList.contains('on')) LIVE.start(stage); else LIVE.stop(); }
   // redraw a box of pictures but keep the ones that are still there (same picture, same place): a fresh copy flashes on phones while it decodes
   function keepPics(box, build){
     const old = new Map(); box.querySelectorAll('img').forEach(im => { const k = im.getAttribute('src') + '|' + im.style.cssText; (old.get(k) || old.set(k, []).get(k)).push(im); });
@@ -7752,7 +7758,7 @@ const ATTN = (function(){
   // the intro film: plays once each time you press PLAY, then the game starts. it is NOT inside this file (about 8.5 MB):
   // bleood_game_2_intro.mp4 sits next to index.html on the site, like the end video
   // the pictures that live in their own files next to the page: fetched as soon as the page opens (and kept), so they are already there when you walk into their rooms
-  const EXTRA_IMGS = ['porch_rag.webp', 'porch_vhs.webp', 'porch_lamp.webp', 'inside_wall.webp', 'bleood_porch_notrike.webp', 'bleood_field.jpg', 'jumpscare_cat.webp', 'jumpscare_idol.webp'].map(src => { const i = new Image(); i.decoding = 'async'; i.src = src; if(i.decode) i.decode().catch(()=>{}); return i; });
+  const EXTRA_IMGS = ['bleood_epi_forest.jpg', 'porch_rag.webp', 'porch_vhs.webp', 'porch_lamp.webp', 'inside_wall.webp', 'bleood_porch_notrike.webp', 'bleood_field.jpg', 'jumpscare_cat.webp', 'jumpscare_idol.webp'].map(src => { const i = new Image(); i.decoding = 'async'; i.src = src; if(i.decode) i.decode().catch(()=>{}); return i; });
   const INTRO_VIDEO = 'bleood_intro.mp4';      // (new intro, Oct 15; the old one was bleood_game_2_intro.mp4)
   let introEl = null;
   function stopIntro(){ if(introEl){ introEl.pause(); introEl.removeAttribute('src'); introEl.load(); introEl.remove(); introEl = null; } }
@@ -8009,7 +8015,7 @@ const ATTN = (function(){
   function epilogue(){
     closeTask(); wearMask(false); girlGone(true);
     STATE.epilogue = true; STATE.mask = true; STATE.metHer = true; STATE.mirror = {scared: true, glass: true}; STATE.gate = GATES.length; STATE.key = true;      // everything stays as you left it
-    roomNow = 'field'; pan = 0; talking = null; if(roomEl){ roomEl.querySelector('.room-talk').classList.remove('on'); roomEl.querySelector('.room-img').src = ROOMS.field.src;      /* after the end you wake in the field: the idol on the bike, the clock above */ glows(); paintProps(); roomLayout(); liveRoom(); } paint();
+    roomNow = 'forest'; pan = 0; talking = null; if(roomEl){ roomEl.querySelector('.room-talk').classList.remove('on'); roomEl.querySelector('.room-img').src = ROOMS.forest.src;      /* after the end: the forest, the idol with the trike, the clock above */ glows(); paintProps(); roomLayout(); liveRoom(); } paint();
   }
   // the field's clock: down to the next Halloween, at the top of the screen (and a way to start again)
   let fieldClock = null;
@@ -8017,10 +8023,10 @@ const ATTN = (function(){
   function fieldTimer(){
     if(!roomEl) return; let el = roomEl.querySelector('.field-timer');
     if(!el){ el = document.createElement('div'); el.className = 'field-timer'; el.innerHTML = '<div class="ft-time"></div>'; roomEl.appendChild(el); }
-    clearInterval(fieldClock); el.classList.remove('ready'); if(roomNow !== 'field') return;
-    const show = () => setTimeout(()=> el.isConnected && roomNow === 'field' && el.classList.add('ready'), 450);      // after the room has faded in
+    clearInterval(fieldClock); el.classList.remove('ready'); const here = () => roomNow === 'field' || (roomNow === 'forest' && STATE.epilogue); if(!here()) return;
+    const show = () => setTimeout(()=> el.isConnected && here() && el.classList.add('ready'), 450);      // after the room has faded in
     const pic = roomEl.querySelector('.room-img');      // the room's own picture of the field: wait until it is really there
-    const wait = () => { if(!el.isConnected || roomNow !== 'field') return; if(pic && pic.complete && pic.naturalWidth && /bleood_field/.test(pic.src)) show(); else setTimeout(wait, 120); };
+    const wait = () => { if(!el.isConnected || !here()) return; if(pic && pic.complete && pic.naturalWidth && /bleood_field|bleood_epi_forest/.test(pic.src)) show(); else setTimeout(wait, 120); };
     wait();
     const tm = el.querySelector('.ft-time'), pad = n => String(n).padStart(2, '0');
     const tick = () => { const now = new Date(); let target = new Date(now.getFullYear(), 9, 31); if(now >= new Date(now.getFullYear(), 10, 1)) target = new Date(now.getFullYear() + 1, 9, 31);
