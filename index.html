@@ -6424,7 +6424,6 @@ const ATTN = (function(){
         const px = g.a[0] + dx * k, py = g.a[1] + dy * k, d = Math.hypot(x - px, y - py); if(d < best.d) best = {s: g.s + k * g.l, d}; } return best;
     }
     let cutting = !!STATE.used.cat && !STATE.cutOpen, sliced = 0, holding = false, openAt = 0, jit = [];
-    if(!STATE.used.cat && !STATE.cutOpen) setTimeout(()=> hintText('torso', 'I need something sharp to cut it open'), 500);      // the first time, before the cat's claw (a hint)
     for(let i = 0; i <= 200; i++) jit.push((Math.random() - .5) * 3);
     function build(){
       // the skin: the closed picture over the cavity and over the cut edge round it, split along the cut into the two halves that peel away
@@ -6952,7 +6951,6 @@ const ATTN = (function(){
     // the channel: each knob has to be turned to its own place; the nearer both are, the clearer the picture
     if(!STATE.tv || !STATE.tv.v2) STATE.tv = {v2: true, a: [0, 0], want: [(Math.random() < .5 ? 1 : -1) * (.9 + Math.random() * 1.7), (Math.random() < .5 ? 1 : -1) * (.9 + Math.random() * 1.7)], tuned: false};
     const TVS = STATE.tv;
-    if(STATE.used.vhs && !STATE.used.knob && !TVS.tuned) setTimeout(()=> hintText('knob', "It's missing a knob"), 600);      // the tape is in, but one knob is gone (the hint)
     const noise = document.createElement('canvas'), ng = noise.getContext('2d'), scr = document.createElement('canvas'), sg = scr.getContext('2d');
     let drag = null, tunedAt = TVS.tuned ? 1 : 0, taken = false, film = null;
     const playFilm = () => {                                               // the tape: it takes over the whole screen, then the CD comes out of the TV
@@ -7024,7 +7022,7 @@ const ATTN = (function(){
     const up = () => { drag = null; }; pic.addEventListener('pointerup', up); pic.addEventListener('lostpointercapture', up); pic.addEventListener('pointercancel', up);
     host.__tv = () => TVS;                                                // (for testing)
     useHook = item => {                                                   // the knob from the desk: it goes back on its post
-      if(item === 'vhs' && !STATE.used.vhs){ STATE.used.vhs = true; paintInv(); say('the tape goes in'); if(!STATE.used.knob) setTimeout(()=> hintText('knob', "It's missing a knob"), 700); return true; }      // the tape from the tricycle
+      if(item === 'vhs' && !STATE.used.vhs){ STATE.used.vhs = true; paintInv(); say('the tape goes in'); return true; }      // the tape from the tricycle
       if(item !== 'knob' || STATE.used.knob) return false;
       STATE.used.knob = true; paintInv(); return true;
     };
@@ -7169,6 +7167,18 @@ const ATTN = (function(){
   };
   const ARTIFACT_WORD = {candles: 'gluttony', mirror: 'wrath', flower: 'lust', cut: 'envy', painting: 'pride', tv: 'sloth', book: 'greed'};      // hairball, glass shard, seed, idol, painting, (tv), golden bookmark
   // the first time you speak to him: he gives you the mask after the last line
+  // in front of him, tap a thing you carry and he tells you about it
+  const ITEM_TALK = {
+    rag: ['Maybe you can wipe something down with that rag...', "see something that wasn't meant to be seen."],
+    vhs: ['Find somewhere to play this.', 'It might tell you more about what happened.'],
+    lantern: ['The faces look familiar...', 'using this in a dark place would help.'],
+    cat: ["The cat's claws are sharp.", 'They can cut into anything.'],
+    can: ['A seal is 60% water by weight.', 'Maybe try watering a plant with it.'],
+    knob: ['This could help tune your signal.'],
+    shard: ['This belongs to a bigger picture.'],
+    key: ['Well, this definitely unlocks something...', 'even if it already looks open.'],
+    bit: ['Well, this definitely unlocks something...', 'even if it already looks open.']};
+  const MASK_AFTER = ['Bring me items, and I can tell you more about them.'];
   const FIRST_TALK = ["I've lost myself...", 'She took pieces of me and scattered them across seven artifacts.', 'Please, bring them back to me,', 'so that I can find myself again.', 'Take this mask. Her obsession will stop at nothing.', "Wear it, and she won't see you."];
   const TALK = {doll: {lines: ['she split me into seven artifacts...', 'she will never let me leave', 'find them, and set me free']}};
   // ---------- the forest, alive: the scene rebuilt from its own layers so the trees can sway and the grass can move in the wind ----------
@@ -7405,8 +7415,7 @@ const ATTN = (function(){
   // a word in the middle of the screen as you walk in, when something is in your way (the hints)
   function roomHint(){
     if(!root || !root.classList.contains('on') || STATE.epilogue) return;
-    if(roomNow === 'mirror' && !STATE.used.rag && !(STATE.mirror && STATE.mirror.scared)) hintText('mirror', 'This mirror is dirty, it needs to be wiped down');
-    else if(roomNow === 'cave' && ROOMS.cave.dark && ROOMS.cave.dark()) hintText('cave', 'The darkness is too much, I need a light source');
+    // (the room hints are off, Oct 16: the captured man tells you about your items instead)
   }
   // a hint: only words, in the middle of the screen, fading in and out. each one only the first time
   function hintText(key, text){
@@ -7835,7 +7844,8 @@ const ATTN = (function(){
         } else tellNote('RETURN TO THE CAPTURED MAN TO LEARN MORE');
       });
       root.querySelector('.at-slots').addEventListener('pointerdown', e=>{ if(e.target.closest('i.on')) e.stopPropagation(); });
-      root.querySelector('.at-inv').addEventListener('click', e=>{ if(e.target.closest('.at-mask')){ e.stopPropagation(); wearMask(!STATE.masked); return; } const s = e.target.closest('i.has'); if(s){ e.stopPropagation(); askUse(s.dataset.item); } });
+      root.querySelector('.at-inv').addEventListener('click', e=>{ if(e.target.closest('.at-mask')){ e.stopPropagation(); wearMask(!STATE.masked); return; } const s = e.target.closest('i.has'); if(s){ e.stopPropagation(); const id = s.dataset.item;      // in front of him (no game open): he tells you about it; anywhere else: use it
+        if(roomNow === 'forest' && !popup && !STATE.epilogue && ITEM_TALK[id]){ closeAsk(); if(talking && talking.close) talking.close(); sfx('tick', .9); roomTalk(null, {lines: ITEM_TALK[id]}); } else askUse(id); } });
       root.querySelector('.at-inv').addEventListener('pointerdown', e=>{ if(e.target.closest('i.has') || e.target.closest('.at-mask')) e.stopPropagation(); });      // picking things up and using them happens inside the games; keep the boxes in step
       buildRoom();
       root.addEventListener('click', e=>{ const b = e.target.closest('.at-list button'); if(b && !b.disabled) openTask(b.dataset.id); });
@@ -7855,7 +7865,7 @@ const ATTN = (function(){
   const GIRL_EVERY_UNUSED = 30000;      // how long between her visits: 30 s (Oct 16, doubled from the 15 s test value; it was once 30-70 s, and 20-45 s for the first)
   function giveMask(){
     if(STATE.mask) return; GIRL.load();
-    STATE.mask = true; obtain(null, [innerWidth / 2, innerHeight / 2], ()=>{ paintInv(); girlNext = performance.now() + girlGap(); }, 'mask');
+    STATE.mask = true; obtain(null, [innerWidth / 2, innerHeight / 2], ()=>{ paintInv(); girlNext = performance.now() + girlGap(); if(roomNow === 'forest' && !talking) roomTalk(null, {lines: MASK_AFTER}); }, 'mask');      // and then: bring him things
   }
   function wearMask(on){
     STATE.masked = !!on; invKey = null; paintInv();
