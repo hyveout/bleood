@@ -814,6 +814,7 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .attn .at-room.near-way .field-way.on{opacity:.55; animation:fieldway 2.6s ease-in-out infinite}      /* only when you are near that edge */
 @keyframes fieldway{0%,100%{opacity:.4} 50%{opacity:.7}}
 .attn .field-timer{display:none; position:absolute; left:0; right:0; top:calc(var(--vt,0px) + clamp(92px,15cqh,124px)); z-index:7; flex-direction:column; align-items:center; gap:4px; pointer-events:none; text-shadow:0 2px 0 #000}
+.intro-veil{position:absolute; inset:0; z-index:60; background:#000; pointer-events:none; opacity:1; transition:opacity 1.6s ease-in-out} .intro-veil.off{opacity:0}      /* the intro hands over to the game through black */
 .attn .at-room[data-room=field] .field-timer{display:flex; opacity:0; transition:none} .attn .at-room[data-room=field] .field-timer.ready{opacity:1; transition:opacity .6s}      /* fades in, but is gone at once when you leave */      /* only once the field itself is showing */
 .attn .ft-day{font-family:var(--display); font-size:clamp(1rem,3.4cqw,2rem); color:rgba(170,16,18,.95); letter-spacing:.06em}
 .attn .ft-time{font-family:"VCR OSD Mono",var(--type); font-size:clamp(2rem,8cqw,4.6rem); color:rgba(196,18,20,.96); letter-spacing:.1em; text-shadow:0 0 18px rgba(170,10,12,.45), 0 3px 0 #000}
@@ -7663,6 +7664,8 @@ const ATTN = (function(){
   }
   // the intro film: plays once each time you press PLAY, then the game starts. it is NOT inside this file (about 8.5 MB):
   // bleood_game_2_intro.mp4 sits next to index.html on the site, like the end video
+  // the pictures that live in their own files next to the page: fetched as soon as the page opens (and kept), so they are already there when you walk into their rooms
+  const EXTRA_IMGS = ['porch_lamp.webp', 'inside_wall.webp', 'bleood_porch_notrike.webp', 'bleood_field.jpg', 'jumpscare_cat.webp', 'jumpscare_idol.webp'].map(src => { const i = new Image(); i.decoding = 'async'; i.src = src; if(i.decode) i.decode().catch(()=>{}); return i; });
   const INTRO_VIDEO = 'bleood_intro.mp4';      // (new intro, Oct 15; the old one was bleood_game_2_intro.mp4)
   let introEl = null;
   function stopIntro(){ if(introEl){ introEl.pause(); introEl.removeAttribute('src'); introEl.load(); introEl.remove(); introEl = null; } }
@@ -7671,7 +7674,14 @@ const ATTN = (function(){
     stopIntro();
     const v = introEl = document.createElement('video'); v.className = 'attn-intro intro-film'; v.src = INTRO_VIDEO; v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'auto';
     host.appendChild(v);
-    let went = false; const go = ()=>{ if(went || introEl !== v) return; went = true; stopIntro(); start(host); };
+    // into the game: a black veil over it that lifts slowly, once the first room's picture is there (or after a moment, whatever happens)
+    let went = false; const go = ()=>{ if(went || introEl !== v) return; went = true;
+      const veil = document.createElement('div'); veil.className = 'intro-veil'; host.appendChild(veil);
+      stopIntro(); start(host);
+      let lifted = false; const lift = ()=>{ if(lifted) return; lifted = true; requestAnimationFrame(()=> requestAnimationFrame(()=> veil.classList.add('off'))); setTimeout(()=> veil.remove(), 2200); };
+      const pic = host.querySelector('.room-img'); if(pic && !(pic.complete && pic.naturalWidth)) pic.addEventListener('load', lift, {once: true}); else setTimeout(lift, 120);
+      setTimeout(lift, 900);
+    };
     v.addEventListener('ended', go); v.addEventListener('error', go);                       // if it can't play (missing file), straight into the game
     const p = v.play(); if(p && p.catch) p.catch(()=>{ v.muted = true; v.play().catch(go); });  // if sound is refused, play it muted rather than not at all
   }
