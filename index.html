@@ -6994,13 +6994,13 @@ const ATTN = (function(){
       if(!STATE.bits.includes('key2') && !STATE.key && bit.naturalWidth && x > BIT_AT[0] - 14 && x < BIT_AT[0] + bit.naturalWidth * BIT_K + 14 && y > BIT_AT[1] - 14 && y < BIT_AT[1] + bit.naturalHeight * BIT_K + 14){ gotBit('key2', [e.clientX, e.clientY]); return; }   // the piece of the key on top
       if(TVS.tuned){ if(TVS.filmed && !film && !have.tv && !taken && Math.hypot(x - BALL[0], y - BALL[1]) < 90){ taken = true; done({at: [e.clientX, e.clientY]}); } return; }   // taken: only once   // take the ball: the STATIC BALL artifact
       const i = KN.findIndex((k, j) => (j === 0 || STATE.used.knob) && Math.hypot(x - (k.x + k.s / 2), y - (k.y + k.s / 2)) < k.s * .9); if(i < 0) return;
-      sfx('knob', 1); drag = {i, px: x, py: y}; try{ pic.setPointerCapture(e.pointerId); }catch(_){ }      // a click as you take hold of it
+      sfx('knob', 1); drag = {i, px: x, py: y, notch: 0}; try{ pic.setPointerCapture(e.pointerId); }catch(_){ }      // a click as you take hold of it
     });
     pic.addEventListener('pointermove', e => {
       const [x, y] = toPic(e);
       if(!drag){ if(TVS.tuned){ pic.style.cursor = !have.tv && Math.hypot(x - BALL[0], y - BALL[1]) < 90 ? 'pointer' : 'default'; return; } pic.style.cursor = KN.some((k, j) => (j === 0 || STATE.used.knob) && Math.hypot(x - (k.x + k.s / 2), y - (k.y + k.s / 2)) < k.s * .9) ? 'grab' : 'default'; return; }
       const da = ((x - drag.px) - (y - drag.py)) * .012; drag.px = x; drag.py = y;   // drag right or up turns it one way, left or down the other
-      TVS.a[drag.i] += da; if(Math.abs(da) > .002) KNOB.rub(); const cl = clarity();      // it ratchets while it turns say(cl > .6 ? 'something is coming through' : cl > .25 ? 'the static thins' : 'only static');
+      TVS.a[drag.i] += da; drag.notch += Math.abs(da); if(drag.notch > .26){ drag.notch = 0; sfx('knob', .75); } const cl = clarity();      // a click for every notch it turns say(cl > .6 ? 'something is coming through' : cl > .25 ? 'the static thins' : 'only static');
     });
     const up = () => { drag = null; }; pic.addEventListener('pointerup', up); pic.addEventListener('lostpointercapture', up); pic.addEventListener('pointercancel', up);
     host.__tv = () => TVS;                                                // (for testing)
@@ -7683,7 +7683,7 @@ const ATTN = (function(){
   function stopIntro(){ if(introEl){ introEl.pause(); introEl.removeAttribute('src'); introEl.load(); introEl.remove(); introEl = null; } }
   function startWithIntro(host){
     AMB.unlock();      // (inside the PLAY tap)
-    setTimeout(()=>{ MON.ready(); WIPE.ready(); KNOB.ready(); }, 0);      // her drone and the rag's sound, fetched and ready before they are needed
+    setTimeout(()=>{ MON.ready(); WIPE.ready(); }, 0);      // her drone and the rag's sound, fetched and ready before they are needed
     document.body.classList.add('attn-playing'); setTimeout(()=> dispatchEvent(new Event('resize')), 50);
     stopIntro();
     const v = introEl = document.createElement('video'); v.className = 'attn-intro intro-film'; v.src = INTRO_VIDEO; v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'auto';
@@ -7761,7 +7761,7 @@ const ATTN = (function(){
     function stop(){ clearTimeout(offT); if(!src) return; const c = AMB.ctx(), s = src, gg = g; src = null; g = null; gg.gain.setTargetAtTime(0, c.currentTime, .06); setTimeout(()=>{ try{ s.stop(); }catch(_){ } }, 400); }
     return {ready, rub, stop};
   })();
-  const WIPE = rubLoop('sfx_wipe.mp3', .9), KNOB = rubLoop('sfx_knob_turn.mp3', .9);      // the rag on the glass; the television's knobs turning
+  const WIPE = rubLoop('sfx_wipe.mp3', .9);      // the rag on the glass
   function start(host){
     document.body.classList.add('attn-playing'); setTimeout(()=> dispatchEvent(new Event('resize')), 50);
     if(!root){
