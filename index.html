@@ -898,9 +898,18 @@ body.mob-full .attn .mob-mask.on{border-color:#f0c868; box-shadow:inset 0 0 0 2p
 .mob-exit{display:none}
 body.mob-full .crt{position:fixed !important; inset:0 !important; width:100vw !important; height:100vh !important; height:100dvh !important; max-width:none !important; margin:0 !important; aspect-ratio:auto !important; border-radius:0 !important; z-index:9000}
 body.mob-full .home-link{visibility:hidden} body.mob-full .fs-btn{display:none} body.mob-full #grain{z-index:9500}
-body.mob-full .mob-exit{display:block; position:absolute; left:max(10px, env(safe-area-inset-left)); bottom:max(10px, env(safe-area-inset-bottom)); z-index:9600; font-family:"VCR OSD Mono",var(--type); font-size:.72rem; letter-spacing:.14em; color:rgba(232,227,214,.75); background:rgba(0,0,0,.45); border:1px solid rgba(232,227,214,.35); padding:.55em 1em; border-radius:2px; opacity:.55}      /* a little see-through */
-@media (orientation:portrait){ body.mob-full .mob-exit{bottom:calc(max(10px, env(safe-area-inset-bottom)) + 70px)} }      /* upright: just above the inventory row */
-body.mob-full .mob-exit:active{color:#fff; border-color:rgba(232,227,214,.9)}
+body.mob-full .mob-exit{display:block; position:absolute; left:max(12px, env(safe-area-inset-left)); top:max(12px, env(safe-area-inset-top)); z-index:9600; width:34px; height:34px; padding:0; font-size:0; background:rgba(0,0,0,.35); border:1px solid rgba(232,227,214,.22); border-radius:2px; opacity:.6; cursor:pointer; touch-action:manipulation}      /* the way out: a small X in the top left corner */
+body.mob-full .mob-exit::before, body.mob-full .mob-exit::after{content:""; position:absolute; left:50%; top:50%; width:15px; height:1.5px; margin:-.75px 0 0 -7.5px; background:rgba(232,227,214,.85); transform:rotate(45deg)}
+body.mob-full .mob-exit::after{transform:rotate(-45deg)}
+.mob-confirm{display:none; position:absolute; inset:0; z-index:9700; align-items:center; justify-content:center; background:rgba(0,0,0,.55)}
+.mob-confirm.on{display:flex}
+.mob-confirm .mc-box{border:1px solid #8a6a2a; background:rgba(10,10,16,.95); box-shadow:inset 0 0 0 2px #2a1a10; padding:18px 22px 16px; margin:0 20px; max-width:300px; text-align:center; font-family:"VCR OSD Mono",monospace; color:#e9e8e4; letter-spacing:.12em}
+.mob-confirm .mc-q{font-size:.95rem; margin-bottom:8px}
+.mob-confirm .mc-n{font-size:.68rem; letter-spacing:.1em; color:rgba(233,232,228,.6); line-height:1.6; margin-bottom:16px}
+.mob-confirm .mc-b{display:flex; gap:12px; justify-content:center}
+.mob-confirm .mc-b button{font:inherit; font-size:.8rem; letter-spacing:.14em; color:#e9e8e4; background:none; border:1px solid rgba(233,232,228,.45); padding:.45em 1.3em; cursor:pointer; touch-action:manipulation}
+.mob-confirm .mc-b button:active{background:rgba(233,232,228,.12); border-color:#e9e8e4}
+body.mob-full .mob-exit:active{opacity:1; border-color:rgba(232,227,214,.9)}
 .fs-btn{position:absolute; top:10px; right:10px; z-index:40; width:30px; height:30px; padding:0; background:rgba(0,0,0,.35); border:0; border-radius:3px; cursor:pointer; opacity:.6; transition:opacity .2s}
 .fs-btn:hover{opacity:1}
 .fs-btn i{position:absolute; width:9px; height:9px; border:2px solid #e9e8e4}
@@ -7945,7 +7954,7 @@ const ATTN = (function(){
     if(!on && girlEv && girlEv.safeAt) scare();                          // took it off while she was still there
   }
   const girlMayCome = ()=> root && root.classList.contains('on') && roomEl && STATE.mask && STATE.mirror && STATE.mirror.scared && !popup && !talking && !(ask && ask.isConnected) &&
-    roomNow !== 'mirror' && !(ROOMS[roomNow] && ROOMS[roomNow].dark && ROOMS[roomNow].dark()) && !fading && !document.hidden && !document.querySelector('.at-memory, .attn-intro, .ug-obtain, .ug-freeze') && !gated() && !STATE.epilogue && GIRL.ready();      /* never while she is asking for you (the 4th artifact) */
+    roomNow !== 'mirror' && !(ROOMS[roomNow] && ROOMS[roomNow].dark && ROOMS[roomNow].dark()) && !fading && !document.hidden && !document.querySelector('.at-memory, .attn-intro, .ug-obtain, .ug-freeze, .mob-confirm.on') && !gated() && !STATE.epilogue && GIRL.ready();      /* never while she is asking for you (the 4th artifact) */
   // her arms, cut from her picture once (1100 x 733): the body without them, and each side's pair, to turn at the shoulders
   let girlParts = null, girlIm = null;
   function girlLayers(){
@@ -8021,7 +8030,7 @@ const ATTN = (function(){
       if(!root || !root.classList.contains('on')){ girlGone(true); return; }
       // something is open over the room (a game, an item being handed to you, a question, words, a film): her clock waits,
       // and once it is closed you still get GIRL_GRACE to put the mask on
-      if(!girlEv.safeAt && (popup || talking || (ask && ask.isConnected) || fading || document.querySelector('.at-memory, .attn-intro, .ug-obtain, .ug-freeze, .at-scare'))){ girlEv.t0 = Math.max(girlEv.t0, now - 2000 + GIRL_GRACE); return; }
+      if(!girlEv.safeAt && (popup || talking || (ask && ask.isConnected) || fading || document.querySelector('.at-memory, .attn-intro, .ug-obtain, .ug-freeze, .at-scare, .mob-confirm.on'))){ girlEv.t0 = Math.max(girlEv.t0, now - 2000 + GIRL_GRACE); return; }
       const t = now - girlEv.t0;
       if(!girlEv.safeAt) MON.ramp(t / 2000);      // her drone climbs toward the moment she strikes
       if(!girlEv.safeAt && t > 2000){ if(STATE.masked){ girlEv.safeAt = now; MON.calm(); } else scare(); }      // two seconds to get the mask on
@@ -8174,17 +8183,23 @@ const ATTN = (function(){
   let gated = true, livingDirty = false;
   // phones and tablets: PLAY takes the whole screen (true full screen where the browser allows it; on iPhone the game just fills the page), with EXIT GAME at the bottom
   const MOB = matchMedia('(pointer: coarse)').matches;
-  const exitBtn = document.createElement('button'); exitBtn.type = 'button'; exitBtn.className = 'mob-exit'; exitBtn.textContent = 'EXIT GAME'; crtEl.appendChild(exitBtn);
+  const exitBtn = document.createElement('button'); exitBtn.type = 'button'; exitBtn.className = 'mob-exit'; exitBtn.setAttribute('aria-label', 'leave the game'); crtEl.appendChild(exitBtn);
+  // leaving asks first: everything starts over
+  const exitAsk = document.createElement('div'); exitAsk.className = 'mob-confirm';
+  exitAsk.innerHTML = '<div class="mc-box"><div class="mc-q">LEAVE THE GAME?</div><div class="mc-n">Your progress will be lost.<br>You will have to start over.</div><div class="mc-b"><button type="button" data-a="stay">STAY</button><button type="button" data-a="leave">LEAVE</button></div></div>';
+  crtEl.appendChild(exitAsk);
+  ['pointerdown', 'pointerup', 'touchstart', 'click'].forEach(ev => exitAsk.addEventListener(ev, e => { e.stopPropagation(); }, {passive: true}));
+  exitAsk.addEventListener('click', e => { const b = e.target.closest('button'); if(b && b.dataset.a === 'leave'){ exitAsk.classList.remove('on'); showGate(); } else if(b || e.target === exitAsk) exitAsk.classList.remove('on'); });
   function mobFull(on){
     if(!MOB) return; document.body.classList.toggle('mob-full', on);
     if(on && canFS && !isFS()){ try{ const r = crtEl.requestFullscreen ? crtEl.requestFullscreen({navigationUI: 'hide'}) : crtEl.webkitRequestFullscreen(); if(r && r.catch) r.catch(()=>{}); }catch(_){ } }
     if(!on && isFS()){ try{ (document.exitFullscreen || document.webkitExitFullscreen).call(document); }catch(_){ } }
     setTimeout(()=> dispatchEvent(new Event('resize')), 60); setTimeout(()=> dispatchEvent(new Event('resize')), 400);
   }
-  exitBtn.addEventListener('click', e=>{ e.stopPropagation(); showGate(); });
+  exitBtn.addEventListener('click', e=>{ e.stopPropagation(); if(gated) return; exitAsk.classList.add('on'); });
   ['pointerdown', 'touchstart'].forEach(ev => exitBtn.addEventListener(ev, e=> e.stopPropagation(), {passive: true}));
   function showGate(){
-    mobFull(false); gated = true; gate.classList.add('on'); gate.classList.toggle('pg-attn', current === 'attention'); screen.style.visibility = 'hidden';
+    exitAsk.classList.remove('on'); mobFull(false); gated = true; gate.classList.add('on'); gate.classList.toggle('pg-attn', current === 'attention'); screen.style.visibility = 'hidden';
     if(window.__stopExam) window.__stopExam(); LIVING.stop(); ATTN.stop();
   }
   function play(){
