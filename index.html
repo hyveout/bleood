@@ -7679,6 +7679,7 @@ const ATTN = (function(){
   function stopIntro(){ if(introEl){ introEl.pause(); introEl.removeAttribute('src'); introEl.load(); introEl.remove(); introEl = null; } }
   function startWithIntro(host){
     AMB.unlock();      // (inside the PLAY tap)
+    setTimeout(()=> MON.ready(), 0);      // her drone, fetched and ready before she first comes
     document.body.classList.add('attn-playing'); setTimeout(()=> dispatchEvent(new Event('resize')), 50);
     stopIntro();
     const v = introEl = document.createElement('video'); v.className = 'attn-intro intro-film'; v.src = INTRO_VIDEO; v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'auto';
@@ -7724,7 +7725,23 @@ const ATTN = (function(){
     }
     function end(){ lastV = -1; level(0); setTimeout(()=>{ if(want) return; if(src){ try{ src.stop(); }catch(_){ } src = null; } if(el){ el.pause(); el = null; } }, 1500); }
     ['pointerdown', 'touchend'].forEach(ev => document.addEventListener(ev, ()=>{ if(ctx && ctx.state !== 'running' && want) ctx.resume().catch(()=>{}); }, {passive: true}));      // a phone that paused it (another app, the lock screen): any tap brings it back
-    return {begin, level, end, unlock, VOL};
+    return {begin, level, end, unlock, VOL, ctx: ()=>{ load(); return ctx; }};
+  })();
+  // her sound: a low drone that loops while she is in the room, louder and a little higher the closer she is to getting you (its own file)
+  const MON = (function(){
+    let buf = null, loading = null, src = null, g = null, want = false;
+    function ready(){ const c = AMB.ctx(); if(!c) return Promise.resolve(null); if(buf) return Promise.resolve(buf);
+      return loading || (loading = fetch('sfx_monster.mp3').then(r => r.ok ? r.arrayBuffer() : Promise.reject()).then(a => new Promise((ok, no) => c.decodeAudioData(a, ok, no))).then(b => buf = b).catch(()=> null)); }
+    function start(){ want = true; ready().then(b => { const c = AMB.ctx(); if(!b || !c || !want || src) return; if(c.state === 'suspended') c.resume().catch(()=>{});
+      g = c.createGain(); g.gain.value = 0; g.connect(c.destination);
+      src = c.createBufferSource(); src.buffer = b; src.loop = true; src.loopStart = .05; src.loopEnd = b.duration - .05; src.connect(g); src.start(0, .05);      // (the ends trimmed: no gap where it loops)
+      g.gain.setTargetAtTime(.35, c.currentTime, .08); }); }
+    function ramp(k){ if(!src) return; const c = AMB.ctx(), t = c.currentTime; k = Math.max(0, Math.min(1, k));
+      g.gain.setTargetAtTime(.35 + .65 * Math.pow(k, 1.6), t, .12); src.playbackRate.setTargetAtTime(1 + .14 * k, t, .25); }
+    function calm(){ if(!g) return; const c = AMB.ctx(); g.gain.setTargetAtTime(0, c.currentTime, .45); src.playbackRate.setTargetAtTime(.92, c.currentTime, .6); }      // the mask is on: it sinks away
+    function stop(fast){ want = false; if(!src) return; const c = AMB.ctx(), s = src, gg = g; src = null; g = null;
+      gg.gain.cancelScheduledValues(c.currentTime); gg.gain.setTargetAtTime(0, c.currentTime, fast ? .015 : .18); setTimeout(()=>{ try{ s.stop(); }catch(_){ } }, fast ? 120 : 900); }
+    return {ready, start, ramp, calm, stop};
   })();
   function start(host){
     document.body.classList.add('attn-playing'); setTimeout(()=> dispatchEvent(new Event('resize')), 50);
@@ -7832,10 +7849,10 @@ const ATTN = (function(){
     }
     stage.appendChild(el); occs.forEach(o => stage.appendChild(o));                       // (the pieces of the room go over her)
     requestAnimationFrame(()=> el.classList.add('on'));
-    girlEv = {el, occs, t0: performance.now(), safeAt: 0}; root.classList.add('haunted');
+    girlEv = {el, occs, t0: performance.now(), safeAt: 0}; root.classList.add('haunted'); MON.start();
   }
   function girlGone(now){
-    if(!girlEv) return; const el = girlEv.el; (girlEv.occs || []).forEach(o => setTimeout(()=> o.remove(), now ? 0 : 700)); girlEv = null; if(root) root.classList.remove('haunted');
+    if(!girlEv) return; MON.stop(now); const el = girlEv.el; (girlEv.occs || []).forEach(o => setTimeout(()=> o.remove(), now ? 0 : 700)); girlEv = null; if(root) root.classList.remove('haunted');
     if(now){ el.remove(); return; } el.classList.remove('on'); el.classList.add('off'); setTimeout(()=> el.remove(), 700);
     girlNext = performance.now() + GIRL_EVERY;
   }
@@ -7864,7 +7881,8 @@ const ATTN = (function(){
       // and once it is closed you still get GIRL_GRACE to put the mask on
       if(!girlEv.safeAt && (popup || talking || (ask && ask.isConnected) || fading || document.querySelector('.at-memory, .attn-intro, .ug-obtain, .ug-freeze, .at-scare'))){ girlEv.t0 = Math.max(girlEv.t0, now - 2000 + GIRL_GRACE); return; }
       const t = now - girlEv.t0;
-      if(!girlEv.safeAt && t > 2000){ if(STATE.masked) girlEv.safeAt = now; else scare(); }      // two seconds to get the mask on
+      if(!girlEv.safeAt) MON.ramp(t / 2000);      // her drone climbs toward the moment she strikes
+      if(!girlEv.safeAt && t > 2000){ if(STATE.masked){ girlEv.safeAt = now; MON.calm(); } else scare(); }      // two seconds to get the mask on
       else if(girlEv.safeAt && now - girlEv.safeAt > 1600) girlGone();                       // it is on: she looks, and goes
       return;
     }
