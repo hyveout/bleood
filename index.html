@@ -4718,6 +4718,25 @@ const LIVING = (function(){
   }
   let noiseBuf = null;
   const LIVING_SOUND = false;      // off until the recorded sounds arrive (the synthesised stand-ins are silenced here)
+  // ---------- the recorded sounds (these play regardless of LIVING_SOUND, which only silences the synthesised stand-ins) ----------
+  // the locked-door sound is Attention's; the cutting loop is Attention's too (the cat's claw through the torso), reused for the knife leaving her back
+  const LSFX = {locked: "data:audio/mpeg;base64,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eITZnxKu6NQG7K1rSmDVbl+rmgB+X1gGloZfSwfTSuk+5eGAhx8b8eDggYMECH//////+N///////4wFgvx//+Dxv/8F/4MAI6qqYGFIYeXef5NQcBnwYMpGZqluZnFWYSCSZnDqLBIa6YG0KhmyEY+YGqiZjyECCpNoxIBKxMWYXQMMGQsSGPiZsGOb//uExCMCESV7AM7tqcH0rh+F3Z04SsDwooghh7O6N8XydBUocLv+yWTNVf9/iJBOQ2g3A35HIxeHcfPZcOT3nf/nP/8//+e/57/z//zk/n//n//z//znzwIEw5HzJVGr81GlKLGDyqGBpWgoPzEgCxCGZgCABiDEcgjkMCaWOix6YczgARGA0y0YMeBlnBgcXLHABh5kg+FhMEgJWAUb5UMajFB6trqUNDGnWjcZUkC4HIqMmY0G3+zf9+V8qU/5YsX//+tO/o/9qqm6X/VdX/5X8p/lVQkMIlxO0D9Nrn/N1hZMDwqMCgES/OZZMlSIS52j5ripp3h91BQMICaBo0WBBe2XmQGtjUaR+iC8WkyBcwjCpZVmPLFRqJIlEghKlhuEo2co8t+NSRby5SX+XK/ly3LlS3y2V/8sUlsv5TKcrK43o//LykbFb0lPlFv5//uExD0DD/F89C7o5cHFLt5JzAi4f8p7XLFAAVYwcMziz5MbB8xkG1aUy0+E4jAVcxnwdwJGo+uA1OGMlbWcubCp3eUql1y/jFMZ1M9LqzZasqPfbdXm7Iuu9U+rG1L1L+ZeW3d822ZW1ZFq0pbKrk2NMr6stdapsl+2jeYCAgx9JAS63t+sj60IJDkAAAgqmsxFeOlrgjSJiUHCSgoqDIqSRnmmQsTmQslNJtzUYbN6lqupM2pMuarGqscPZjWr6gK58ZmMqtVVUmP2Y6qquqw/6x1VUtdQEBElzql0gwFdc8mYLYK2P2UtfVVY4x/qdUrsGAgVGHgVlVnfLFXQVK/8liJwADSIWDMxFewxenjTHSbCM3lYk0MEKDQ3LxM9ofoyhRAzHXBYOUTMxTdDW8/ONMI5aJTghRNeowzwlzKytMErwxOtzOCGNMjc0wCT//uExGIATwFo3S2kZYIfjgYV7mUoPJGMkF0w+XDCpcKhdMEFI5+T0WCXx70aaTxeSLvYr4t6YYwATELBA2OOgxgyTQ7ADfGsmZLwMjEMgJq6TEFNRTMuMTAwqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq"}, lsfxPool = {};
+  function lsfx(k, vol){
+    try{ const base = lsfxPool[k] || (lsfxPool[k] = new Audio(LSFX[k])); const a = base.cloneNode(); a.volume = vol == null ? .8 : vol; const p = a.play(); if(p && p.catch) p.catch(()=>{}); }catch(_){ } }
+  function realCtx(){ if(!AC){ try{ AC = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ return null; } } if(AC.state === 'suspended') AC.resume().catch(()=>{}); return AC; }
+  // a looped sound that plays only while it keeps being asked for (call rub() on every pull; it fades out 160 ms after the last one)
+  const livLoop = (FILE, VOL) => (function(){
+    let buf = null, loading = null, src = null, g = null, offT = 0;
+    function ready(){ const c = realCtx(); if(!c) return Promise.resolve(null); if(buf) return Promise.resolve(buf);
+      return loading || (loading = fetch(FILE).then(r => r.ok ? r.arrayBuffer() : Promise.reject()).then(a => new Promise((ok, no) => c.decodeAudioData(a, ok, no))).then(b => buf = b).catch(()=> null)); }
+    function rub(){ const c = realCtx(); if(!c) return; ready().then(b => { if(!b) return;
+      if(!src){ g = c.createGain(); g.gain.value = 0; g.connect(c.destination);
+        src = c.createBufferSource(); src.buffer = b; src.loop = true; src.loopStart = .05; src.loopEnd = b.duration - .05; src.connect(g); src.start(0, .05 + Math.random() * Math.max(0, b.duration - .4)); }
+      g.gain.setTargetAtTime(VOL, c.currentTime, .04); clearTimeout(offT); offT = setTimeout(stop, 160); }); }
+    function stop(){ clearTimeout(offT); if(!src) return; const c = realCtx(), s = src, gg = g; src = null; g = null; gg.gain.setTargetAtTime(0, c.currentTime, .06); setTimeout(()=>{ try{ s.stop(); }catch(_){ } }, 400); }
+    return {ready, rub, stop};
+  })();
+  const KNIFE_CUT = livLoop('sfx_cut.mp3', 1);
   function plushAudio(){
     if(!LIVING_SOUND) return null;
     if(!AC){ try{ AC = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ return null; } }
@@ -4968,7 +4987,7 @@ const LIVING = (function(){
       return;
     }
     if(level.needCamera) return;
-    if(u.kind === 'bedroomdoor'){ if(!u.door.open){ flash("it's locked"); } return; }
+    if(u.kind === 'bedroomdoor'){ if(!u.door.open){ flash("it's locked"); lsfx('locked'); } return; }
     if(u.kind === 'memory'){ playMemory(); return; }
     if(u.kind === 'halldrawer'){
       const H1 = level.hall1; H1.drawerOpen = !H1.drawerOpen; u.prompt = H1.drawerOpen ? 'close' : 'open';
@@ -4980,7 +4999,7 @@ const LIVING = (function(){
     if(u.kind === 'painting'){ openPainting(); return; }
     if(u.kind === 'sidedoor'){
       const H1 = level.hall1;
-      if(!H1.hasKey){ flash('locked'); return; }
+      if(!H1.hasKey){ flash('locked'); lsfx('locked'); return; }
       openDoor(H1.door); level.solids = level.solids.filter(s => s !== H1.block);
       level.interactives = level.interactives.filter(m => m !== H1.door.leaf); flash('the key turns'); return;
     }
@@ -5379,15 +5398,15 @@ const LIVING = (function(){
       if(done) return;
       const now = performance.now();
       if(now < rest) return;                        // it has just caught: let go a moment
-      if(dy < 0){ moves.push([now, -dy]); prog += -dy / 100; }
+      if(dy < 0){ moves.push([now, -dy]); prog += -dy / 100; KNIFE_CUT.rub(); }
       while(moves.length && now - moves[0][0] > 300) moves.shift();
       strain = moves.reduce((a, m) => a + m[1], 0) / .3 / MAXV;
       if(strain > 1){
-        prog = Math.max(0, prog - .55); moves.length = 0; strain = 0; rest = now + 450; redLevel = 1;      // the whole screen goes red, not a box
+        prog = Math.max(0, prog - .55); moves.length = 0; strain = 0; rest = now + 450; redLevel = 1; KNIFE_CUT.stop();      // the whole screen goes red, not a box
         panel.classList.add('jolt'); setTimeout(()=>panel.classList.remove('jolt'), 200);
         flash('it catches');
       }else if(prog >= PULL){
-        done = true; draw();
+        done = true; draw(); KNIFE_CUT.stop();
         setTimeout(()=>{
           closePanel(); inv.knife = true; kn.visible = false; level.interactives = level.interactives.filter(m => m.userData !== u);
           flash('it comes free');
@@ -5410,8 +5429,9 @@ const LIVING = (function(){
       draw(); requestAnimationFrame(tick);
     };
     // on the way out: back to where you were standing; a knife left half out slides back in
+    KNIFE_CUT.ready();                       // have the sound decoded before the first pull
     pullCleanup = ()=>{
-      scene.remove(lamp); camera.position.copy(saved.pos); yaw = saved.yaw; pitch = saved.pitch;
+      KNIFE_CUT.stop(); scene.remove(lamp); camera.position.copy(saved.pos); yaw = saved.yaw; pitch = saved.pitch;
       if(!done) kn.position.set(KNIFE_IN, 0, 0);
       panel.classList.remove('see');
     };
