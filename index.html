@@ -4869,7 +4869,7 @@ const LIVING = (function(){
         P.litAt = now;
         if(P.step === 3){                                         // on the X: caught
           P.done = true; setHUD(''); P.spot.intensity = PL.TORCH; plushShow(P, true);
-          redLevel = .5; flash('caught');
+          redLevel = .5; flash('caught'); lsfx('artifact', .9);
           setTimeout(()=>{ if(level.plush === P) playMemory(); }, 1900);
           return;
         }
@@ -4990,7 +4990,7 @@ const LIVING = (function(){
     if(u.kind === 'camera'){
       // in your hands: the strap over your wrist, the room wakes up, and the warning about what it is for
       level.needCamera = false; hasCamera = true; level.cameraProp.visible = false; level.interactives = level.interactives.filter(m => m.userData !== u);
-      flash('the camera'); openTip(); hauntArm(HAUNT.FIRST); if(camBtn) camBtn.classList.add('show');
+      flash('the camera'); lsfx('pick'); openTip(); hauntArm(HAUNT.FIRST); if(camBtn) camBtn.classList.add('show');
       return;
     }
     if(level.needCamera) return;
