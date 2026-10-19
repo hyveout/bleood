@@ -3810,7 +3810,7 @@ const LIVING = (function(){
       if(!on){ if(tb.flame) tb.flame.visible = false; else if(!tb.glass) tb.shade.material = new THREE.MeshLambertMaterial({color:0x2a0a0a, side:THREE.DoubleSide}); }
       lights.push({L, on, z:tb.z, seed:Math.random()*10});
     });
-    const hallAmb = new THREE.AmbientLight(FF ? 0x3e5654 : 0x7a756e, [0.26, 0.2, 0.14][p-1]); hallAmb.userData.base = hallAmb.intensity; g.add(hallAmb);
+    const hallAmb = new THREE.AmbientLight(FF ? 0x3e5654 : 0x7a756e, [0.26, 0.2, TOUCH ? 0.22 : 0.14][p-1]); hallAmb.userData.base = hallAmb.intensity; g.add(hallAmb);      // (the last hall a touch brighter on phones)
     // bare bulbs down the middle of the ceiling, as in the bedroom, stuttering now and then; in the plain hall only one still works
     level.bulbs = [];
     const bzs = d > 10 ? [-4.5, 0, 4.5] : [-2, 2];
@@ -4122,6 +4122,8 @@ const LIVING = (function(){
       const dark = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 2.45), new THREE.MeshBasicMaterial({color:0x000000})); dark.position.set(-w/2 - .45, 1.07, exitAt); dark.rotation.y = Math.PI/2; g.add(dark);
     }
     openDoor(out); out.pivot.rotation.y = out.ry - Math.PI/2; level.doors.push(out);
+    { const gl = new THREE.PointLight(0x9a8a70, .32, 3.2, 1.6); gl.position.set(out.x + (onFront ? 0 : .5), 1.9, out.z + (onFront ? -.5 : 0)); g.add(gl);
+      out.leaf.material = out.leaf.material.map(m => { const c = m.clone(); if(c.emissive) c.emissive.setHex(0x1a1610); return c; }); }
     // what else is in here: a few of the tables and chairs from the halls, in the way
     const railM = new THREE.MeshLambertMaterial({color:0x1a120c}), cabM = mat('dresser', 1, 1);
     // long church benches, pushed about the floor
@@ -4673,13 +4675,16 @@ const LIVING = (function(){
     })();
   }
   let noiseBuf = null;
+  const LIVING_SOUND = false;      // off until the recorded sounds arrive (the synthesised stand-ins are silenced here)
   function plushAudio(){
+    if(!LIVING_SOUND) return null;
     if(!AC){ try{ AC = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ return null; } }
     if(AC.state === 'suspended') AC.resume();
     if(!noiseBuf){ noiseBuf = AC.createBuffer(1, AC.sampleRate * .5, AC.sampleRate); const ch = noiseBuf.getChannelData(0); for(let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1; }
     return AC;
   }
   function burst(t, len, vol, lo, hi, pan){
+    if(!AC) return;
     const src = AC.createBufferSource(); src.buffer = noiseBuf;
     const f = AC.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = lo + Math.random() * (hi - lo); f.Q.value = .9;
     const gn = AC.createGain(); gn.gain.setValueAtTime(0, t); gn.gain.linearRampToValueAtTime(vol, t + .004); gn.gain.exponentialRampToValueAtTime(.0005, t + len);
