@@ -3679,17 +3679,42 @@ const LIVING = (function(){
     // side tables with lamps along the right wall, doors along the left
     const tables = [], tzs = d > 10 ? [-4, 0, 4] : [-2.5, 1.5];
     const cabM = mat('dresser', 1, 1), shadeM = FF ? new THREE.MeshLambertMaterial({color:0xe6d3a4, emissive:0x6a4a1a}) : new THREE.MeshLambertMaterial({color:0x5a1212, side:THREE.DoubleSide, emissive:0x2a0505});
+    // each hall is furnished its own way: the chase has the dressers with red-shaded lamps; the key hall has round pedestal tables with
+    // glass oil lamps; the plain hall has nothing on the floor, only iron sconces on the wall
+    const glassM = new THREE.MeshPhongMaterial({color:0xd8d2c0, transparent:true, opacity:.35, specular:0xffffff, shininess:90, side:THREE.DoubleSide});
+    const brassM = new THREE.MeshPhongMaterial({color:0x7a6232, specular:0x5a4a30, shininess:40}), ironM = new THREE.MeshLambertMaterial({color:0x1a1816});
     tzs.forEach(tz=>{
       const tx = w/2 - .3;
-      box(g, .5, .06, .95, cabM, tx, .8, tz, false);
-      box(g, .44, .62, .88, cabM, tx, .46, tz, false);
-      const fr = new THREE.Mesh(new THREE.BoxGeometry(.03, .5, .8), (()=>{ const m = mat('panel', 1, 1); m.map.wrapS = m.map.wrapT = THREE.ClampToEdgeWrapping; return m; })()); fr.position.set(tx - .23, .46, tz); g.add(fr);
-      [[-.2, -.4], [-.2, .4]].forEach(([ox, oz])=> box(g, .05, .16, .05, railM, tx + ox, .08, tz + oz, false));
-      level.solids.push({minX:tx - .26, maxX:tx + .26, minZ:tz - .5, maxZ:tz + .5});
-      const lb = new THREE.Mesh(new THREE.CylinderGeometry(.04, .07, .26, 7), railM); lb.position.set(tx, .96, tz + .2); g.add(lb);
-      const sh = new THREE.Mesh(FF ? new THREE.BoxGeometry(.22, .3, .22) : new THREE.CylinderGeometry(.09, .15, .18, 8, 1, true), shadeM); sh.position.set(tx, FF ? 1.12 : 1.16, tz + .2); g.add(sh);
-      if(FF){ [[-.11,0],[.11,0],[0,-.11],[0,.11]].forEach(([ox, oz])=>{ const r = new THREE.Mesh(new THREE.BoxGeometry(ox ? .02 : .24, .32, oz ? .02 : .24), railM); r.position.set(tx + ox, 1.12, tz + .2 + oz); g.add(r); }); }
-      tables.push({x:tx, z:tz + .2, shade:sh});
+      if(p === 2){
+        box(g, .5, .06, .95, cabM, tx, .8, tz, false);
+        box(g, .44, .62, .88, cabM, tx, .46, tz, false);
+        const fr = new THREE.Mesh(new THREE.BoxGeometry(.03, .5, .8), (()=>{ const m = mat('panel', 1, 1); m.map.wrapS = m.map.wrapT = THREE.ClampToEdgeWrapping; return m; })()); fr.position.set(tx - .23, .46, tz); g.add(fr);
+        [[-.2, -.4], [-.2, .4]].forEach(([ox, oz])=> box(g, .05, .16, .05, railM, tx + ox, .08, tz + oz, false));
+        level.solids.push({minX:tx - .26, maxX:tx + .26, minZ:tz - .5, maxZ:tz + .5});
+        const lb = new THREE.Mesh(new THREE.CylinderGeometry(.04, .07, .26, 7), railM); lb.position.set(tx, .96, tz + .2); g.add(lb);
+        const sh = new THREE.Mesh(FF ? new THREE.BoxGeometry(.22, .3, .22) : new THREE.CylinderGeometry(.09, .15, .18, 8, 1, true), shadeM); sh.position.set(tx, FF ? 1.12 : 1.16, tz + .2); g.add(sh);
+        if(FF){ [[-.11,0],[.11,0],[0,-.11],[0,.11]].forEach(([ox, oz])=>{ const r = new THREE.Mesh(new THREE.BoxGeometry(ox ? .02 : .24, .32, oz ? .02 : .24), railM); r.position.set(tx + ox, 1.12, tz + .2 + oz); g.add(r); }); }
+        tables.push({x:tx, z:tz + .2, shade:sh, ly:1.1});
+      }else if(p === 1){
+        // a round table on a turned pedestal, a brass oil lamp with a glass chimney on it
+        const top = new THREE.Mesh(new THREE.CylinderGeometry(.3, .3, .035, 16), cabM); top.position.set(tx, .78, tz); g.add(top);
+        const stem = new THREE.Mesh(new THREE.CylinderGeometry(.035, .05, .72, 8), railM); stem.position.set(tx, .4, tz); g.add(stem);
+        const knop = new THREE.Mesh(new THREE.SphereGeometry(.06, 8, 6), railM); knop.position.set(tx, .5, tz); g.add(knop);
+        const foot = new THREE.Mesh(new THREE.CylinderGeometry(.2, .24, .05, 12), railM); foot.position.set(tx, .025, tz); g.add(foot);
+        level.solids.push({minX:tx - .3, maxX:tx + .3, minZ:tz - .3, maxZ:tz + .3});
+        const base = new THREE.Mesh(new THREE.CylinderGeometry(.05, .08, .1, 10), brassM); base.position.set(tx, .85, tz); g.add(base);
+        const bowl = new THREE.Mesh(new THREE.SphereGeometry(.07, 10, 8), brassM); bowl.position.set(tx, .95, tz); g.add(bowl);
+        const chim = new THREE.Mesh(new THREE.CylinderGeometry(.035, .05, .26, 10, 1, true), glassM); chim.position.set(tx, 1.14, tz); g.add(chim);
+        const fl = new THREE.Mesh(new THREE.SphereGeometry(.014, 6, 6), new THREE.MeshBasicMaterial({color:0xffe2a8})); fl.scale.y = 2.2; fl.position.set(tx, 1.05, tz); g.add(fl);
+        tables.push({x:tx, z:tz, shade:chim, ly:1.1, glass:true});
+      }else{
+        // an iron sconce on the wall: a bracket, a cup, a stub of candle
+        const arm = new THREE.Mesh(new THREE.BoxGeometry(.18, .025, .025), ironM); arm.position.set(w/2 - .1, 1.55, tz); g.add(arm);
+        const cup = new THREE.Mesh(new THREE.CylinderGeometry(.05, .03, .06, 8, 1, true), ironM); cup.position.set(w/2 - .19, 1.58, tz); g.add(cup);
+        const cd = new THREE.Mesh(new THREE.CylinderGeometry(.018, .018, .1, 8), new THREE.MeshLambertMaterial({color:0xd8cfb8})); cd.position.set(w/2 - .19, 1.63, tz); g.add(cd);
+        const fl = new THREE.Mesh(new THREE.SphereGeometry(.012, 6, 6), new THREE.MeshBasicMaterial({color:0xffd9a0})); fl.scale.y = 1.8; fl.position.set(w/2 - .19, 1.7, tz); g.add(fl);
+        tables.push({x:w/2 - .19, z:tz, shade:cd, ly:1.75, flame:fl});
+      }
     });
     doorZs.forEach(z=>{ if(!(p === 1 && z === SIDE_Z)) door(g, -w/2 + .03, z, Math.PI/2, 'deco'); });
     // stains soaked into the boards
@@ -3703,8 +3728,8 @@ const LIVING = (function(){
     const lights = [];
     tables.forEach((tb, i)=>{
       const on = p === 1 ? true : p === 2 ? (i !== 1) : (i === 0);
-      const L = new THREE.PointLight(FF ? 0xffb070 : 0xffc88c, on ? 1.0 : 0, 6, 1.6); L.position.set(tb.x - .05, 1.1, tb.z); g.add(L);
-      if(!on) tb.shade.material = new THREE.MeshLambertMaterial({color:0x2a0a0a, side:THREE.DoubleSide});
+      const L = new THREE.PointLight(FF ? 0xffb070 : 0xffc88c, on ? 1.0 : 0, 6, 1.6); L.position.set(tb.x - .05, tb.ly || 1.1, tb.z); g.add(L);
+      if(!on){ if(tb.flame) tb.flame.visible = false; else if(!tb.glass) tb.shade.material = new THREE.MeshLambertMaterial({color:0x2a0a0a, side:THREE.DoubleSide}); }
       lights.push({L, on, z:tb.z, seed:Math.random()*10});
     });
     const hallAmb = new THREE.AmbientLight(FF ? 0x3e5654 : 0x7a6a58, [0.2, 0.1, 0.05][p-1]); hallAmb.userData.base = hallAmb.intensity; g.add(hallAmb);
@@ -3712,8 +3737,22 @@ const LIVING = (function(){
     lights.forEach(o=> o.base = [1.0, .75, .55][p-1]);
     // a chair, not where it was
     const chairX = [0.7, -0.6, 0.0][p-1], chairZ = [-3.5, 1.5, 2.0][p-1];
-    box(g, .45, .45, .45, mat('wood'), chairX, .225, chairZ, true);
-    box(g, .45, .5, .06, mat('wood'), chairX, .7, chairZ - .2, false);
+    if(p === 2){
+      box(g, .45, .45, .45, mat('wood'), chairX, .225, chairZ, true);
+      box(g, .45, .5, .06, mat('wood'), chairX, .7, chairZ - .2, false);
+    }else if(p === 1){
+      // a three-legged stool, knocked over on its side
+      const st = new THREE.Group(); st.position.set(chairX, .2, chairZ); st.rotation.z = Math.PI / 2; st.rotation.y = .6; g.add(st);
+      const seat = new THREE.Mesh(new THREE.CylinderGeometry(.2, .2, .04, 12), mat('wood')); seat.position.y = .2; st.add(seat);
+      for(let i = 0; i < 3; i++){ const a = i * Math.PI * 2 / 3, lg = new THREE.Mesh(new THREE.CylinderGeometry(.018, .022, .4, 6), railM); lg.position.set(Math.sin(a) * .14, 0, Math.cos(a) * .14); lg.rotation.z = Math.cos(a) * .18; lg.rotation.x = -Math.sin(a) * .18; st.add(lg); }
+      level.solids.push({minX:chairX - .3, maxX:chairX + .3, minZ:chairZ - .3, maxZ:chairZ + .3});
+    }else{
+      // a high-backed armchair in dark cloth, facing the wrong way
+      const ch = new THREE.Group(); ch.position.set(chairX, 0, chairZ); ch.rotation.y = Math.PI + .4; g.add(ch);
+      const cloth = new THREE.MeshLambertMaterial({color:0x2a1a16}), cp = (a, b2, c2, x, y, z)=>{ const q = new THREE.Mesh(new THREE.BoxGeometry(a, b2, c2), cloth); q.position.set(x, y, z); ch.add(q); };
+      cp(.6, .42, .6, 0, .21, 0); cp(.6, .9, .14, 0, .87, -.23); cp(.12, .3, .6, -.24, .57, 0); cp(.12, .3, .6, .24, .57, 0);
+      level.solids.push({minX:chairX - .35, maxX:chairX + .35, minZ:chairZ - .35, maxZ:chairZ + .35});
+    }
     if(p === 2){
       // the furniture has been dragged out into the corridor: a table or a chair every couple of metres, left, right, left, so the way back is a weave
       const chairAt = (x, z, ry)=>{ const c = new THREE.Group(); c.position.set(x, 0, z); c.rotation.y = ry; g.add(c);
@@ -3801,7 +3840,7 @@ const LIVING = (function(){
       const skM = new THREE.MeshLambertMaterial({color:0x2a231c});
       box(g, .06, .12, RD, skM, RX0 - RW + .03, .06, SIDE_Z, false);
       // the X on the boards, in old red tape
-      const xM = new THREE.MeshLambertMaterial({color:0x8a1612});
+      const xM = new THREE.MeshLambertMaterial({color:0xb01a14, emissive:0x3a0604});
       [1, -1].forEach(sg2=>{ const t = new THREE.Mesh(new THREE.BoxGeometry(.95, .006, .11), xM); t.position.set(RX0 - PL.X_D, .004, SIDE_Z); t.rotation.y = sg2 * Math.PI / 4; g.add(t); });
       // the chair at the far end, turned to face the door
       const cx = RX0 - RW + .55, chM = mat('wood');
@@ -3908,9 +3947,12 @@ const LIVING = (function(){
     openDoor(out); out.pivot.rotation.y = out.ry - Math.PI/2; level.doors.push(out);
     // what else is in here: a few of the tables and chairs from the halls, in the way
     const railM = new THREE.MeshLambertMaterial({color:0x1a120c}), cabM = mat('dresser', 1, 1);
+    // long church benches, pushed about the floor
     [[-5, -3, .4], [4, 2, 1.9], [-2, 5, .8], [6, -5, 2.4], [1, -1.5, 0]].forEach(([x, z, ry])=>{
-      box(g, .5, .06, .95, cabM, x, .8, z, false); box(g, .44, .62, .88, cabM, x, .46, z, false);
-      level.solids.push({minX:x - .5, maxX:x + .5, minZ:z - .5, maxZ:z + .5});
+      const bn = new THREE.Group(); bn.position.set(x, 0, z); bn.rotation.y = ry; g.add(bn);
+      const bp = (a, b2, c2, x2, y2, z2, m)=>{ const q = new THREE.Mesh(new THREE.BoxGeometry(a, b2, c2), m); q.position.set(x2, y2, z2); bn.add(q); };
+      bp(2.2, .05, .4, 0, .45, 0, cabM); bp(2.2, .5, .05, 0, .72, -.2, cabM); [-1, 1].forEach(sd=> bp(.06, .45, .4, sd * 1.05, .225, 0, railM));
+      level.solids.push({minX:x - 1.1, maxX:x + 1.1, minZ:z - .9, maxZ:z + .9});
     });
     // her: three of her, each with a red light that sweeps the floor in front of her
     const GIRLS = [[-4.5, -1.0, .0], [4.0, 3.5, 2.2], [-1.5, 5.5, 4.0]];      // where each stands, and where her light starts
@@ -4402,7 +4444,7 @@ const LIVING = (function(){
     {d:PL.L - .55, z:0, y:1.25},          // over the chair
     {d:8.0, z:.72, y:1.45},               // the far doorway
     {d:6.5, z:-.72, y:1.35},              // the doorway across from it
-    {d:PL.X_D, z:0, y:1.4},               // on the X
+    {d:PL.X_D, z:0, y:.62},               // on the X: low, right over the tape
     {d:3.1, z:.68, y:.75},                // close, low, in the near doorway
     {d:1.75, z:-.22, y:1.5}];             // right in front of you
   // sounds, made here: little running steps (louder and to one side as it comes), the click of the light, the scream when it jumps
