@@ -1040,9 +1040,9 @@ body.mob-full .mob-exit:active{opacity:1; border-color:rgba(232,227,214,.9)}
 .cam-frame .c2{right:clamp(24px,5vmin,46px); top:clamp(24px,5vmin,46px); border-left:0; border-bottom:0}
 .cam-frame .c3{left:clamp(24px,5vmin,46px); bottom:clamp(24px,5vmin,46px); border-right:0; border-top:0}
 .cam-frame .c4{right:clamp(24px,5vmin,46px); bottom:clamp(24px,5vmin,46px); border-left:0; border-top:0}
-.cam-frame .cf-tag{position:absolute; left:clamp(30px,6vmin,56px); bottom:clamp(30px,6vmin,56px); font-family:var(--crtface); font-size:clamp(.6rem,1.3vw,.8rem); letter-spacing:.3em; text-transform:uppercase; color:rgba(230,224,210,.55)}
+.cam-frame .cf-tag{display:none; position:absolute; left:clamp(30px,6vmin,56px); bottom:clamp(30px,6vmin,56px); font-family:var(--crtface); font-size:clamp(.6rem,1.3vw,.8rem); letter-spacing:.3em; text-transform:uppercase; color:rgba(230,224,210,.55)}
 .cam-frame .cf-tag::before{content:''; display:inline-block; width:7px; height:7px; border-radius:50%; background:#e2352b; margin-right:8px; vertical-align:middle; animation:tipblink 1.1s ease-in-out infinite}
-.cam-frame .cf-count{position:absolute; right:clamp(30px,6vmin,56px); bottom:clamp(30px,6vmin,56px); font-family:var(--crtface); font-size:clamp(.6rem,1.3vw,.8rem); letter-spacing:.3em; color:rgba(230,224,210,.55)}
+.cam-frame .cf-count{display:none; position:absolute; right:clamp(30px,6vmin,56px); bottom:clamp(30px,6vmin,56px); font-family:var(--crtface); font-size:clamp(.6rem,1.3vw,.8rem); letter-spacing:.3em; color:rgba(230,224,210,.55)}
 .cam-btn{position:absolute; right:7%; bottom:10%; width:15%; aspect-ratio:1; border-radius:50%; border:1px solid rgba(233,232,228,.45); background:rgba(0,0,0,.4); display:none; z-index:7; touch-action:manipulation}
 .cam-btn span{position:absolute; left:50%; top:50%; width:46%; height:34%; transform:translate(-50%,-50%); border:2px solid rgba(233,232,228,.75); border-radius:4px}
 .cam-btn span::after{content:''; position:absolute; left:50%; top:50%; width:40%; aspect-ratio:1; transform:translate(-50%,-50%); border-radius:50%; border:2px solid rgba(233,232,228,.75)}
@@ -2329,6 +2329,20 @@ const LIVING = (function(){
   }
   function skipOpening(){ if(opening && (openSeen(opening.key) || opening.finished)) endOpening(); }
   let capEl = null, capHint = null, camFrame = null, camBtn = null, camUp = false, hasCamera = false, raiseHinted = false;
+  // a camera move the player does not control: out to a point, a hold there, and back to where they stood
+  let dolly = null;
+  function startDolly(to, o){ o = o || {}; dolly = {t0:performance.now(), from:{p:camera.position.clone(), yaw, pitch}, to, out:o.out || 1.6, hold:o.hold || .5, back:o.back || 1.0, onHold:o.onHold, onEnd:o.onEnd, fogTo:o.fogTo, fog0:scene.fog ? [scene.fog.near, scene.fog.far] : null, held:false}; }
+  function stepDolly(now){
+    const D = dolly, t = (now - D.t0) / 1000, ez = v => v < .5 ? 4 * v * v * v : 1 - Math.pow(-2 * v + 2, 3) / 2;
+    let k, phase;
+    if(t < D.out){ k = ez(t / D.out); phase = 0; }
+    else if(t < D.out + D.hold){ k = 1; phase = 1; if(!D.held){ D.held = true; if(D.onHold) D.onHold(); } }
+    else if(t < D.out + D.hold + D.back){ k = 1 - ez((t - D.out - D.hold) / D.back); phase = 2; }
+    else { dolly = null; camera.position.copy(D.from.p); yaw = D.from.yaw; pitch = D.from.pitch; if(D.fogTo && scene.fog){ scene.fog.near = D.fogTo[0]; scene.fog.far = D.fogTo[1]; } if(D.onEnd) D.onEnd(); return; }
+    camera.position.lerpVectors(D.from.p, D.to.p, k);
+    let dy = D.to.yaw - D.from.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); yaw = D.from.yaw + dy * k; pitch = D.from.pitch + (D.to.pitch - D.from.pitch) * k;
+    if(D.fogTo && D.fog0 && scene.fog && phase === 2){ const q = 1 - k; scene.fog.near = D.fog0[0] + (D.fogTo[0] - D.fog0[0]) * q; scene.fog.far = D.fog0[1] + (D.fogTo[1] - D.fog0[1]) * q; }      // the dark comes back with you
+  }
   // the two flashes: FORGET is for him (the past), REMEMBER is for her (the present). the wrong one does nothing but bring them closer
   let camMode = 'forget', camReady = 0;      // camReady: the flash is charging again until then
   const RECHARGE = 3200;
@@ -2808,15 +2822,14 @@ const LIVING = (function(){
     };
     const o = openings || {};
     cove(g, w, d, h, 0, 0, {front:o.front === 'none'});
-    if(kinds.frame) framing(g, w, d, h, 0, 0, {spacing:o.postSpacing, noPosts:o.noPosts, front:o.front === 'none', backHoles:typeof o.back === 'number' ? [o.back] : [], frontHoles:typeof o.front === 'number' ? [o.front] : [], leftHoles:(o.left !== undefined ? [o.left] : []).concat(o.decoLeft || [])});
+    if(kinds.frame) framing(g, w, d, h, 0, 0, {spacing:o.postSpacing, noPosts:o.noPosts, front:o.front === 'none', backHoles:typeof o.back === 'number' ? [o.back] : [], frontHoles:typeof o.front === 'number' ? [o.front] : [], leftHoles:(o.left !== undefined ? [o.left] : []).concat(o.left2 !== undefined ? [o.left2] : []).concat(o.decoLeft || [])});
     wallWithHole(-d/2, 0, o.back);
     wallWithHole(d/2, Math.PI, o.front);
     if(leftHole){
-      // the left wall in three pieces round a doorway (nothing dark behind it: a room is built there)
-      const hz = o.left, z0 = -d/2, z1 = d/2, a = (hz - DW/2) - z0, b = z1 - (hz + DW/2);
-      if(a > 0) plane(a, h, -w/2, h/2, z0 + a/2, Math.PI/2);
-      if(b > 0) plane(b, h, -w/2, h/2, z1 - b/2, Math.PI/2);
-      plane(DW, h - DH, -w/2, DH + (h - DH)/2, hz, Math.PI/2);
+      // the left wall in pieces round its doorways (nothing dark behind them: rooms are built there)
+      const holes = [o.left, o.left2].filter(v => v !== undefined).sort((x, y) => x - y); let z0 = -d/2;
+      holes.forEach(hz => { const a = (hz - DW/2) - z0; if(a > 0) plane(a, h, -w/2, h/2, z0 + a/2, Math.PI/2); plane(DW, h - DH, -w/2, DH + (h - DH)/2, hz, Math.PI/2); z0 = hz + DW/2; });
+      const b = d/2 - z0; if(b > 0) plane(b, h, -w/2, h/2, d/2 - b/2, Math.PI/2);
     }else plane(d, h, -w/2, h/2, 0, Math.PI/2);
     plane(d, h, w/2, h/2, 0, -Math.PI/2);
   }
@@ -3788,8 +3801,8 @@ const LIVING = (function(){
     const g = level.group, w = 3.0, d = p === 3 ? 9 : 14, h = 2.9;
     level.bounds = {minX:-w/2+.35, maxX:w/2-.35, minZ:-d/2 - .4, maxZ:d/2+.4};
     // pass two has no doorway at the far end at all
-    const SIDE_Z = 2.5;                                  // hallway one: the second door on the left is a real one, into the doll's corridor
-    shell(g, w, d, h, {floor:'floor', ceil:'ceil', wall:'wall', frame:true}, p === 2 ? {noPosts:true, back:0, front:'none', decoLeft:d > 10 ? [-3, 2.5] : [-1.5]} : p === 1 ? {noPosts:true, front:0, back:0, left:SIDE_Z, decoLeft:[-3]} : {noPosts:true, front:0, back:0, decoLeft:d > 10 ? [-3, 2.5] : [-1.5]});
+    const SIDE_Z = 2.5, ARENA_Z = -3;                    // hallway one: both doors on the left are real: the first into the big room, the second into the doll's corridor
+    shell(g, w, d, h, {floor:'floor', ceil:'ceil', wall:'wall', frame:true}, p === 2 ? {noPosts:true, back:0, front:'none', decoLeft:d > 10 ? [-3, 2.5] : [-1.5]} : p === 1 ? {noPosts:true, front:0, back:0, left:SIDE_Z, left2:ARENA_Z, decoLeft:[]} : {noPosts:true, front:0, back:0, decoLeft:d > 10 ? [-3, 2.5] : [-1.5]});
     if(p === 2){
       // no end wall at all: the corridor runs on past the thing in it, into the dark
       const L = 40, z0 = d/2;
@@ -3802,7 +3815,7 @@ const LIVING = (function(){
       framing(g, w, L, h, 0, z0 + L/2, {back:true, front:true, noPosts:true});
     }
     const railM = new THREE.MeshLambertMaterial({color:0x1a120c});
-    const doorZs = d > 10 ? [-3, 2.5] : [-1.5];
+    const doorZs = p === 1 ? [] : d > 10 ? [-3, 2.5] : [-1.5];
     // side tables with lamps along the right wall, doors along the left
     const tables = [], tzs = d > 10 ? [-4, 0, 4] : [-2.5, 1.5];
     const cabM = mat('dresser', 1, 1), shadeM = FF ? new THREE.MeshLambertMaterial({color:0xe6d3a4, emissive:0x6a4a1a}) : (()=>{ const m = mat('shade', 1, 1, {side:THREE.DoubleSide, emissive:0x2a0505}); m.map.magFilter = THREE.LinearFilter; return m; })();      // the shades: old cloth, stained and scorched
@@ -3960,11 +3973,17 @@ const LIVING = (function(){
       const RX0 = -w/2, RW = PL.L, RD = PL.W, rz0 = SIDE_Z - RD/2, rz1 = SIDE_Z + RD/2, rxc = RX0 - RW/2;
       const doorBlock = {minX:-w/2 - .12, maxX:-w/2, minZ:SIDE_Z - .55, maxZ:SIDE_Z + .55};
       level.hall1.block = doorBlock;
+      // the big room off the first left door: twelve by twelve, its doorway in the hall's left wall at ARENA_Z
+      const AW = 12, AD = 12, acx = -w/2 - AW/2, acz = ARENA_Z - 2, az0 = acz - AD/2, az1 = acz + AD/2;
+      const arenaBlock = {minX:-w/2 - .12, maxX:-w/2, minZ:ARENA_Z - .55, maxZ:ARENA_Z + .55};
       level.solids.push(
-        {minX:-w/2 - .12, maxX:-w/2, minZ:-d/2 - 1, maxZ:SIDE_Z - .55},        // the left wall, either side of the doorway
+        {minX:-w/2 - .12, maxX:-w/2, minZ:-d/2 - 1, maxZ:ARENA_Z - .55},       // the left wall, round both doorways
+        {minX:-w/2 - .12, maxX:-w/2, minZ:ARENA_Z + .55, maxZ:SIDE_Z - .55},
         {minX:-w/2 - .12, maxX:-w/2, minZ:SIDE_Z + .55, maxZ:d/2 + 1},
-        doorBlock,                                                                // the door itself, while it is shut
-        {minX:-RW - 4, maxX:-w/2 - .12, minZ:-d/2 - 1, maxZ:rz0 - .02},         // everything outside the corridor
+        doorBlock, arenaBlock,                                                    // the doors themselves, while they are shut
+        {minX:-RW - 4, maxX:-w/2 - .12, minZ:az1 + .02, maxZ:rz0 - .02},        // outside the corridor and the big room
+        {minX:-40, maxX:acx - AW/2 - .02, minZ:-40, maxZ:rz0 - .02},
+        {minX:-40, maxX:-w/2 - .12, minZ:-40, maxZ:az0 - .02},
         {minX:-RW - 4, maxX:-w/2 - .12, minZ:rz1 + .02, maxZ:d/2 + 1});
       level.bounds.minX = RX0 - RW + .35;
 
@@ -3991,6 +4010,26 @@ const LIVING = (function(){
       box(g, .46, .05, .46, chM, cx, .45, SIDE_Z, false);
       [[-.2, -.2], [.2, -.2], [-.2, .2], [.2, .2]].forEach(([ox, oz])=> box(g, .045, .45, .045, railM, cx + ox, .225, SIDE_Z + oz, false));
       box(g, .05, .55, .46, chM, cx - .21, .75, SIDE_Z, false);
+      // ---- the big room: the same boards and walls, a chalk ring in the middle of the floor, one bulb over it
+      const ad = door(g, -w/2 + .03, ARENA_Z, Math.PI/2, 'arena'); ad.leaf.userData = {kind:'arenadoor', prompt:'open'}; level.interactives.push(ad.leaf);
+      // (lit like the hall, not dimmed like the corridor)
+      const ap = (m, pw, ph, x, y, z, ry, rx)=>{ const q = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), m); q.position.set(x, y, z); q.rotation.set(rx || 0, ry || 0, 0); g.add(q); return q; };
+      const aw = (pw, ph, x, y, z, ry)=> ap(wallPiece('wall', pw, ph, h, x, y, z, ry), pw, ph, x, y, z, ry);
+      ap(mat('floor', AW, AD), AW, AD, acx, 0, acz, 0, -Math.PI/2);
+      ap(mat('ceil', AW / 1.5, AD / 1.5), AW, AD, acx, h, acz, 0, Math.PI/2);
+      aw(AD, h, acx - AW/2, h/2, acz, Math.PI/2);                        // far wall
+      aw(AW, h, acx, h/2, az0, 0);                                        // the two side walls
+      aw(AW, h, acx, h/2, az1, Math.PI);
+      { const DWh = 1.1, DHh = 2.15, a1 = (ARENA_Z - DWh/2) - az0, b1 = az1 - (ARENA_Z + DWh/2);      // the near wall, round the doorway, seen from inside
+        aw(a1, h, -w/2 - .005, h/2, az0 + a1/2, -Math.PI/2); aw(b1, h, -w/2 - .005, h/2, az1 - b1/2, -Math.PI/2); aw(DWh, h - DHh, -w/2 - .005, DHh + (h - DHh)/2, ARENA_Z, -Math.PI/2); }
+      cove(g, AW, AD, h, acx, acz);
+      { const ring = new THREE.Mesh(new THREE.RingGeometry(1.0, 1.12, 48), new THREE.MeshBasicMaterial({color:0xd8d0c0, transparent:true, opacity:.45, side:THREE.DoubleSide})); ring.rotation.x = -Math.PI/2; ring.position.set(acx, .006, acz); g.add(ring);
+        [[acx, acz], [acx - 3.2, acz - 3.6], [acx + 3.2, acz + 3.6]].forEach(([bx, bz], i)=>{
+          const bulb = new THREE.PointLight(0xffe2b8, i ? .9 : 1.3, 15, 1.5); bulb.position.set(bx, h - .3, bz); g.add(bulb);
+          const bb = new THREE.Mesh(new THREE.SphereGeometry(.05, 8, 6), new THREE.MeshBasicMaterial({color:0xfff2d8})); bb.position.copy(bulb.position); g.add(bb);
+          level.bulbs.push({L:bulb, m:bb, base:i ? .9 : 1.3, flk:{until:0, next:performance.now() + 800 + Math.random() * 3000}}); }); }
+      level.arena = {door:ad, block:arenaBlock, cx:acx, cz:acz, w:AW, d:AD, z0:az0, z1:az1, state:'closed', killed:0, need:6, hallBounds:level.bounds, wasInside:false,
+        bounds:{minX:acx - AW/2 + .35, maxX:-w/2 + .5, minZ:az0 + .35, maxZ:az1 - .35}};
       // the doll, and the light you hold
       level.plush = plushSetup(g, RX0, SIDE_Z);
       level.hallLights = lights; level.hallAmb = hallAmb;
@@ -4019,7 +4058,7 @@ const LIVING = (function(){
       const D = level.distort;
       const dtS = Math.min(.05, (now - (level._t || now)) / 1000); level._t = now;
       level.bulbs.forEach(b=>{ const f = b.flk; if(now > f.next){ f.until = now + 90 + Math.random() * 900; f.next = f.until + 900 + Math.random() * 5200; }
-        const on = now < f.until ? (Math.random() < .55 ? .04 : .85) : 1; b.L.intensity = (level.plush && level.plush.dark ? 0 : .9) * on; b.m.material.color.setRGB(on, on * .96, on * .88); });
+        const on = now < f.until ? (Math.random() < .55 ? .04 : .85) : 1; b.L.intensity = (level.plush && level.plush.dark ? 0 : (b.base || .9)) * on; b.m.material.color.setRGB(on, on * .96, on * .88); });
       lights.forEach(o=>{ if(o.on){
         const flick = Math.random() < (0.02 + 0.12 * D) ? -0.6 * Math.random() : 0;
         o.L.intensity = Math.max(0, (o.base || 1) + flick + Math.sin(now / (120 + o.seed * 30)) * 0.12 * D);
@@ -4031,6 +4070,13 @@ const LIVING = (function(){
       if(level.candleLight) level.candleLight.intensity = (level.plush && level.plush.dark ? 0 : .7) + Math.sin(now / 70) * .06 + (Math.random() - .5) * .15;
       if(p === 2 && level.demon && level.watch && !level.watch.scaring){
         const gp = level.demon.group.position, dx = camera.position.x - gp.x, dz = camera.position.z - gp.z, dist = Math.hypot(dx, dz);
+        if(!level.dollyDone && !dolly && !level.intro){
+          // the first thing: the view rushes down the hall to her face, holds on it, and comes back with the dark behind it
+          level.dollyDone = true;
+          startDolly({p:new THREE.Vector3(gp.x, 1.75, gp.z - 1.35), yaw:Math.PI, pitch:.02}, {out:2.0, hold:.75, back:1.3, fogTo:[2.0, 6.5],
+            onHold:()=>{ redLevel = Math.max(redLevel, .85); level.shake = .12; lsfx('sting', .8); }, onEnd:()=>{ level.shake = 0; }});
+        }
+        if(dolly) return;
         if(!level.chase){
           // has she come into view? close enough to see through the dark, and somewhere in front of you
           const fx = -Math.sin(yaw), fz = -Math.cos(yaw), ang = Math.acos(Math.max(-1, Math.min(1, (-dx * fx - dz * fz) / Math.max(.001, dist))));
@@ -4056,6 +4102,16 @@ const LIVING = (function(){
         H1.drawer.position.x += ((w/2 - .3 - (H1.drawerOpen ? .3 : 0)) - H1.drawer.position.x) * .12;
         const sd = H1.door; sd.pivot.rotation.y += ((sd.ry + (sd.open ? Math.PI/2 : 0)) - sd.pivot.rotation.y) * .06;     // it swings in, away from you
         if(level.plush) plushStep(level.plush, now, dtS);
+        const A = level.arena;
+        if(A){
+          A.door.pivot.rotation.y += ((A.door.ry + (A.door.open ? Math.PI/2 : 0)) - A.door.pivot.rotation.y) * .06;
+          const inside = inArena(); if(inside !== A.wasInside){ A.wasInside = inside; level.bounds = inside ? A.bounds : A.hallBounds; }
+          if(A.state === 'open' && inside && Math.hypot(camera.position.x - A.cx, camera.position.z - A.cz) < 1.1){
+            // in the ring: the door shuts behind you and they come, one after another, until all of them are gone
+            A.state = 'fighting'; A.door.open = false; level.solids.push(A.block); lsfx('locked'); redLevel = Math.max(redLevel, .7); level.shake = .1;
+            flash('they are coming'); hauntArm([1.5, 3]);
+          }
+        }
       }
       if(p === 2){
         if(level.backDoor && level.backDoor.open && camera.position.z < level.exitBackZ) go(nextRoom());      // out the way you came, with her behind you
@@ -4064,8 +4120,9 @@ const LIVING = (function(){
       }
     };
     if(p !== 2){ hauntSetup(); hauntArm(HAUNT.AGAIN); }
-    level.blockZMax = ()=> p === 2 ? d/2 + 30 : (p === 1 && !level.memoryDone ? d/2 - .5 : d/2 + .6);
-    level.blockZMin = ()=> p === 2 ? (level.backDoor && level.backDoor.open ? -d/2 - .6 : -d/2 + .35) : -d/2 + .35;
+    const inArena = ()=> !!(level.arena && camera.position.x < -w/2 - .05 && camera.position.z < level.arena.z1 + .3);
+    level.blockZMax = ()=> p === 2 ? d/2 + 30 : inArena() ? level.arena.z1 - .35 : (p === 1 && !level.memoryDone ? d/2 - .5 : d/2 + .6);
+    level.blockZMin = ()=> p === 2 ? (level.backDoor && level.backDoor.open ? -d/2 - .6 : -d/2 + .35) : inArena() ? level.arena.z0 + .35 : -d/2 + .35;
   }
 
   // ---------- the doll's head in the bedroom (the camera, after Fatal Frame): it drifts in from a corner and comes for you. a ring comes up in the
@@ -4104,16 +4161,45 @@ const LIVING = (function(){
     if(H.who === 'her'){ H.herHead.eyes.forEach(e => e.visible = true); H.herHead.glow.intensity = 1.8; }
     camFrame.querySelector('.cf-tag').textContent = H.who === 'him' ? 'past' : 'present'; camFrame.querySelector('.cf-count').textContent = String(H.kills).padStart(2, '0');
     if(camUp){ capHint.textContent = ringHint(H); capHint.classList.add('on'); }
-    else flash(TOUCH ? 'something is here. raise the camera' : 'something is here. raise the camera (C)');      // every time: the only other warning is the red at the edges
+    else if(!raiseHinted){ raiseHinted = true; flash(TOUCH ? 'something is here. raise the camera' : 'something is here. raise the camera (C)'); }      // the first time only
     if(H.who === 'her'){ if(plushAudio()) burst(AC.currentTime + .01, .6, .3, 200, 600, 0); }
     plushSteps(3, 0); redLevel = Math.max(redLevel, .5); lsfx('sting', .9);
   }
+  // the flash takes it: a second flash, the head flung away spinning and swelling, and a burst of dark and red from where it was
+  function hauntBurst(H){
+    const m = H.model; if(!m) return;
+    H.dying = performance.now(); level.shake = .34; redLevel = 1;
+    setTimeout(()=>{ fadeEl.style.background = '#fff'; fade = .9; fadeTo = 0; setTimeout(()=>{ fadeEl.style.background = '#000'; }, 220); }, 170);
+    const fx = H.fx = [], gM = new THREE.MeshBasicMaterial({color:0x1a0406, transparent:true, opacity:.95, depthWrite:false, fog:false}), rM = new THREE.MeshBasicMaterial({color:0xc01818, transparent:true, opacity:.9, depthWrite:false, fog:false});
+    for(let i = 0; i < 28; i++){
+      const q = new THREE.Mesh(new THREE.PlaneGeometry(.06 + Math.random() * .1, .06 + Math.random() * .1), i % 3 ? gM : rM);
+      q.position.set(H.px, H.py, H.pz); const a = Math.random() * Math.PI * 2, e = (Math.random() - .3) * 1.4, sp = 1.5 + Math.random() * 3.5;
+      fx.push({o:q, v:new THREE.Vector3(Math.cos(a) * Math.cos(e) * sp, Math.sin(e) * sp + 1, Math.sin(a) * Math.cos(e) * sp), w:(Math.random() - .5) * 20, life:.55 + Math.random() * .4, age:0});
+      level.group.add(q);
+    }
+  }
+  function hauntDieStep(H, now, dt){
+    const m = H.model, t = (now - H.dying) / 1000, cam = camera.position;
+    const dx = H.px - cam.x, dz = H.pz - cam.z, d = Math.max(.01, Math.hypot(dx, dz));
+    m.position.set(H.px + dx / d * t * 7, H.py + t * 2.2 + t * t * 1.5, H.pz + dz / d * t * 7); m.rotateZ(dt * 16); m.rotateX(dt * 9);
+    const sc = 1 + t * 1.6; m.scale.setScalar(sc); m.visible = t < .55;
+    level.shake = Math.max(0, .34 * (1 - t / .6));
+    (H.fx || []).forEach(f => { f.age += dt; f.o.position.addScaledVector(f.v, dt); f.v.y -= 4 * dt; f.o.rotation.z += f.w * dt; f.o.lookAt(cam); f.o.material.opacity = Math.max(0, 1 - f.age / f.life); });
+    if(t > .7){ (H.fx || []).forEach(f => level.group.remove(f.o)); H.fx = null; H.dying = 0; m.scale.setScalar(1); hauntEnd(true); }
+  }
   function hauntEnd(killed){
     const H = level.haunt; H.on = false; if(H.model) H.model.visible = false; capEl.classList.remove('full'); capEl.querySelectorAll('i').forEach(el => el.classList.remove('lit')); capHint.classList.remove('on');
+    const A = level.arena;
+    if(killed && A && A.state === 'fighting'){
+      H.kills++; A.killed++;
+      if(A.killed >= A.need){ A.state = 'cleared'; A.door.open = true; level.solids = level.solids.filter(x => x !== A.block); flash('it is quiet'); lsfx('artifact', .9); hauntArm(HAUNT.AGAIN); }
+      else { flash((A.need - A.killed) + ' more'); hauntArm([1.2, 2.6]); }
+      return;
+    }
     if(killed){ H.kills++; hauntArm(HAUNT.AGAIN); } else hauntArm(HAUNT.AGAIN);
   }
   function hauntSnap(){
-    const H = level && level.haunt; if(!H || !H.on || !camUp) return false;
+    const H = level && level.haunt; if(!H || !H.on || !camUp || H.dying) return false;
     const nowS = performance.now(); if(nowS < camReady) return false;      // still charging: nothing happens
     camReady = nowS + RECHARGE;
     // the shutter: a white flash, a click
@@ -4129,7 +4215,7 @@ const LIVING = (function(){
       // caught in full: it screams, it is thrown back, it comes apart in the light and is gone
       plushScream(); redLevel = 1; level.shake = .18; setTimeout(()=>{ if(level && level.haunt === H) level.shake = 0; }, 450);
       if(H.who === 'her') redLevel = 1;
-      flash('it is gone'); setTimeout(()=>{ if(level.haunt === H) hauntEnd(true); }, 420);
+      hauntBurst(H);
     }else{
       // too soon: only knocked back a few feet, and the runes go dark
       const dx = H.px - camera.position.x, dz = H.pz - camera.position.z, d = Math.max(.01, Math.hypot(dx, dz)), b = level.bounds;
@@ -4141,9 +4227,10 @@ const LIVING = (function(){
   let HV = null;
   function hauntStep(now, dt){
     const H = level.haunt; if(!H) return;
-    const busy = level.intro || tipOpen || opening || level.memory || noteOverlay.classList.contains('on') || panel.classList.contains('on') || (level.watch && level.watch.scaring) || (level.plush && level.plush.active);
+    const busy = level.intro || tipOpen || opening || dolly || level.memory || noteOverlay.classList.contains('on') || panel.classList.contains('on') || (level.watch && level.watch.scaring) || (level.plush && level.plush.active);
     if(!H.on){ if(now > H.next){ if(busy || !haveCamera()) H.next = now + 4000 + Math.random() * 4000; else hauntStart(now); } return; }
     if(busy) return;
+    if(H.dying){ hauntDieStep(H, now, dt); return; }
     const m = H.model, t = now / 1000 + H.seed, cam = camera.position;
     // it drifts toward you, weaving, sinking as it comes
     const dx = cam.x - H.px, dz = cam.z - H.pz, d = Math.hypot(dx, dz);
@@ -4835,12 +4922,17 @@ const LIVING = (function(){
   function plushStart(P, now){
     P.active = true; P.lock = true; P.dark = true; P.lastNow = now; P.startAt = now; setCamUp(false);
     yaw = Math.PI / 2; pitch = 0; fade = .85; fadeTo = 0;          // you are facing down it, as the lights go
-    P.nextMove = now + 1e9; P.push = false;      // (set once the intro is over: it sits in its chair a good while before the first move)
-    P.intro = {t0:now};                          // first it is in your face; then it drifts back to its chair; then the lights go
+    P.nextMove = now + 1e9; P.push = false;      // (set once the look is over: it sits in its chair a good while before the first move)
+    P.intro = true;
     const H1 = level.hall1; H1.door.open = false; H1.door.pivot.rotation.y = H1.door.ry;      // it shuts behind you
     P.fog = scene.fog; scene.fog = new THREE.Fog(FOGC, 7, 17);      // the torch reaches the chair
     level.solids.push(H1.block);
-    plushPlace(P, 0); P.spot.intensity = PL.TORCH;
+    plushPlace(P, 0); P.spot.intensity = PL.TORCH; plushShow(P, true);
+    // the view goes down the corridor to the face on the chair, stays on it, and comes back; then the light dies and it begins
+    { const S0 = PL.STOPS[0]; startDolly({p:new THREE.Vector3(P.RX0 - S0.d + 1.05, S0.y + .05, P.Z0), yaw:Math.PI / 2, pitch:0}, {out:2.0, hold:.8, back:1.3,
+        onHold:()=>{ redLevel = Math.max(redLevel, .7); lsfx('sting', .7); },
+        onEnd:()=>{ P.intro = false; plushShow(P, false); P.spot.intensity = 0; P.nextMove = performance.now() + 6500 + Math.random() * 3500; redLevel = Math.max(redLevel, .4);
+          flash(TOUCH ? 'hold the light button. let it move in the dark' : 'hold space or the mouse for light. let it move in the dark'); }}); }
     wrap.classList.add('plush-on');
     story('catch it on the x');
     plushClick(false);
@@ -4882,27 +4974,14 @@ const LIVING = (function(){
       const m = P.model; if(m && m.parent === camera){ const e = 1 - Math.pow(1 - Math.min(1, (now - P.scareAt) / 240), 3); m.position.set((Math.random() - .5) * .05, -.12 + (Math.random() - .5) * .04, -1.8 + 1.1 * e); m.rotation.z = (Math.random() - .5) * .08; }
       return;
     }
+    if(dolly) return;      // the look down the corridor: hands off
     // you stand just inside the door, looking down the corridor; you can only look around a little
     const k = Math.min(1, dt * 6);
     camera.position.x += (P.RX0 - .45 - camera.position.x) * k; camera.position.z += (P.Z0 - camera.position.z) * k; camera.position.y += (EYE - camera.position.y) * k;
     const yc = Math.PI / 2;
     const rel = Math.atan2(Math.sin(yaw - yc), Math.cos(yaw - yc));
     yaw = yc + Math.max(-.5, Math.min(.5, rel)); pitch = Math.max(-.4, Math.min(.3, pitch));
-    if(P.intro){
-      const m = P.model, t = (now - P.intro.t0) / 1000, S0 = PL.STOPS[0];
-      const ex = P.RX0 - .45 - .55, ey = EYE - .02, ez = P.Z0;                       // a hand's breadth from your face
-      const cx = P.RX0 - S0.d, cy = S0.y, cz = P.Z0 + S0.z;                           // over the chair
-      if(m){
-        plushShow(P, true);
-        if(t < 1.6){ m.position.set(ex + (Math.random() - .5) * .012, ey + (Math.random() - .5) * .012, ez + (Math.random() - .5) * .012); m.rotation.set(0, Math.PI / 2 + Math.sin(t * 9) * .05, Math.sin(t * 7) * .04); }
-        else if(t < 3.4){ const k = (t - 1.6) / 1.8, e = k * k * (3 - 2 * k); m.position.set(ex + (cx - ex) * e, ey + (cy - ey) * e + Math.sin(k * Math.PI) * .25, ez + (cz - ez) * e); m.rotation.set(0, Math.PI / 2, Math.sin(t * 5) * .05); }
-        else { plushPlace(P, 0); }
-      }
-      if(t < 3.6) P.spot.intensity = PL.TORCH * (t < 3.0 ? 1 : Math.max(0, 1 - (t - 3.0) / .6));      // the light dies as it settles
-      if(t >= 3.6 || !m){ P.intro = null; plushShow(P, false); P.spot.intensity = 0; P.nextMove = now + 6500 + Math.random() * 3500; redLevel = Math.max(redLevel, .4);
-        flash(TOUCH ? 'hold the light button. let it move in the dark' : 'hold space or the mouse for light. let it move in the dark'); }
-      return;
-    }
+    if(P.intro){ if(!dolly){ P.intro = false; } return; }
     if(P.done){
       P.spot.intensity = PL.TORCH;
       if(level.memoryDone){ plushEnd(P); }
@@ -5038,7 +5117,7 @@ const LIVING = (function(){
     if(u.kind === 'camera'){
       // in your hands: the strap over your wrist, the room wakes up, and the warning about what it is for
       level.needCamera = false; hasCamera = true; level.cameraProp.visible = false; level.interactives = level.interactives.filter(m => m.userData !== u);
-      flash('the camera'); lsfx('pick'); openTip(); hauntArm(HAUNT.FIRST); if(camBtn) camBtn.classList.add('show');
+      lsfx('pick'); openTip(); hauntArm(HAUNT.FIRST); if(camBtn) camBtn.classList.add('show');
       return;
     }
     if(level.needCamera) return;
@@ -5052,9 +5131,15 @@ const LIVING = (function(){
     }
     if(u.kind === 'hallkey'){ const H1 = level.hall1; H1.hasKey = true; H1.key.visible = false; level.interactives = level.interactives.filter(m => !H1.keyParts.includes(m)); flash('a small key'); lsfx('pick'); return; }
     if(u.kind === 'painting'){ openPainting(); return; }
+    if(u.kind === 'arenadoor'){
+      const A = level.arena; if(A.state === 'fighting') return;
+      if(!A.door.open){ A.door.open = true; A.state = A.state === 'closed' ? 'open' : A.state; level.solids = level.solids.filter(x => x !== A.block); u.prompt = ''; level.interactives = level.interactives.filter(m => m !== A.door.leaf); }
+      return;
+    }
     if(u.kind === 'sidedoor'){
       const H1 = level.hall1;
       if(!H1.hasKey){ flash('locked'); lsfx('locked'); return; }
+      if(level.arena && level.arena.state !== 'cleared'){ flash('not yet. the other door first'); lsfx('locked'); return; }
       openDoor(H1.door); level.solids = level.solids.filter(s => s !== H1.block);
       level.interactives = level.interactives.filter(m => m !== H1.door.leaf); flash('the key turns'); return;
     }
@@ -5065,7 +5150,7 @@ const LIVING = (function(){
     if(u.kind === 'typewriter'){ if(done.type){ flash('the page is finished'); return; } openTypewriter(); return; }
     if(u.kind === 'sigil'){
       if(done.trace){ flash('it is drawn'); return; }
-      if(!inv.knife){ flash("this needs to be traced with blood, maybe there's a knife somewhere"); return; }
+      if(!inv.knife){ flash('i need a knife to draw some blood'); return; }
       if(!inv.cut){ inv.cut = true; cutFlash(); setTimeout(openTrace, 900); return; }
       openTrace(); return;
     }
@@ -5567,7 +5652,7 @@ const LIVING = (function(){
     });
     photoEl = document.createElement('div'); photoEl.className = 'living-photo'; photoEl.innerHTML = '<img alt="" src="' + PHOTO_A + '"><span>is this me?</span>'; wrap.appendChild(photoEl);
     tipEl = document.createElement('div'); tipEl.className = 'living-tip';
-    tipEl.innerHTML = '<div class="tip-body"><div class="tip-line1">You are haunted by both your past and your present</div><div class="tip-heads"><img class="tip-head" alt="" src="' + TIP_HEAD + '"><video class="tip-film" src="bleood_cam_tip.mp4" muted loop playsinline autoplay preload="auto"></video><img class="tip-head him" alt="" src="' + DOLL_FACE + '"></div><div class="tip-line2">Flash them when your runic meter is full. REMEMBER her. FORGET him.</div><div class="tip-line3">' + (TOUCH ? 'You can only see them through the camera. The round button raises it. It needs a moment to recharge after each flash.' : 'You can only see them through the camera. C raises it. It needs a moment to recharge after each flash.') + '</div><div class="tip-go">' + (TOUCH ? 'tap to continue' : 'press any key') + '</div></div>';
+    tipEl.innerHTML = '<div class="tip-body"><div class="tip-line1">You are haunted by both your past and your present</div><div class="tip-heads"><video class="tip-film" src="bleood_cam_tip.mp4" muted loop playsinline autoplay preload="auto"></video></div><div class="tip-line2">Flash them when your runic meter is full. REMEMBER her. FORGET him.</div><div class="tip-line3">' + (TOUCH ? 'You can only see them through the camera. The round button raises it. It needs a moment to recharge after each flash.' : 'You can only see them through the camera. C raises it. It needs a moment to recharge after each flash.') + '</div><div class="tip-go">' + (TOUCH ? 'tap to continue' : 'press any key') + '</div></div>';
     wrap.appendChild(tipEl);
     tipEl.addEventListener('touchend', e=>{ e.preventDefault(); e.stopPropagation(); closeTip(); });
     redEl = document.createElement('div'); redEl.className = 'living-red'; wrap.appendChild(redEl);
@@ -5718,7 +5803,7 @@ const LIVING = (function(){
     raf = requestAnimationFrame(loop);
     const dt = Math.min((now - last) / 1000, 0.05); last = now;
     if(opening){ stepOpening(now); if(level && level.intro) level.intro.t0 = now; }
-    const reading = !!opening || noteOverlay.classList.contains('on') || panel.classList.contains('on') || tipOpen || !!(level && level.intro) || !!(level && level.ending && level.ending.locked) || !!(level && level.memory) || !!(level && level.plush && level.plush.lock);
+    const reading = !!opening || !!dolly || noteOverlay.classList.contains('on') || panel.classList.contains('on') || tipOpen || !!(level && level.intro) || !!(level && level.ending && level.ending.locked) || !!(level && level.memory) || !!(level && level.plush && level.plush.lock);
     if(reading) movingNow = false;
 
     if(level && !reading){
@@ -5749,6 +5834,7 @@ const LIVING = (function(){
       if(watchEl) watchEl.classList.toggle('on', !!(Wt && Wt.open && !Wt.scaring));
     }
     if(level && level.intro) stepIntro(now);
+    if(dolly){ stepDolly(now); camera.rotation.set(0, 0, 0); camera.rotateY(yaw); camera.rotateX(pitch); }
     if(level && level.shake > 0){ camera.rotateZ((Math.random() - .5) * level.shake); camera.rotateX((Math.random() - .5) * level.shake * .6); }
     const D = (level && level.distort) || 0;
     if(D > 0){
