@@ -975,7 +975,7 @@ body.mob-full .mob-exit:active{opacity:1; border-color:rgba(232,227,214,.9)}
 .living-credits{position:absolute; inset:0; z-index:8; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:clamp(6px,1.4vh,14px);
   pointer-events:none; opacity:0; color:#141312; text-align:center; padding:0 8%; will-change:opacity, transform}
 .living-credits .cr-top{font-family:var(--display); font-size:clamp(.95rem,2.6vw,1.6rem); letter-spacing:.04em; opacity:.8}
-.living-credits .cr-main{font-family:var(--display); font-size:clamp(2rem,7.4vw,4.6rem); line-height:1.05}
+.living-credits .cr-main{font-family:var(--display); font-size:clamp(2rem,7.4vw,4.6rem); line-height:1.05; color:#a8140f}
 .living-credits .cr-sub{font-family:var(--display); font-size:clamp(1.2rem,3.6vw,2.2rem); opacity:.85}
 .living-ask{position:absolute; left:0; right:0; bottom:9%; z-index:8; text-align:center; opacity:0; pointer-events:none; transition:opacity 1.4s ease}
 .living-ask.on{opacity:1}
@@ -2271,12 +2271,12 @@ const LIVING = (function(){
   const CREDITS = [
     {main:'KILL YOUR IDOLS', sub:'bleood'},
     {top:'Designed and Developed by', main:'Hyveout'},
-    {top:'Assessment', main:'B1eed0ut and Happy', sub:'assets'},
+    {top:'Assessment', main:'B1eed0ut<br>Happy', sub:'assets'},
     {top:'Attention', main:'Foolveil', sub:'assets and scenery'},
-    {top:'Attention', main:'B1eed0ut and Happy', sub:'cutscenes'},
-    {top:'Living', main:'Xen and Zokuv', sub:'cutscenes'},
-    {top:'Living', main:'B1eed0ut and Happy', sub:'assets'},
-    {top:'Sound Design by', main:'Aquasocks and Shadx2'},
+    {top:'Attention', main:'B1eed0ut<br>Happy', sub:'cutscenes'},
+    {top:'Living', main:'Xen<br>Zokuv', sub:'cutscenes'},
+    {top:'Living', main:'B1eed0ut<br>Happy', sub:'assets'},
+    {top:'Sound Design by', main:'Aquasocks<br>Shadx2'},
     {top:'Voice Acting by', main:'Anne Lily Kump'},
     {top:'3D Assets by', main:'Posixspwn'},
     {top:'Additional Assets and Trailers by', main:'Noahsocold'},
@@ -4498,7 +4498,7 @@ const LIVING = (function(){
       for(let i = 0; i < 700; i++){ const v = 238 + (Math.random() * 17 | 0); n2.fillStyle = 'rgb(' + v + ',' + v + ',' + v + ')'; n2.fillRect(Math.random() * 128, Math.random() * 128, 2, 2); }
       const nt = new THREE.CanvasTexture(nc); nt.wrapS = nt.wrapT = THREE.RepeatWrapping; nt.repeat.set(220, 220); nt.magFilter = THREE.NearestFilter;
       const floor = new THREE.Mesh(new THREE.PlaneGeometry(440, 440), new THREE.MeshBasicMaterial({map:nt})); floor.rotation.x = -Math.PI / 2; cg.add(floor);
-      const fwd = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)), dist = 15;      // straight ahead of wherever you are looking: a walk of a few seconds
+      const fwd = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)), dist = 48;      // straight ahead of wherever you are looking: a long walk, long enough for the credits
       // not a door: a tall empty black rectangle standing in the white, flat, with nothing on it, that you can walk into
       const door = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 4.6), new THREE.MeshBasicMaterial({color:0x000000, side:THREE.DoubleSide, fog:false}));
       door.position.set(camera.position.x + fwd.x * dist, 2.3, camera.position.z + fwd.z * dist); door.rotation.y = yaw;
