@@ -570,6 +570,14 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .living-hud{position:absolute; left:4%; top:4%; font-family:var(--crtface); font-size:clamp(.72rem,1.4vw,.95rem); letter-spacing:.2em;
   text-transform:uppercase; color:#cfcdc7; text-shadow:-1.1px 0 rgba(255,0,70,.55), 1.1px 0 rgba(0,240,220,.45); pointer-events:none}
 .living-fade{position:absolute; inset:0; background:#000; pointer-events:none; opacity:1}
+.living-open{position:absolute; inset:0; z-index:12; background:#000; display:none; align-items:center; justify-content:center; padding:0 8%; cursor:default}
+.living-open.on{display:flex}
+.living-open .lo-lines{display:flex; flex-direction:column; gap:.55em; max-width:28em; text-align:center; font-family:var(--display); font-size:clamp(1.15rem,3.2vw,2.2rem); line-height:1.3; color:#e8e4da; transition:opacity .9s ease}
+.living-open .lo-lines.out{opacity:0}
+.living-open .lo-lines p{opacity:0; transform:translateY(6px); transition:opacity 1.3s ease, transform 1.3s ease}
+.living-open .lo-lines p.in{opacity:1; transform:none}
+.living-open .lo-skip{position:absolute; left:0; right:0; bottom:7%; text-align:center; font-family:var(--crtface); font-size:clamp(.6rem,1.2vw,.8rem); letter-spacing:.3em; text-transform:uppercase; color:rgba(220,215,205,.35); display:none}
+.living-open.skip .lo-skip{display:block}
 .living-story{position:absolute; top:22%; left:0; right:0; padding:0 6%; font-family:var(--display); font-size:clamp(1.4rem,4.2vw,3rem);
   line-height:1.2; color:#efece4; text-shadow:0 2px 14px rgba(0,0,0,.95), 0 0 30px rgba(0,0,0,.8); pointer-events:none; opacity:0; z-index:7}
 .living-story.left{text-align:left} .living-story.right{text-align:right}
@@ -2213,7 +2221,17 @@ const LIVING = (function(){
   // add more cards to the end of this list
   const CREDITS = [
     {main:'KILL YOUR IDOLS', sub:'bleood'},
-    // {top:'Developed and Designed by', main:'Hyveout'},      // off for now
+    {top:'Designed and Developed by', main:'Hyveout'},
+    {top:'Creative Direction by', main:'Whitecollarwill and Hyveout'},
+    {top:'Assessment', main:'B1eed0ut and Happy', sub:'assets'},
+    {top:'Attention', main:'Foolveil', sub:'assets and scenery'},
+    {top:'Attention', main:'B1eed0ut and Happy', sub:'cutscenes'},
+    {top:'Living', main:'Xen and Zokuv', sub:'cutscenes'},
+    {top:'Living', main:'B1eed0ut and Happy', sub:'assets'},
+    {top:'Sound Design by', main:'Aquasocks and Shadx2'},
+    {top:'Voice Acting by', main:'Anne Lily Kump'},
+    {top:'3D Assets by', main:'Posixspwn'},
+    {top:'Additional Assets and Trailers by', main:'Noahsocold'},
   ];
   // the four garments in the closet, left to right; each one's colour picks out one number painted by the door
   const CLOTHES = [
@@ -2228,6 +2246,31 @@ const LIVING = (function(){
     'not every number by the door is one of ours',
     'only the colors that hang in the closet matter',
   ];
+  // the opening: black, and her words, a line at a time, before you wake on the bed. [seconds after the last line, text]; '' clears the screen
+  const OPEN_LINES = [[0, 'And so I killed.'], [1.9, 'One by one.'], [1.5, 'By one.'], [2.3, 'Until only he was left.'], [3.4, ''],
+    [1.2, 'Now, alone with the one who gave me freedom,'], [3.0, 'my idol is loved.'], [2.4, 'My idol is safe.'], [2.4, 'My idol is my obsession.'], [3.2, 'Forever.'], [3.6, '']];
+  let openEl = null, opening = null, openNext = true;
+  const openSeen = ()=>{ try{ return localStorage.getItem('bleood_living_open') === '1'; }catch(e){ return false; } };
+  function showOpening(){
+    if(!openEl){ openEl = document.createElement('div'); openEl.className = 'living-open'; openEl.innerHTML = '<div class="lo-lines"></div><span class="lo-skip">press any key to skip</span>'; wrap.appendChild(openEl); }
+    openEl.querySelector('.lo-lines').innerHTML = ''; openEl.classList.add('on'); openEl.classList.toggle('skip', openSeen());
+    let t = 0; opening = {t0:performance.now(), at:OPEN_LINES.map(([gap, text])=>{ t += gap; return {t, text}; }), i:0, finished:false};
+  }
+  function stepOpening(now){
+    const O = opening, el = openEl.querySelector('.lo-lines'), t = (now - O.t0) / 1000;
+    while(O.i < O.at.length && t >= O.at[O.i].t){
+      const L = O.at[O.i++];
+      if(L.text === ''){ el.classList.add('out'); setTimeout(()=>{ if(opening === O){ el.innerHTML = ''; el.classList.remove('out'); } }, 900); }
+      else{ const pEl = document.createElement('p'); pEl.textContent = L.text; el.appendChild(pEl); requestAnimationFrame(()=> pEl.classList.add('in')); }
+    }
+    if(O.i >= O.at.length){ O.finished = true; if(t >= O.at[O.at.length - 1].t + 1.2) endOpening(); }
+  }
+  function endOpening(){
+    if(!opening) return; opening = null; openEl.classList.remove('on');
+    try{ localStorage.setItem('bleood_living_open', '1'); }catch(e){}
+    if(level && level.intro) level.intro.t0 = performance.now();      // now you wake on the bed
+  }
+  function skipOpening(){ if(opening && (openSeen() || opening.finished)) endOpening(); }
   let watchEl = null, watchedNow = false, creditsEl = null, reticle, hud, noteOverlay, fadeEl, panel, msgEl, storyEl, scareEl, redEl, redLevel = 0, movingNow = false, tipEl, tipOpen = false, tipShown = false, sayEl, photoEl, askEl, promptEl, memoryEl, freshNext = false;
   // lines slide in from one side, hold, and leave through the other. letters only: the face has no punctuation
   const storyQueue = []; let storyBusy = false;
@@ -3516,6 +3559,7 @@ const LIVING = (function(){
     setHUD('puzzles 0 / 4');
     // the game opens on the bed: you lie looking at the ceiling, roll off the edge, hit the floor, and get up
     level.intro = {t0:performance.now(), bedX:bx, spawn:spawnAt};
+    if(openNext){ openNext = false; showOpening(); }
     level.tick = (now)=>{
       // every few seconds the bulb stutters, sometimes going out for a moment
       if(now > flk.next){ flk.until = now + 90 + Math.random() * 900; flk.next = flk.until + 900 + Math.random() * 5200; }
@@ -3630,6 +3674,26 @@ const LIVING = (function(){
     const chairX = [0.7, -0.6, 0.0][p-1], chairZ = [-3.5, 1.5, 2.0][p-1];
     box(g, .45, .45, .45, mat('wood'), chairX, .225, chairZ, true);
     box(g, .45, .5, .06, mat('wood'), chairX, .7, chairZ - .2, false);
+    if(p === 2){
+      // the furniture has been dragged out into the corridor: a table or a chair every couple of metres, left, right, left, so the way back is a weave
+      const chairAt = (x, z, ry)=>{ const c = new THREE.Group(); c.position.set(x, 0, z); c.rotation.y = ry; g.add(c);
+        const cp = (a, b2, c2, x2, y2, z2, m)=>{ const q = new THREE.Mesh(new THREE.BoxGeometry(a, b2, c2), m); q.position.set(x2, y2, z2); c.add(q); };
+        cp(.42, .04, .42, 0, .45, 0, mat('wood')); [[-.19,-.19],[.19,-.19],[-.19,.19],[.19,.19]].forEach(([a, b2])=> cp(.045, .45, .045, a, .225, b2, railM));
+        cp(.045, .55, .045, -.19, .72, -.19, railM); cp(.045, .55, .045, .19, .72, -.19, railM); cp(.38, .05, .03, 0, .95, -.19, railM); cp(.38, .3, .02, 0, .7, -.19, mat('wood'));
+        level.solids.push({minX:x - .25, maxX:x + .25, minZ:z - .25, maxZ:z + .25}); };
+      const tableAt = (x, z, ry)=>{ const t = new THREE.Group(); t.position.set(x, 0, z); t.rotation.y = ry; g.add(t);
+        const tp = (a, b2, c2, x2, y2, z2, m)=>{ const q = new THREE.Mesh(new THREE.BoxGeometry(a, b2, c2), m); q.position.set(x2, y2, z2); t.add(q); };
+        tp(.5, .06, .95, 0, .8, 0, cabM); tp(.44, .62, .88, 0, .46, 0, cabM); [[-.2, -.4], [-.2, .4], [.2, -.4], [.2, .4]].forEach(([a, b2])=> tp(.05, .16, .05, a, .08, b2, railM));
+        const c = Math.abs(Math.cos(ry)), sn = Math.abs(Math.sin(ry)), hx = .25 * c + .48 * sn, hz = .48 * c + .25 * sn;
+        level.solids.push({minX:x - hx, maxX:x + hx, minZ:z - hz, maxZ:z + hz}); };
+      // from the far end (where she is) back to the door: the gaps alternate sides and never line up
+      tableAt(-.55, 4.6, Math.PI / 2);          // across the left half
+      chairAt(.75, 2.6, -.7);
+      tableAt(.5, .4, Math.PI / 2 + .3);        // across the right, a little skewed
+      chairAt(-.8, -1.5, .5);
+      tableAt(-.45, -3.4, Math.PI / 2);
+      chairAt(.7, -5.2, 2.6);                   // the last one, right before the door
+    }
 
     if(p === 1){
       // ---- a drawer in the middle lamp table, with a small key in it
@@ -4214,26 +4278,33 @@ const LIVING = (function(){
   // let it reach you, or run out of time, and it jumps at you and goes back to its chair (you can go in and try again)
   const PL = {L:11, W:2.2, X_D:4.6, TIME:60, TORCH:5, ALCOVES:[{d:8.0, side:1}, {d:6.5, side:-1}, {d:3.1, side:1}, {d:3.1, side:-1}]};
   PL.STOPS = [
-    {d:PL.L - .55, z:0, pose:'sit'},        // in the chair
+    {d:PL.L - .85, z:0, pose:'sit'},        // against the chair
     {d:8.0, z:.72, pose:'peek'},            // the far doorway
     {d:6.5, z:-.72, pose:'peek'},           // the doorway across from it
     {d:PL.X_D, z:0, pose:'stand'},          // on the X
     {d:3.1, z:.68, pose:'crouch'},          // close, low, in the near doorway
     {d:1.75, z:-.22, pose:'reach'}];        // right in front of you
-  let dollBytes = null;
+  const DOLL_URL = 'bleood_doll.glb';      // the full model (its own textures inside), next to the page. if it can't be fetched, the smaller copy Attention carries is used
+  let dollLoading = null;
   function loadDoll(){
-    return new Promise(res=>{
-      const M = window.__dollModel;
-      if(!M || !THREE.GLTFLoader){ res(null); return; }
-      if(!dollBytes){ const t = atob(M.b64); dollBytes = new Uint8Array(t.length); for(let i = 0; i < t.length; i++) dollBytes[i] = t.charCodeAt(i); }
-      new THREE.GLTFLoader().parse(dollBytes.buffer.slice(0), '', gltf=>{
-        const m = gltf.scene, tl = new THREE.TextureLoader();
-        m.traverse(o=>{ if(!o.isMesh) return; o.frustumCulled = false;
-          (Array.isArray(o.material) ? o.material : [o.material]).forEach(mt=>{ const url = M.tex[mt.name]; if(!url) return; const tx = tl.load(url); tx.flipY = false; tx.encoding = THREE.sRGBEncoding; mt.map = tx; mt.needsUpdate = true; });
-          (Array.isArray(o.material) ? o.material : [o.material]).forEach(mt=>{ if('metalness' in mt){ mt.metalness = 0; mt.roughness = .8; } }); });      // no shine: lit only by the torch
-        m.scale.setScalar(.01); res(m);
-      }, ()=> res(null));
-    });
+    if(dollLoading) return dollLoading;
+    dollLoading = (async ()=>{
+      if(!THREE.GLTFLoader) return null;
+      let buf = null;
+      try{ const r = await fetch(DOLL_URL); if(r.ok) buf = await r.arrayBuffer(); }catch(e){}
+      let tex = null;
+      if(!buf){ const M = window.__dollModel; if(!M) return null; const t = atob(M.b64); const u = new Uint8Array(t.length); for(let i = 0; i < t.length; i++) u[i] = t.charCodeAt(i); buf = u.buffer; tex = M.tex; }
+      const gltf = await new Promise(res => new THREE.GLTFLoader().parse(buf, '', res, ()=> res(null)));
+      if(!gltf) return null;
+      const m = gltf.scene, tl = new THREE.TextureLoader();
+      m.traverse(o=>{ if(!o.isMesh) return; o.frustumCulled = false;
+        (Array.isArray(o.material) ? o.material : [o.material]).forEach(mt=>{
+          if(tex){ const url = tex[mt.name]; if(url){ const tx = tl.load(url); tx.flipY = false; tx.encoding = THREE.sRGBEncoding; mt.map = tx; } }
+          if('metalness' in mt){ mt.metalness = 0; mt.roughness = .85; }      // no shine: lit only by the torch
+          mt.needsUpdate = true; }); });
+      m.scale.setScalar(.01); return m;
+    })();
+    return dollLoading;
   }
   // the doll's poses, set on its rig (the model is in a T pose; its bones are turned about the world axes)
   function dollPose(model, name){
@@ -4247,17 +4318,14 @@ const LIVING = (function(){
     const X = [1, 0, 0], Y = [0, 1, 0], Z = [0, 0, 1];
     ({
       stand:  ()=>{ rot('upper_armL', Z, -72); rot('upper_armR', Z, 72); rot('forearmL', X, -8); rot('forearmR', X, -8); rot('spine006', Z, 8); },
-      sit:    ()=>{ rot('upper_armL', Z, -70); rot('upper_armR', Z, 70); rot('upper_armL', X, -25); rot('upper_armR', X, -25); rot('forearmL', X, -35); rot('forearmR', X, -35);
-                    rot('thighL', X, -88); rot('thighR', X, -88); rot('shinL', X, 88); rot('shinR', X, 88); rot('spine005', X, 18); rot('spine006', Z, 14); },
-      peek:   ()=>{ rot('upper_armL', Z, -40); rot('upper_armR', Z, 72); rot('upper_armL', Y, -60); rot('forearmL', Y, -40); rot('spine006', Z, -22); },
-      crouch: ()=>{ rot('upper_armL', Z, -55); rot('upper_armR', Z, 55); rot('upper_armL', Y, -50); rot('upper_armR', Y, 50); rot('forearmL', Y, -30); rot('forearmR', Y, 30);
-                    rot('thighL', X, -100); rot('thighR', X, -100); rot('shinL', X, 130); rot('shinR', X, 130); rot('spine006', X, -20); },
-      reach:  ()=>{ rot('upper_armL', Y, -60); rot('upper_armR', Y, 60); rot('upper_armL', Z, 10); rot('upper_armR', Z, -10); rot('forearmL', Y, -15); rot('forearmR', Y, 15);
-                    rot('thighL', X, -35); rot('thighR', X, -20); rot('shinL', X, 55); rot('shinR', X, 35); rot('spine006', X, 10); },
-      caught: ()=>{ rot('upper_armL', Z, 40); rot('upper_armR', Z, -40); rot('forearmL', Z, 25); rot('forearmR', Z, -25); rot('thighL', Z, 8); rot('thighR', Z, -8); rot('spine006', X, -12); },
+      sit:    ()=>{ rot('upper_armL', Z, -74); rot('upper_armR', Z, 74); rot('spine003', X, -8); rot('spine006', X, 14); rot('spine006', Z, 10); },        // propped against the chair, head dropped
+      peek:   ()=>{ rot('upper_armL', Z, -40); rot('upper_armR', Z, 72); rot('upper_armL', Y, -60); rot('forearmL', Y, -40); rot('spine006', Z, -22); rot('spine004', Z, -8); },
+      crouch: ()=>{ rot('upper_armL', Z, -55); rot('upper_armR', Z, 55); rot('upper_armL', Y, -50); rot('upper_armR', Y, 50); rot('forearmL', Y, -30); rot('forearmR', Y, 30); rot('spine003', X, 22); rot('spine006', X, -26); },   // bent forward at the waist, looking up at you
+      reach:  ()=>{ rot('upper_armL', Y, -60); rot('upper_armR', Y, 60); rot('upper_armL', Z, 10); rot('upper_armR', Z, -10); rot('forearmL', Y, -15); rot('forearmR', Y, 15); rot('spine003', X, 10); rot('spine006', X, 6); },
+      caught: ()=>{ rot('upper_armL', Z, 40); rot('upper_armR', Z, -40); rot('forearmL', Z, 25); rot('forearmR', Z, -25); rot('spine006', X, -12); },
     }[name] || (()=>{}))();
     model.position.copy(keep.p); model.rotation.copy(keep.r); model.updateMatrixWorld(true);
-    return {sit:.03, crouch:-.2}[name] || 0;      // how high the doll's origin sits off the floor in that pose (sitting: on the chair seat)
+    return 0;
   }
   // sounds, made here: little running steps (louder and to one side as it comes), the click of the light, the scream when it jumps
   let noiseBuf = null;
@@ -4471,7 +4539,7 @@ const LIVING = (function(){
       eyes.forEach(e => e.visible = false); glow.intensity = 0;
       W.lunge = null; W.scaring = false; W.next = performance.now() + 5000;
       // she caught you, so everything starts over: the bedroom, the notes, the hallways
-      restart();
+      restart(true);
     }, 900);
   }
   function gained(){
@@ -5018,6 +5086,7 @@ const LIVING = (function(){
   function setupMouse(){
     wrap.addEventListener('mousedown', e=>{
       if(!running) return;
+      if(opening){ skipOpening(); return; }
       if(tipOpen){ closeTip(); return; }
       if(level && level.asking) return;
       // a note open: any click puts it down. (with the pointer locked, as in full screen, clicks land here and never reach the note itself)
@@ -5041,6 +5110,7 @@ const LIVING = (function(){
     addEventListener('keydown', e=>{
       keys[e.code] = true;
       if(!running) return;
+      if(opening){ if(e.code === 'KeyD' && e.shiftKey) endOpening(); else if(!['ShiftLeft', 'ShiftRight', 'MetaLeft', 'MetaRight', 'ControlLeft', 'ControlRight', 'AltLeft', 'AltRight'].includes(e.code)) skipOpening(); e.preventDefault(); return; }
       if(level && level.asking){ if(e.code === 'KeyY') level.answer('yes'); else if(e.code === 'KeyN') level.answer('no'); e.preventDefault(); return; }
       if(tipOpen){ if(!['ShiftLeft', 'ShiftRight', 'MetaLeft', 'MetaRight', 'ControlLeft', 'ControlRight', 'AltLeft', 'AltRight'].includes(e.code)) closeTip(); e.preventDefault(); return; }
       if(['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
@@ -5053,6 +5123,14 @@ const LIVING = (function(){
       if(e.code === 'Space' && level && level.plush && level.plush.lock){ plushHold(true); return; }
       if(e.code === 'KeyE' || e.code === 'Space'){ if(noteOverlay.classList.contains('on')) hideNote(); else wantInteract = true; }
       if(e.code === 'KeyH' && e.shiftKey){ go(hallPass >= 3 ? buildRitual : buildHallway); }          // TEMPORARY: shift+H jumps on: hallway 1, 2, 3, then straight to the demon's room
+      // DEVELOPER: Shift + D skips whatever is in front of you: a memory film ends; the corridor game is won; in hallway 1 you get the key and the side door opens; in the bedroom the door opens
+      if(e.code === 'KeyD' && e.shiftKey){
+        if(level && level.memory){ level.memory.finish(); }
+        else if(level && level.plush && level.plush.active && !level.plush.done){ const P = level.plush; P.held = false; P.lit = false; plushPlace(P, 3); P.nextMove = 1e15; plushHold(true); flash('DEV: caught'); }
+        else if(level && level.hall1 && !level.hall1.door.open){ const H1 = level.hall1; H1.hasKey = true; H1.key.visible = false; openDoor(H1.door); level.solids = level.solids.filter(x => x !== H1.block); level.interactives = level.interactives.filter(m => m !== H1.door.leaf && !H1.keyParts.includes(m)); flash('DEV: side door open'); }
+        else if(level && level.doors[0] && !level.doors[0].open && artifacts < 4){ artifacts = 3; gained(); flash('DEV: door open'); }
+        e.preventDefault();
+      }
     });
     addEventListener('keyup', e=>{ keys[e.code] = false; if(e.code === 'Space') plushHold(false); });
   }
@@ -5060,6 +5138,7 @@ const LIVING = (function(){
     let lookId = null, lx = 0, ly = 0, lx0 = 0, ly0 = 0, moveId = null, mx0 = 0, my0 = 0;
     const knob = stick.querySelector('i');
     wrap.addEventListener('touchstart', e=>{
+      if(opening){ skipOpening(); return; }
       if(noteOverlay.classList.contains('on') || panel.classList.contains('on') || tipOpen || (level && level.asking)) return;
       for(const tch of e.changedTouches){
         const r = wrap.getBoundingClientRect();
@@ -5108,7 +5187,8 @@ const LIVING = (function(){
     if(!running) return;
     raf = requestAnimationFrame(loop);
     const dt = Math.min((now - last) / 1000, 0.05); last = now;
-    const reading = noteOverlay.classList.contains('on') || panel.classList.contains('on') || tipOpen || !!(level && level.intro) || !!(level && level.ending && level.ending.locked) || !!(level && level.memory) || !!(level && level.plush && level.plush.lock);
+    if(opening){ stepOpening(now); if(level && level.intro) level.intro.t0 = now; }
+    const reading = !!opening || noteOverlay.classList.contains('on') || panel.classList.contains('on') || tipOpen || !!(level && level.intro) || !!(level && level.ending && level.ending.locked) || !!(level && level.memory) || !!(level && level.plush && level.plush.lock);
     if(reading) movingNow = false;
 
     if(level && !reading){
@@ -5195,7 +5275,7 @@ const LIVING = (function(){
       await loadScript(['https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js', 'https://cdn.jsdelivr.net/npm/three@0.128.1/examples/js/loaders/GLTFLoader.js']).catch(()=>{});
     }
     if(!built) build();
-    if(freshNext){ freshNext = false; hallPass = 0; notesRead = 0; buildBedroom(); }      // you came out of the ending: start again from the bed
+    if(freshNext){ freshNext = false; hallPass = 0; notesRead = 0; openNext = true; buildBedroom(); }      // you came out of the ending: start again from the bed
     wrap.classList.add('on');
     crt.classList.add('in-living'); { const gr = document.getElementById('grain'); if(gr) gr.style.opacity = LIVING_GRAIN; }      // light scanlines, almost no grain
     resize();
@@ -5213,9 +5293,10 @@ const LIVING = (function(){
     if(document.pointerLockElement === wrap && document.exitPointerLock) document.exitPointerLock();
     removeEventListener('resize', resize);
   }
-  function restart(){
+  function restart(afterCatch){
     if(!built) return;
-    hideNote(); closePanel(); hallPass = 0; notesRead = 0; switching = false;
+    if(!afterCatch) openNext = true;
+    hideNote(); closePanel(); hallPass = 0; notesRead = 0; switching = false; if(opening) endOpening();
     fade = 1; fadeTo = 0;
     buildBedroom();
   }
