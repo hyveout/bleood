@@ -4020,14 +4020,16 @@ const LIVING = (function(){
   // picture and it is gone. a picture taken early only knocks it back. if it reaches you, it has you ----------
   const HAUNT = {FIRST:[14, 26], AGAIN:[30, 55], CHARGE:2.6, SPEED:.2, START:1.9, SNAPS:3};
   let hauntTurn = 0;      // whose turn: his, hers, his...
+  // drawn once where you cannot see it, so the first real appearance costs nothing
+  function warmUp(obj){ obj.visible = true; obj.position.set(camera.position.x, -40, camera.position.z); setTimeout(()=>{ obj.visible = false; }, 120); }
   function hauntSetup(){
     const H = level.haunt = {on:false, next:performance.now() + 1e9, model:null, him:null, her:null, charge:0, kills:0, snaps:0};
     loadDollHead().then(m=>{ if(!m || level.haunt !== H) return; const car = new THREE.Group(); car.rotation.order = 'YXZ'; m.position.y = -HEAD_CY * HEAD_S; car.add(m); car.visible = false; level.group.add(car); H.him = car; H.himMats = m.userData.mats;
-      const gl = new THREE.PointLight(0xfff0e0, 1.2, 3, 1.4); gl.position.set(0, .25, .45); car.add(gl); });      // a little light of its own, so it reads in the dim room
+      const gl = new THREE.PointLight(0xfff0e0, 1.2, 3, 1.4); gl.position.set(0, .25, .45); car.add(gl); warmUp(car); });      // a little light of its own, so it reads in the dim room
     // hers: the same head as the opening, eyes burning, kept dark till it is her turn
     const hd = buildHead(); const car2 = new THREE.Group(); car2.rotation.order = 'YXZ'; hd.group.scale.setScalar(2.4); hd.group.traverse(o=>{ if(o.isMesh && o.material && o.material.isMeshLambertMaterial) o.material.color.setHex(0x8a8480); }); car2.add(hd.group); car2.visible = false; level.group.add(car2);
     const gl2 = new THREE.PointLight(0xfff0e0, .8, 2.6, 1.4); gl2.position.set(0, .25, .45); car2.add(gl2);
-    H.her = car2; H.herHead = hd;
+    H.her = car2; H.herHead = hd; warmUp(car2);
   }
   function hauntArm(delay){ const H = level && level.haunt; if(!H) return; const [a, b] = delay; H.next = performance.now() + (a + Math.random() * (b - a)) * 1000; }
   function hauntStart(now){
@@ -4642,15 +4644,20 @@ const LIVING = (function(){
   // sounds, made here: little running steps (louder and to one side as it comes), the click of the light, the scream when it jumps
   // the doll's head: the Attention doll with its body hidden. the full file (its own textures) sits next to the page; if it can't be fetched, the copy Attention carries is used
   const DOLL_URL = 'bleood_doll.glb', HEAD_CY = 92, HEAD_S = .02, PAINTING_FILE = 'bleood_painting.png', KEY_ICON = "data:image/webp;base64,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", DOLL_FACE = 'bleood_tip_doll.webp';      // where the head's centre is in the model (model units), and how big it floats
-  let dollLoading = null;
+  let dollBytes = null;      // the file, fetched once; each head is parsed fresh from it (a parsed model can only be in one place at a time)
+  async function dollSource(){
+    if(dollBytes) return dollBytes;
+    let buf = null;
+    try{ const r = await fetch(DOLL_URL); if(r.ok) buf = await r.arrayBuffer(); }catch(e){}      // (the chat preview can't host it: there the smaller copy is used)
+    let tex = null;
+    if(!buf){ const M = window.__dollModel; if(!M) return null; const t = atob(M.b64); const u = new Uint8Array(t.length); for(let i = 0; i < t.length; i++) u[i] = t.charCodeAt(i); buf = u.buffer; tex = M.tex; }
+    return dollBytes = {buf, tex};
+  }
   function loadDollHead(){
-    if(dollLoading) return dollLoading;
-    dollLoading = (async ()=>{
+    return (async ()=>{
       if(!THREE.GLTFLoader) return null;
-      let buf = null;
-      try{ const r = await fetch(DOLL_URL); if(r.ok) buf = await r.arrayBuffer(); }catch(e){}
-      let tex = null;
-      if(!buf){ const M = window.__dollModel; if(!M) return null; const t = atob(M.b64); const u = new Uint8Array(t.length); for(let i = 0; i < t.length; i++) u[i] = t.charCodeAt(i); buf = u.buffer; tex = M.tex; }
+      const src = await dollSource(); if(!src) return null;
+      const buf = src.buf.slice(0), tex = src.tex;
       const gltf = await new Promise(res => new THREE.GLTFLoader().parse(buf, '', res, ()=> res(null)));
       if(!gltf) return null;
       const m = gltf.scene, tl = new THREE.TextureLoader(), mats = [];
@@ -4664,7 +4671,6 @@ const LIVING = (function(){
           mt.needsUpdate = true; }); });
       m.scale.setScalar(HEAD_S); m.userData.mats = mats; return m;
     })();
-    return dollLoading;
   }
   let noiseBuf = null;
   function plushAudio(){
@@ -4703,7 +4709,7 @@ const LIVING = (function(){
       const car = new THREE.Group(); car.rotation.order = 'YXZ'; m.position.y = -HEAD_CY * HEAD_S; car.add(m); g.add(car);
       P.model = car; P.mats = m.userData.mats;
       P.glow = new THREE.PointLight(0xfff0e0, 0, 3.4, 1.3); P.glow.position.set(0, .2, .35); car.add(P.glow);      // a little above and in front of its face, so it has form in the torch
-      car.visible = false; plushPlace(P, P.step); });
+      car.visible = false; plushPlace(P, P.step); warmUp(car); setTimeout(()=>{ if(level.plush === P) plushPlace(P, P.step); }, 150); });
     return P;
   }
   function plushPlace(P, i){
@@ -5661,6 +5667,7 @@ const LIVING = (function(){
     crt.classList.add('in-living'); { const gr = document.getElementById('grain'); if(gr) gr.style.opacity = LIVING_GRAIN; }      // light scanlines, almost no grain
     resize();
     running = true; last = performance.now(); fade = 1; fadeTo = 0;
+    plushAudio();
     raf = requestAnimationFrame(loop);
     addEventListener('resize', resize);
   }
