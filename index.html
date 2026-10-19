@@ -571,8 +571,9 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
   text-transform:uppercase; color:#cfcdc7; text-shadow:-1.1px 0 rgba(255,0,70,.55), 1.1px 0 rgba(0,240,220,.45); pointer-events:none}
 .living-fade{position:absolute; inset:0; background:#000; pointer-events:none; opacity:1}
 .living-flash{position:absolute; inset:0; background:#fff; pointer-events:none; opacity:0; z-index:9}
-.cam-edge{position:absolute; left:0; top:0; width:16px; height:16px; border-left:3px solid #e2352b; border-top:3px solid #e2352b; pointer-events:none; z-index:7; opacity:0; filter:drop-shadow(0 0 6px rgba(226,53,43,.9)); animation:tipblink .5s steps(1) infinite}
-.cam-edge.on{opacity:.95}
+.cam-edge{position:absolute; left:0; top:0; width:16px; height:16px; border-left:3px solid #e2352b; border-top:3px solid #e2352b; pointer-events:none; z-index:7; display:none; filter:drop-shadow(0 0 6px rgba(226,53,43,.9))}
+.cam-edge.on{display:block; animation:edgeblink .5s steps(1) infinite}
+@keyframes edgeblink{0%,100%{opacity:.95} 50%{opacity:.35}}
 .living-flash.go{animation:camflash .32s ease-out both}
 @keyframes camflash{0%{opacity:.28} 100%{opacity:0}}
 .living-open{position:absolute; inset:0; z-index:12; background:#000; display:none; align-items:center; justify-content:center; padding:0 8%; cursor:default}
@@ -2346,7 +2347,7 @@ const LIVING = (function(){
     if(on){ for(const Hh of hauntAlive()){ if(Hh.dying || Hh.scare || k >= edgeEls.length) continue;
       EV.set(Hh.px, Hh.py, Hh.pz).applyMatrix4(EVm);      // camera space: x right, y up, -z ahead
       const ahead = -EV.z, phi = Math.atan2(EV.x, ahead);                          // 0 straight ahead, ±π straight behind
-      const seen = ahead > 0 && Math.abs(EV.x / ahead) < Math.tan(camera.fov * Math.PI / 360 * camera.aspect) * .9 && Math.abs(EV.y / ahead) < Math.tan(camera.fov * Math.PI / 360) * .9;
+      const tv = Math.tan(camera.fov * Math.PI / 360), seen = ahead > 0 && Math.abs(EV.x / ahead) < tv * camera.aspect * .9 && Math.abs(EV.y / ahead) < tv * .9;
       if(seen) continue;
       const dx = Math.sin(phi), dy = Math.cos(phi) * -1;                           // on screen: behind = down, left = left
       const sc = Math.min((W / 2 - 34) / Math.max(1e-3, Math.abs(dx)), (H / 2 - 34) / Math.max(1e-3, Math.abs(dy)));
