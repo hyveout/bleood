@@ -2249,12 +2249,21 @@ const LIVING = (function(){
   // the opening: black, and her words, a line at a time, before you wake on the bed. [seconds after the last line, text]; '' clears the screen
   const OPEN_LINES = [[0, 'And so I killed.'], [1.9, 'One by one.'], [1.5, 'By one.'], [2.3, 'Until only he was left.'], [3.4, ''],
     [1.2, 'Now, alone with the one who gave me freedom,'], [3.0, 'my idol is loved.'], [2.4, 'My idol is safe.'], [2.4, 'My idol is my obsession.'], [3.2, 'Forever.'], [3.6, '']];
+  // the memory after the corridor: what she did once Legion was gone (the same black screen and words, until the film arrives)
+  const MEMORY_LINES = [[0, 'Legion fled my body.'], [2.4, 'I could not believe what he had done.'], [2.6, ''],
+    [1.0, 'I watched him walk back to the people.'], [2.6, 'They saw me. Clean. Free of my torment.'], [2.8, 'And they were afraid of him.'], [2.2, 'They shunned him.'], [1.8, 'No one had ever seen such a thing.'], [3.0, ''],
+    [1.0, 'He told me to stay.'], [1.8, 'To tell them what God had done for me.'], [2.8, 'I could not.'], [2.0, 'I followed him.'], [3.0, ''],
+    [1.0, 'I studied him. I studied his sins.'], [2.8, 'I learned what he ate, where he slept, who he loved.'], [3.2, 'I learned what made him strong,'], [2.0, 'and what made him weak.'], [3.0, ''],
+    [1.0, 'I tried to keep him.'], [2.4, 'He would not be kept.'], [3.0, ''],
+    [1.2, 'So I did what I had to do.'], [4.0, '']];
   let openEl = null, opening = null, openNext = true;
-  const openSeen = ()=>{ try{ return localStorage.getItem('bleood_living_open') === '1'; }catch(e){ return false; } };
-  function showOpening(){
+  const openSeen = key=>{ try{ return localStorage.getItem('bleood_living_' + key) === '1'; }catch(e){ return false; } };
+  // words on black: `lines` as [gap, text] pairs ('' clears the screen); `key` remembers it has been watched; `onEnd` runs when it is over
+  function showOpening(lines, key, onEnd){
+    lines = lines || OPEN_LINES; key = key || 'open';
     if(!openEl){ openEl = document.createElement('div'); openEl.className = 'living-open'; openEl.innerHTML = '<div class="lo-lines"></div><span class="lo-skip">press any key to skip</span>'; wrap.appendChild(openEl); }
-    openEl.querySelector('.lo-lines').innerHTML = ''; openEl.classList.add('on'); openEl.classList.toggle('skip', openSeen());
-    let t = 0; opening = {t0:performance.now(), at:OPEN_LINES.map(([gap, text])=>{ t += gap; return {t, text}; }), i:0, finished:false};
+    openEl.querySelector('.lo-lines').innerHTML = ''; openEl.classList.add('on'); openEl.classList.toggle('skip', openSeen(key));
+    let t = 0; opening = {t0:performance.now(), at:lines.map(([gap, text])=>{ t += gap; return {t, text}; }), i:0, finished:false, key, onEnd};
   }
   function stepOpening(now){
     const O = opening, el = openEl.querySelector('.lo-lines'), t = (now - O.t0) / 1000;
@@ -2266,11 +2275,12 @@ const LIVING = (function(){
     if(O.i >= O.at.length){ O.finished = true; if(t >= O.at[O.at.length - 1].t + 1.2) endOpening(); }
   }
   function endOpening(){
-    if(!opening) return; opening = null; openEl.classList.remove('on');
-    try{ localStorage.setItem('bleood_living_open', '1'); }catch(e){}
+    if(!opening) return; const O = opening; opening = null; openEl.classList.remove('on');
+    try{ localStorage.setItem('bleood_living_' + O.key, '1'); }catch(e){}
     if(level && level.intro) level.intro.t0 = performance.now();      // now you wake on the bed
+    if(O.onEnd) O.onEnd();
   }
-  function skipOpening(){ if(opening && (openSeen() || opening.finished)) endOpening(); }
+  function skipOpening(){ if(opening && (openSeen(opening.key) || opening.finished)) endOpening(); }
   let watchEl = null, watchedNow = false, creditsEl = null, reticle, hud, noteOverlay, fadeEl, panel, msgEl, storyEl, scareEl, redEl, redLevel = 0, movingNow = false, tipEl, tipOpen = false, tipShown = false, sayEl, photoEl, askEl, promptEl, memoryEl, freshNext = false;
   // lines slide in from one side, hold, and leave through the other. letters only: the face has no punctuation
   const storyQueue = []; let storyBusy = false;
@@ -4570,7 +4580,7 @@ const LIVING = (function(){
     if(MEMORY_VIDEO){
       const v = document.createElement('video'); v.src = MEMORY_VIDEO; v.playsInline = true; v.className = 'mem-video'; memoryEl.appendChild(v);
       v.addEventListener('ended', M.finish); v.addEventListener('error', M.finish); v.play().catch(M.finish);
-    }else memoryTimer = setTimeout(M.finish, 4800);
+    }else{ memoryEl.classList.remove('on'); showOpening(MEMORY_LINES, 'memory', M.finish); }
   }
   // eyes shut, then open. while they are open, moving is fatal. used by the head in the chair and by the demon in the hallway
   function watchStep(W, now){
@@ -5325,7 +5335,7 @@ const LIVING = (function(){
       wantInteract = false;
       // during the opening, a press of E, space or a tap skips ahead once it has had a moment to play
       if(level && level.intro){ if(now - level.intro.t0 > 1500) endIntro(); }
-      else if(level && level.memory){ if(now - level.memory.t0 > 1000 && !MEMORY_VIDEO) level.memory.finish(); }      // a press skips the placeholder
+      else if(level && level.memory){ }      // (the memory ends on its own: the film, or her words)
       else if(hover) interact(hover);
     }
 
