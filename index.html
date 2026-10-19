@@ -571,6 +571,8 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
   text-transform:uppercase; color:#cfcdc7; text-shadow:-1.1px 0 rgba(255,0,70,.55), 1.1px 0 rgba(0,240,220,.45); pointer-events:none}
 .living-fade{position:absolute; inset:0; background:#000; pointer-events:none; opacity:1}
 .living-flash{position:absolute; inset:0; background:#fff; pointer-events:none; opacity:0; z-index:9}
+.cam-edge{position:absolute; left:0; top:0; width:16px; height:16px; border-left:3px solid #e2352b; border-top:3px solid #e2352b; pointer-events:none; z-index:7; opacity:0; filter:drop-shadow(0 0 6px rgba(226,53,43,.9)); animation:tipblink .5s steps(1) infinite}
+.cam-edge.on{opacity:.95}
 .living-flash.go{animation:camflash .32s ease-out both}
 @keyframes camflash{0%{opacity:.28} 100%{opacity:0}}
 .living-open{position:absolute; inset:0; z-index:12; background:#000; display:none; align-items:center; justify-content:center; padding:0 8%; cursor:default}
@@ -2333,7 +2335,23 @@ const LIVING = (function(){
   function skipOpening(){ if(opening && (openSeen(opening.key) || opening.finished)) endOpening(); }
   let capEl = null, capHint = null, camFrame = null, camBtn = null, camUp = false, hasCamera = false, raiseHinted = false;
   // a camera move the player does not control: out to a point, a hold there, and back to where they stood
-  let dolly = null, flashEl = null;
+  let dolly = null, flashEl = null; const edgeEls = [];
+  // in the big room: for each head you cannot see, a chevron on the edge of the view in its direction
+  let EV = null;
+  function edgeMarkers(){
+    if(!EV) EV = new THREE.Vector3();
+    const A = level && level.arena, on = !!(A && A.state === 'fighting'), W = wrap.clientWidth, H = wrap.clientHeight;
+    let k = 0;
+    if(on){ for(const Hh of hauntAlive()){ if(Hh.dying || Hh.scare || k >= edgeEls.length) continue;
+      EV.set(Hh.px, Hh.py, Hh.pz).applyMatrix4(camera.matrixWorldInverse);      // camera space: x right, y up, -z ahead
+      const ahead = -EV.z, phi = Math.atan2(EV.x, ahead);                          // 0 straight ahead, ±π straight behind
+      const seen = ahead > 0 && Math.abs(EV.x / ahead) < Math.tan(camera.fov * Math.PI / 360 * camera.aspect) * .9 && Math.abs(EV.y / ahead) < Math.tan(camera.fov * Math.PI / 360) * .9;
+      if(seen) continue;
+      const dx = Math.sin(phi), dy = Math.cos(phi) * -1;                           // on screen: behind = down, left = left
+      const sc = Math.min((W / 2 - 34) / Math.max(1e-3, Math.abs(dx)), (H / 2 - 34) / Math.max(1e-3, Math.abs(dy)));
+      const e = edgeEls[k++]; e.style.transform = 'translate(' + (W / 2 + dx * sc - 8) + 'px,' + (H / 2 + dy * sc - 8) + 'px) rotate(' + (Math.atan2(dy, dx) * 180 / Math.PI + 135) + 'deg)'; e.classList.add('on'); } }
+    for(; k < edgeEls.length; k++) edgeEls[k].classList.remove('on');
+  }
   function flashWhite(){ if(!flashEl) return; flashEl.classList.remove('go'); void flashEl.offsetWidth; flashEl.classList.add('go'); }
   function startDolly(to, o){ o = o || {}; dolly = {t0:performance.now(), from:{p:camera.position.clone(), yaw, pitch}, to, out:o.out || 1.6, hold:o.hold || .5, back:o.back || 1.0, onHold:o.onHold, onEnd:o.onEnd, fogTo:o.fogTo, fog0:scene.fog ? [scene.fog.near, scene.fog.far] : null, held:false}; }
   function stepDolly(now){
@@ -4113,7 +4131,7 @@ const LIVING = (function(){
           const inside = inArena(); if(inside !== A.wasInside){ A.wasInside = inside; level.bounds = inside ? A.bounds : A.hallBounds; }
           if(A.state === 'open' && inside && Math.hypot(camera.position.x - A.cx, camera.position.z - A.cz) < 1.1){
             // in the ring: the door shuts behind you and they come, one after another, until all of them are gone
-            A.state = 'fighting'; level.solids.push(A.block); redLevel = Math.max(redLevel, .7); level.shake = .1; setTimeout(()=>{ if(level.arena === A) level.shake = 0; }, 400);      // (the doorway is barred, not shut)
+            A.state = 'fighting'; A.door.open = false; level.solids.push(A.block); lsfx('locked'); redLevel = Math.max(redLevel, .7); level.shake = .1; setTimeout(()=>{ if(level.arena === A) level.shake = 0; }, 400);      // the door shuts you in
             flash('they are coming'); A.nextSpawn = now + 1200;
           }
         }
@@ -4225,7 +4243,7 @@ const LIVING = (function(){
     const A = level.arena;
     if(killed && A && A.state === 'fighting'){
       H.kills++; A.killed++;
-      if(A.killed >= A.need){ A.state = 'cleared'; level.solids = level.solids.filter(x => x !== A.block); flash('it is quiet'); lsfx('artifact', .9); hauntArm(HAUNT.AGAIN); }
+      if(A.killed >= A.need){ A.state = 'cleared'; A.door.open = true; level.solids = level.solids.filter(x => x !== A.block); flash('it is quiet'); lsfx('artifact', .9); hauntArm(HAUNT.AGAIN); }
       else { flash((A.need - A.killed) + ' more'); A.nextSpawn = performance.now() + 700 + Math.random() * 900; }
       return;
     }
@@ -4978,13 +4996,7 @@ const LIVING = (function(){
     P.active = true; P.lock = true; P.dark = true; P.lastNow = now; P.startAt = now; setCamUp(false);
     yaw = Math.PI / 2; pitch = 0; fade = .85; fadeTo = 0;          // you are facing down it, as the lights go
     P.nextMove = now + 1e9; P.push = false;      // (set once the opening is over: it sits in its chair a good while before the first move)
-    P.intro = {t0:now, stage:'look'};            // the light comes on; the view goes down to it on its chair; comes back to find it at your face; it goes back; the light dies
-    { const S0 = PL.STOPS[0]; startDolly({p:new THREE.Vector3(P.RX0 - S0.d + 1.05, S0.y + .05, P.Z0), yaw:Math.PI / 2, pitch:0}, {out:1.8, hold:.7, back:.9,
-        onHold:()=>{ redLevel = Math.max(redLevel, .6); },
-        onEnd:()=>{ if(level.plush === P && P.intro){ P.intro = {t0:performance.now(), stage:'face'}; lsfx('sting', .9); redLevel = Math.max(redLevel, .85); level.shake = .14; setTimeout(()=>{ if(level.plush === P) level.shake = 0; }, 350); } }}); }
-    const H1 = level.hall1; H1.door.open = false; H1.door.pivot.rotation.y = H1.door.ry;      // it shuts behind you
-    P.fog = scene.fog; scene.fog = new THREE.Fog(FOGC, 7, 17);      // the torch reaches the chair
-    level.solids.push(H1.block);
+    P.intro = {t0:now};                          // the light comes on; it is on its chair; it comes at your face; it goes back; the light dies
     plushPlace(P, 0); P.spot.intensity = PL.TORCH; plushShow(P, true);
     wrap.classList.add('plush-on');
     story('catch it on the x');
@@ -5027,7 +5039,6 @@ const LIVING = (function(){
       const m = P.model; if(m && m.parent === camera){ const e = 1 - Math.pow(1 - Math.min(1, (now - P.scareAt) / 240), 3); m.position.set((Math.random() - .5) * .05, -.12 + (Math.random() - .5) * .04, -1.8 + 1.1 * e); m.rotation.z = (Math.random() - .5) * .08; }
       return;
     }
-    if(dolly){ if(P.intro && P.model){ const S0 = PL.STOPS[0]; if(dolly.phase === 2){ P.model.position.set(P.RX0 - .45 - .55, EYE - .02, P.Z0); P.model.rotation.set(0, Math.PI / 2, 0); } else plushPlace(P, 0); plushShow(P, true); } return; }      // the look down the corridor: hands off
     // you stand just inside the door, looking down the corridor; you can only look around a little
     const k = Math.min(1, dt * 6);
     camera.position.x += (P.RX0 - .45 - camera.position.x) * k; camera.position.z += (P.Z0 - camera.position.z) * k; camera.position.y += (EYE - camera.position.y) * k;
@@ -5039,19 +5050,16 @@ const LIVING = (function(){
       const ex = P.RX0 - .45 - .55, ey = EYE - .02, ez = P.Z0;                       // a hand's breadth from your face
       const cx = P.RX0 - S0.d, cy = S0.y, cz = P.Z0 + S0.z;                           // over the chair
       const sm = k => k * k * (3 - 2 * k);
-      if(m) plushShow(P, true);
-      if(P.intro.stage === 'look'){
-        // while the view is away it sits on its chair; as the view comes back, it is already waiting at your face
-        if(m){ if(dolly && dolly.phase === 2){ m.position.set(ex, ey, ez); m.rotation.set(0, Math.PI / 2, 0); } else plushPlace(P, 0); }
-        return;
-      }
       if(m){
-        if(t < 1.0){ m.position.set(ex + (Math.random() - .5) * .014, ey + (Math.random() - .5) * .014, ez + (Math.random() - .5) * .014); m.rotation.set(0, Math.PI / 2 + Math.sin(t * 9) * .05, Math.sin(t * 7) * .04); }      // in your face
-        else if(t < 2.4){ const k = sm((t - 1.0) / 1.4); m.position.set(ex + (cx - ex) * k, ey + (cy - ey) * k + Math.sin(k * Math.PI) * .25, ez + (cz - ez) * k); m.rotation.set(0, Math.PI / 2, Math.sin(t * 5) * .05); }      // back to its chair
+        plushShow(P, true);
+        if(t < 1.1){ plushPlace(P, 0); }                                                                                         // on its chair, in the light
+        else if(t < 1.5){ const k = sm((t - 1.1) / .4); m.position.set(cx + (ex - cx) * k, cy + (ey - cy) * k + Math.sin(k * Math.PI) * .2, cz + (ez - cz) * k); m.rotation.set(0, Math.PI / 2, 0); if(!P.intro.rushed){ P.intro.rushed = true; lsfx('sting', .9); redLevel = Math.max(redLevel, .8); level.shake = .14; } }      // at you, fast
+        else if(t < 2.5){ m.position.set(ex + (Math.random() - .5) * .014, ey + (Math.random() - .5) * .014, ez + (Math.random() - .5) * .014); m.rotation.set(0, Math.PI / 2 + Math.sin(t * 9) * .05, Math.sin(t * 7) * .04); }      // in your face
+        else if(t < 3.9){ const k = sm((t - 2.5) / 1.4); m.position.set(ex + (cx - ex) * k, ey + (cy - ey) * k + Math.sin(k * Math.PI) * .25, ez + (cz - ez) * k); m.rotation.set(0, Math.PI / 2, Math.sin(t * 5) * .05); level.shake = 0; }      // back to its chair
         else { plushPlace(P, 0); }
       }
-      if(t >= 2.4) P.spot.intensity = PL.TORCH * Math.max(0, 1 - (t - 2.4) / .6);      // the light dies as it settles
-      if(t >= 3.0 || !m){ P.intro = null; plushShow(P, false); P.spot.intensity = 0; P.nextMove = now + 6500 + Math.random() * 3500; redLevel = Math.max(redLevel, .4);
+      if(t >= 3.9) P.spot.intensity = PL.TORCH * Math.max(0, 1 - (t - 3.9) / .6);      // the light dies as it settles
+      if(t >= 4.5 || !m){ P.intro = null; plushShow(P, false); P.spot.intensity = 0; P.nextMove = now + 6500 + Math.random() * 3500; redLevel = Math.max(redLevel, .4); level.shake = 0;
         flash(TOUCH ? 'hold the light button. let it move in the dark' : 'hold space or the mouse for light. let it move in the dark'); }
       return;
     }
@@ -5702,6 +5710,7 @@ const LIVING = (function(){
     hud = document.createElement('div'); hud.className = 'living-hud'; wrap.appendChild(hud);
     fadeEl = document.createElement('div'); fadeEl.className = 'living-fade'; wrap.appendChild(fadeEl);
     flashEl = document.createElement('div'); flashEl.className = 'living-flash'; wrap.appendChild(flashEl);
+    for(let i = 0; i < 3; i++){ const e = document.createElement('i'); e.className = 'cam-edge'; wrap.appendChild(e); edgeEls.push(e); }
     panel = document.createElement('div'); panel.className = 'game-panel'; wrap.appendChild(panel);
     panel.addEventListener('mousedown', e=>e.stopPropagation()); panel.addEventListener('click', e=>e.stopPropagation());
     msgEl = document.createElement('div'); msgEl.className = 'living-msg'; wrap.appendChild(msgEl);
@@ -5918,6 +5927,7 @@ const LIVING = (function(){
     }else if(camera.fov !== 70){ camera.fov = 70; camera.updateProjectionMatrix(); }
 
     if(level && level.tick && !switching) level.tick(now);
+    if(level && level.haunt) edgeMarkers();
     if(level && level.demon && !reduce) animateDemon(level.demon, now);
     if(level && level.watch && !switching && !level.intro && !tipOpen) watchStep(level.watch, now);
 
