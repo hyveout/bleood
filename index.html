@@ -4097,7 +4097,7 @@ const LIVING = (function(){
           // the first thing: the view rushes down the hall to her face, holds on it, and comes back with the dark behind it
           level.dollyDone = true;
           startDolly({p:new THREE.Vector3(gp.x, 1.75, gp.z - 1.35), yaw:Math.PI, pitch:.02}, {out:2.0, hold:.75, back:1.3, fogTo:[2.0, 6.5],
-            onHold:()=>{ redLevel = Math.max(redLevel, .85); level.shake = .12; lsfx('sting', .8); const W = level.watch; if(W){ W.eyesForced = true; W.next = performance.now() + 1e12; } }, onEnd:()=>{ level.shake = 0; }});
+            onHold:()=>{ redLevel = Math.max(redLevel, .85); level.shake = .12; lsfx('sting', .8); }, onEnd:()=>{ level.shake = 0; }});
         }
         if(dolly) return;
         if(!level.chase){
@@ -5215,13 +5215,13 @@ const LIVING = (function(){
     if(u.kind === 'painting'){ openPainting(); return; }
     if(u.kind === 'arenadoor'){
       const A = level.arena; if(A.state === 'fighting') return;
-      if(!A.door.open){ A.door.open = true; A.state = A.state === 'closed' ? 'open' : A.state; level.solids = level.solids.filter(x => x !== A.block); u.prompt = ''; level.interactives = level.interactives.filter(m => m !== A.door.leaf); }
+      if(!level.hall1.hasKey){ flash('locked'); lsfx('locked'); return; }
+      if(!A.door.open){ flash('the key turns'); A.door.open = true; A.state = A.state === 'closed' ? 'open' : A.state; level.solids = level.solids.filter(x => x !== A.block); u.prompt = ''; level.interactives = level.interactives.filter(m => m !== A.door.leaf); }
       return;
     }
     if(u.kind === 'sidedoor'){
       const H1 = level.hall1;
-      if(!H1.hasKey){ flash('locked'); lsfx('locked'); return; }
-      if(level.arena && level.arena.state !== 'cleared'){ flash('not yet. the other door first'); lsfx('locked'); return; }
+      if(level.arena && level.arena.state !== 'cleared'){ flash('locked. the other door first'); lsfx('locked'); return; }
       openDoor(H1.door); level.solids = level.solids.filter(s => s !== H1.block);
       level.interactives = level.interactives.filter(m => m !== H1.door.leaf); flash('the key turns'); return;
     }
