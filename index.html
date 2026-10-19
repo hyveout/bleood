@@ -736,9 +736,13 @@ body.mob-full .attn .mob-mask.on{border-color:#f0c868; box-shadow:inset 0 0 0 2p
 .ug-keys.few button.wide{width:100%; aspect-ratio:auto; padding:6px 0}
 .ug-keys.few.below button, .ug-keys.few.below button.del{width:calc((100% - 5 * 5px) / 6); aspect-ratio:1; font-size:20px}
 .ug-keys.few.below button.wide{padding:10px 0; font-size:14px}
+.ug-keys.qwerty{flex-direction:column; align-items:center; gap:6px}      /* the typewriter on phones: a real keyboard's three rows, staggered */
+.ug-keys.qwerty .krow{display:flex; justify-content:center; gap:5px; width:100%}
+.ug-keys.qwerty .krow button{width:calc((100% - 9 * 5px) / 10); max-width:44px; aspect-ratio:.9; font-size:16px}
 .ug-pop.ug-up{justify-content:flex-start; padding-top:clamp(86px,13vw,100px)}   /* clear of the inventory and the mask box */
 /* phones: no boxes at all. the letters float in the dark like a spirit board, and the word comes up on a single faint line */
 @media (hover: none), (pointer: coarse){
+  .living-hud{left:0; right:0; top:4%; text-align:center}      /* phones: the count sits in the middle at the top, clear of the exit button */
   .ug-keys, .ug-keys.below{background:radial-gradient(ellipse 60% 62% at 50% 50%, rgba(0,0,0,.82), rgba(0,0,0,.55) 65%, rgba(0,0,0,0) 100%) !important; box-shadow:none !important; border:0 !important}   /* a soft pool of dark behind the letters, no edges */
   .ug-keys button, .ug-keys.below button{background:none !important; border:0 !important; box-shadow:none !important; color:rgba(239,236,225,.82); text-shadow:0 0 6px rgba(0,0,0,.95), 0 0 2px #000}
   .ug-keys button:active{background:none !important; color:#f0c868; text-shadow:0 0 8px rgba(240,200,104,.8)}
@@ -2624,7 +2628,7 @@ const LIVING = (function(){
   }
   function framing(g, w, d, h, cx, cz, open){
     cx = cx || 0; cz = cz || 0; open = open || {};
-    const postM = mat('wood', 1, 3), beamM = mat('wood', 4, 1), r = (a, b) => a + Math.random() * (b - a);
+    const postM = mat('dresser', 1, 4), beamM = mat('dresser', 6, 1), r = (a, b) => a + Math.random() * (b - a);      // grained, grimy timber
     const post = (x, z, ry)=>{ const p = new THREE.Mesh(new THREE.BoxGeometry(.16, h, .11), postM); p.position.set(x, h / 2, z); p.rotation.y = ry; p.rotation.z = r(-.012, .012); g.add(p);
       if(Math.random() < .3){ const ch = new THREE.Mesh(new THREE.PlaneGeometry(.09, .34), charmMat()); ch.position.set(0, r(.1, .5), .06); ch.rotation.z = r(-.08, .08); p.add(ch); } };
     const beam = (len, x, z, ry, y, sz)=>{ const b = new THREE.Mesh(new THREE.BoxGeometry(len, sz, .13), beamM); b.position.set(x, y, z); b.rotation.y = ry; g.add(b); };
@@ -3699,14 +3703,14 @@ const LIVING = (function(){
       const cl = new THREE.Mesh(new THREE.PlaneGeometry(w, L), mat('ceil', w / 1.5, L / 1.5)); cl.rotation.x = Math.PI/2; cl.position.set(0, h, z0 + L/2); g.add(cl);
       [-1, 1].forEach(sd=>{
         const wl = new THREE.Mesh(new THREE.PlaneGeometry(L, h), mat('plaster', L / 2.2, 1)); wl.position.set(sd * w/2, h/2, z0 + L/2); wl.rotation.y = -sd * Math.PI/2; g.add(wl);
-        const wn = new THREE.Mesh(new THREE.BoxGeometry(.04, .95, L), mat('panel', L / 1.1, 1)); wn.position.set(sd * (w/2 - .025), .475, z0 + L/2); g.add(wn);
+        const wn = new THREE.Mesh(new THREE.BoxGeometry(.04, .95, L), mat('boards', L / 1.2, .38)); wn.position.set(sd * (w/2 - .025), .475, z0 + L/2); g.add(wn);
         box(g, .07, .05, L, new THREE.MeshLambertMaterial({color:0x1a120c}), sd * (w/2 - .035), .97, z0 + L/2, false);
       });
       cove(g, w, L, h, 0, z0 + L/2, {back:true});      // the same dark along the top, all the way down; no edge where the hall ends
       framing(g, w, L, h, 0, z0 + L/2, {back:true, front:true});
     }
     // dark wood wainscoting and a chair rail along both walls
-    const wainM = mat('panel', d / 1.1, 1), railM = new THREE.MeshLambertMaterial({color:0x1a120c});
+    const wainM = mat('boards', d / 1.2, .38), railM = new THREE.MeshLambertMaterial({color:0x1a120c});      // dark boards, standing on end
     // the left wall has doors in it, so its panelling and rail stop at each door frame instead of running across it
     const doorZs = d > 10 ? [-3, 2.5] : [-1.5];
     [-1, 1].forEach(sd=>{
@@ -3717,7 +3721,7 @@ const LIVING = (function(){
       spans.push([from, d/2]);
       spans.forEach(([z0, z1])=>{
         const len = z1 - z0; if(len <= .02) return; const zc = (z0 + z1) / 2;
-        const wm2 = mat('panel', len / 1.1, 1);
+        const wm2 = mat('boards', len / 1.2, .38);
         const wain = new THREE.Mesh(new THREE.BoxGeometry(.04, .95, len), wm2); wain.position.set(wx, .475, zc); g.add(wain);
         box(g, .07, .05, len, railM, sd * (w/2 - .035), .97, zc, false);
       });
@@ -3727,7 +3731,7 @@ const LIVING = (function(){
       if(sg > 0 && p === 2) return;                                         // pass two has no end wall there
       [[-w/2, -.64], [.64, w/2]].forEach(([x0, x1])=>{
         const len = x1 - x0, xc = (x0 + x1) / 2, zz = ez - sg * .025;
-        const wn = new THREE.Mesh(new THREE.BoxGeometry(len, .95, .04), mat('panel', len / 1.1, 1)); wn.position.set(xc, .475, zz); g.add(wn);
+        const wn = new THREE.Mesh(new THREE.BoxGeometry(len, .95, .04), mat('boards', len / 1.2, .38)); wn.position.set(xc, .475, zz); g.add(wn);
         box(g, len, .05, .07, railM, xc, .97, ez - sg * .035, false);
       });
     });
@@ -3887,7 +3891,7 @@ const LIVING = (function(){
       rp(rWall, a1, h, RX0 - .005, h/2, rz0 + a1/2, -Math.PI/2);
       rp(rWall, a1, h, RX0 - .005, h/2, rz1 - a1/2, -Math.PI/2);
       rp(rWall, DWh, h - DHh, RX0 - .005, DHh + (h - DHh)/2, SIDE_Z, -Math.PI/2);
-      const wnR = (len, x, z, alongZ, inset)=>{ const wn = new THREE.Mesh(alongZ ? new THREE.BoxGeometry(.04, .95, len) : new THREE.BoxGeometry(len, .95, .04), mat('panel', len / 1.1, 1)); wn.position.set(x, .475, z); g.add(wn);
+      const wnR = (len, x, z, alongZ, inset)=>{ const wn = new THREE.Mesh(alongZ ? new THREE.BoxGeometry(.04, .95, len) : new THREE.BoxGeometry(len, .95, .04), mat('boards', len / 1.2, .38)); wn.position.set(x, .475, z); g.add(wn);
         box(g, alongZ ? .07 : len, .05, alongZ ? len : .07, railM, x + (alongZ ? inset : 0), .97, z + (alongZ ? 0 : inset), false); };
       wnR(RD, RX0 - RW + .025, SIDE_Z, true, .01);
       // the long walls: panelling broken by the dark doorways it hides in
@@ -4883,8 +4887,8 @@ const LIVING = (function(){
     if(TOUCH){
       // phones: the system keyboard can't be opened from here (and it zooms the page), so the keys are laid out under the page
       panel.querySelector('.tw-input').remove();
-      const keys = document.createElement('div'); keys.className = 'ug-keys below tw-keys';
-      keys.innerHTML = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(c => '<button type="button" data-k="' + c + '">' + c + '</button>').join('');
+      const keys = document.createElement('div'); keys.className = 'ug-keys below tw-keys qwerty';
+      keys.innerHTML = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'].map(row => '<div class="krow">' + row.split('').map(c => '<button type="button" data-k="' + c + '">' + c + '</button>').join('') + '</div>').join('');
       panel.querySelector('.tw').appendChild(keys);
       keys.addEventListener('click', e => { const b = e.target.closest('button'); if(b && panel.dataset.game === 'type') typeChar(b.dataset.k); });
     }
