@@ -1033,7 +1033,7 @@ body.mob-full .mob-exit:active{opacity:1; border-color:rgba(232,227,214,.9)}
 .game-panel .paint-key img{width:100%; height:100%; object-fit:contain; image-rendering:pixelated}
 .game-panel .paint-key.hot img, .game-panel .paint-key:hover img{filter:brightness(1.4) drop-shadow(0 0 6px rgba(240,200,104,.9))}
 .game-panel .paint-cap{font-family:var(--crtface); font-size:clamp(.62rem,1.3vw,.8rem); letter-spacing:.2em; text-transform:uppercase; color:rgba(230,224,210,.6); text-align:center}
-.cam-frame{position:absolute; inset:0; z-index:6; pointer-events:none; opacity:0; transition:opacity .45s; box-shadow:inset 0 0 0 clamp(14px,3vmin,28px) rgba(0,0,0,.55), inset 0 0 90px rgba(0,0,0,.75)}
+.cam-frame{position:absolute; inset:0; z-index:6; pointer-events:none; opacity:0; transition:opacity .45s; mix-blend-mode:screen; background:var(--cf) center/100% 100% no-repeat}
 .cam-frame.on{opacity:1}
 .cam-frame i{position:absolute; width:clamp(26px,6vmin,54px); height:clamp(26px,6vmin,54px); border:2px solid rgba(230,224,210,.55)}
 .cam-frame .c1{left:clamp(24px,5vmin,46px); top:clamp(24px,5vmin,46px); border-right:0; border-bottom:0}
@@ -1059,10 +1059,11 @@ body.mob-full .mob-exit:active{opacity:1; border-color:rgba(232,227,214,.9)}
 .cap-ring.cold b{animation:tipblink .5s steps(1) infinite}
 .cam-frame .cf-charge{position:absolute; left:0; right:0; top:calc(50% - min(21vmin,150px) - 30px); text-align:center; font-family:var(--crtface); font-size:clamp(.58rem,1.2vw,.76rem); letter-spacing:.3em; text-transform:uppercase; color:rgba(230,120,90,.85); opacity:0; transition:opacity .2s}
 .cam-frame .cf-charge.on{opacity:1}
-.cam-frame .cf-mode{position:absolute; left:0; right:0; bottom:clamp(24px,5vmin,46px); text-align:center; font-family:var(--crtface); font-size:clamp(.62rem,1.35vw,.84rem); letter-spacing:.32em; text-transform:uppercase; pointer-events:auto}
-.cam-frame .cf-mode span{display:inline-block; padding:6px 14px; margin:0 6px; color:rgba(230,224,210,.3); border:1px solid transparent; cursor:pointer; touch-action:manipulation}
-.cam-frame .cf-mode span.on{color:#f0c868; border-color:rgba(240,200,104,.55); text-shadow:0 0 8px rgba(240,200,104,.6)}
-.cam-frame .cf-mode small{display:block; margin-top:4px; font-size:.72em; letter-spacing:.22em; color:rgba(230,224,210,.3)}
+.cam-frame .cf-mode{position:absolute; inset:0; pointer-events:none}
+.cam-frame .cf-mode span{position:absolute; top:82%; height:7.5%; opacity:0; pointer-events:auto; cursor:pointer; touch-action:manipulation}      /* invisible hotspots over the FORGET / REMEMBER painted on the frame */
+.cam-frame .cf-mode span[data-m="forget"]{left:21%; width:26%} .cam-frame .cf-mode span[data-m="remember"]{left:52%; width:27%}
+.cam-frame .cf-mode small{display:none}
+.living.touch .cam-frame{background-size:100% auto}      /* phones: the frame keeps its shape across the width; the hotspots are laid over it in script */
 .cap-hint{position:absolute; left:0; right:0; top:calc(50% + min(21vmin,150px) + 14px); text-align:center; font-family:var(--crtface); font-size:clamp(.62rem,1.3vw,.82rem); letter-spacing:.26em; text-transform:uppercase; color:rgba(230,224,210,.55); pointer-events:none; opacity:0; transition:opacity .5s; z-index:6}
 .cap-hint.on{opacity:1}
 .living-tip{position:absolute; inset:0; z-index:8; display:none; align-items:center; justify-content:center; flex-direction:column; cursor:pointer;
@@ -2331,7 +2332,14 @@ const LIVING = (function(){
   // the two flashes: FORGET is for him (the past), REMEMBER is for her (the present). the wrong one does nothing but bring them closer
   let camMode = 'forget', camReady = 0;      // camReady: the flash is charging again until then
   const RECHARGE = 3200;
-  function setCamMode(m){ camMode = m; if(camFrame) camFrame.querySelectorAll('.cf-mode span').forEach(el => el.classList.toggle('on', el.dataset.m === m)); }
+  const CAM_FRAMES = {forget:'cam_forget.webp', remember:'cam_remember.webp', forget_flash:'cam_forget_flash.webp', remember_flash:'cam_remember_flash.webp'};
+  let camFlashing = false, camFlashT = 0;
+  function camFramePic(){ if(camFrame) camFrame.style.setProperty('--cf', 'url(' + CAM_FRAMES[camMode + (camFlashing ? '_flash' : '')] + ')'); }
+  function camFlashPic(){ camFlashing = true; camFramePic(); clearTimeout(camFlashT); camFlashT = setTimeout(()=>{ camFlashing = false; camFramePic(); }, 380); }
+  function setCamMode(m){ camMode = m; if(camFrame) camFrame.querySelectorAll('.cf-mode span').forEach(el => el.classList.toggle('on', el.dataset.m === m)); camFramePic(); }
+  // phones: the frame is drawn as a 4:3 band across the width, centred; the two hotspots follow it
+  function layoutCamFrame(){ if(!camFrame || !TOUCH) return; const W = wrap.clientWidth, H = wrap.clientHeight, bh = W * .75, top = (H - bh) / 2;
+    camFrame.querySelectorAll('.cf-mode span').forEach(el => { el.style.top = (top + bh * .82) + 'px'; el.style.height = (bh * .075) + 'px'; }); }
   function rightMode(H){ return (H.who === 'her') === (camMode === 'remember'); }
   function ringHint(H){ return (H.who === 'her' ? 'remember her. ' : 'forget him. ') + (TOUCH ? 'keep it in the ring. when the runes are lit, tap' : 'keep it in the ring. when the runes are lit, press E'); }
   function haveCamera(){ return hasCamera && level && !level.needCamera; }
@@ -4109,7 +4117,7 @@ const LIVING = (function(){
     const nowS = performance.now(); if(nowS < camReady) return false;      // still charging: nothing happens
     camReady = nowS + RECHARGE;
     // the shutter: a white flash, a click
-    fadeEl.style.background = '#fff'; fade = 1; fadeTo = 0; setTimeout(()=>{ fadeEl.style.background = '#000'; }, 350);
+    fadeEl.style.background = '#fff'; fade = 1; fadeTo = 0; setTimeout(()=>{ fadeEl.style.background = '#000'; }, 350); camFlashPic();
     plushClick(true); if(plushAudio()) burst(AC.currentTime + .06, .05, .3, 1200, 2600, 0);
     if(H.charge >= 1 && !rightMode(H)){
       // the wrong flash: the light goes through it and it is nearer when the glare clears
@@ -5538,10 +5546,11 @@ const LIVING = (function(){
     panel = document.createElement('div'); panel.className = 'game-panel'; wrap.appendChild(panel);
     panel.addEventListener('mousedown', e=>e.stopPropagation()); panel.addEventListener('click', e=>e.stopPropagation());
     msgEl = document.createElement('div'); msgEl.className = 'living-msg'; wrap.appendChild(msgEl);
-    camFrame = document.createElement('div'); camFrame.className = 'cam-frame'; camFrame.innerHTML = '<i class="c1"></i><i class="c2"></i><i class="c3"></i><i class="c4"></i><span class="cf-tag"></span><span class="cf-count"></span><span class="cf-charge">recharging</span><div class="cf-mode"><span data-m="forget">forget</span><span data-m="remember">remember</span><small></small></div>'; wrap.appendChild(camFrame);
+    camFrame = document.createElement('div'); camFrame.className = 'cam-frame'; camFrame.innerHTML = '<span class="cf-tag"></span><span class="cf-count"></span><span class="cf-charge">recharging</span><div class="cf-mode"><span data-m="forget">forget</span><span data-m="remember">remember</span><small></small></div>'; wrap.appendChild(camFrame);
     camFrame.querySelector('.cf-mode small').textContent = TOUCH ? 'tap to switch' : '1 / 2 or scroll to switch';
     camFrame.querySelectorAll('.cf-mode span').forEach(el => { const f = e => { e.preventDefault(); e.stopPropagation(); setCamMode(el.dataset.m); }; el.addEventListener('touchstart', f, {passive:false}); el.addEventListener('mousedown', f); });
-    setCamMode('forget');
+    setCamMode('forget'); Object.values(CAM_FRAMES).forEach(src => { const i = new Image(); i.src = src; });
+    window.addEventListener('resize', layoutCamFrame); setTimeout(layoutCamFrame, 50);
     wrap.addEventListener('wheel', e => { if(camUp && haveCamera()){ setCamMode(camMode === 'forget' ? 'remember' : 'forget'); e.preventDefault(); } }, {passive:false});
     capEl = document.createElement('div'); capEl.className = 'cap-ring'; capEl.innerHTML = [0,1,2,3,4,5,6].map(i => '<i style="--a:' + (i * 360 / 7).toFixed(2) + 'deg"></i>').join('') + '<b></b>'; wrap.appendChild(capEl);
     capHint = document.createElement('div'); capHint.className = 'cap-hint'; wrap.appendChild(capHint);
