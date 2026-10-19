@@ -3727,12 +3727,11 @@ const LIVING = (function(){
         const c = Math.abs(Math.cos(ry)), sn = Math.abs(Math.sin(ry)), hx = .25 * c + .48 * sn, hz = .48 * c + .25 * sn;
         level.solids.push({minX:x - hx, maxX:x + hx, minZ:z - hz, maxZ:z + hz}); };
       // from the far end (where she is) back to the door: the gaps alternate sides and never line up
-      tableAt(-.55, 4.6, Math.PI / 2);          // across the left half
-      chairAt(.75, 2.6, -.7);
-      tableAt(.5, .4, Math.PI / 2 + .3);        // across the right, a little skewed
-      chairAt(-.8, -1.5, .5);
-      tableAt(-.45, -3.4, Math.PI / 2);
-      chairAt(.7, -5.2, 2.6);                   // the last one, right before the door
+      // (eased, Oct 19: four pieces, each pushed to its wall, so the gap past it is a full stride wide)
+      tableAt(-.78, 4.4, Math.PI / 2);          // against the left wall
+      chairAt(.82, 1.9, -.7);                   // the right
+      tableAt(.78, -.9, Math.PI / 2 + .2);      // the right again, a little skewed
+      chairAt(-.85, -3.6, .5);                  // the left, before the door
     }
 
     if(p === 1){
