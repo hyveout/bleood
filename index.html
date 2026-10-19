@@ -3335,7 +3335,7 @@ const LIVING = (function(){
       const pp = new THREE.Mesh(new THREE.PlaneGeometry(.22, .3), mat('paper', 1, 1, {side:THREE.DoubleSide}));
       pp.rotation.x = -Math.PI/2; pp.rotation.z = Math.random() * 6;
       pp.position.set(x, .012 + i * .0006, z); g.add(pp);
-      pp.userData = {kind:'readnote', text:said[i]}; level.interactives.push(pp);
+      pp.userData = {kind:'readnote', text:''}; level.interactives.push(pp);      // (blank for now: the notes will be pictures)
     });
 
     // the dressing table against the right wall: typewriter on top, the key in its drawer
@@ -3593,7 +3593,9 @@ const LIVING = (function(){
   function buildHallway(){
     clearLevel();
     hallPass += 1;
-    const p = hallPass;                                   // 1 normal, 2 no way forward, 3 it is right there
+    // the order (Oct 19): hall 1 is the chase, hall 2 has the key and the doll's corridor, then the dark room (its own builder), then a plain hall, then the ritual.
+    // inside this function the old numbering is kept: p 1 = the key hall, 2 = the chase, 3 = the plain one
+    const p = {1:2, 2:1, 4:3}[hallPass] || 3;
     const g = level.group, w = 3.0, d = p === 3 ? 9 : 14, h = 2.9;
     level.bounds = {minX:-w/2+.35, maxX:w/2-.35, minZ:-d/2 - .4, maxZ:d/2+.4};
     // pass two has no doorway at the far end at all
@@ -3788,11 +3790,7 @@ const LIVING = (function(){
       else{ openDoor(out); out.pivot.rotation.y = out.ry - Math.PI/2; }
       level.exitZ = d/2 + .2;
     }
-    if(p === 3){
-      // right in front of you, a little to the side. you have to walk past it.
-      spawnDemon(1.7, -1.2, 0.3, -d/2 + 2.6, {watch:{spawn:{x:0, z:-d/2 + 1.2, yaw:Math.PI}, home:[-1.2, 0.3, -d/2 + 2.6], openMin:2200, openMax:4600, closedMin:3000, closedMax:6000, first:3000}});
-      level.solids.push({minX:-3.0, maxX:-.45, minZ:-d/2 + 2.0, maxZ:-d/2 + 3.2});   // just her body, against the left wall, so the rest of the hallway is walkable
-    }
+    // (p 3, the plain hall: nothing in it. the lamps are mostly out and the air is wrong, that is all)
 
     camera.position.set(0, EYE, -d/2 + 1.2); yaw = Math.PI; pitch = 0;
     setHUD('');
@@ -3835,13 +3833,98 @@ const LIVING = (function(){
         if(level.plush) plushStep(level.plush, now, dtS);
       }
       if(p === 2){
-        if(level.backDoor && level.backDoor.open && camera.position.z < level.exitBackZ) go(buildHallway);      // out the way you came, with her behind you
+        if(level.backDoor && level.backDoor.open && camera.position.z < level.exitBackZ) go(nextRoom());      // out the way you came, with her behind you
       }else if(camera.position.z > level.exitZ){
-        go(p >= 3 ? buildRitual : buildHallway);
+        go(nextRoom());
       }
     };
     level.blockZMax = ()=> p === 2 ? d/2 + 30 : (p === 1 && !level.memoryDone ? d/2 - .5 : d/2 + .6);
     level.blockZMin = ()=> p === 2 ? (level.backDoor && level.backDoor.open ? -d/2 - .6 : -d/2 + .35) : -d/2 + .35;
+  }
+
+  function nextRoom(){ return hallPass >= 4 ? buildRitual : hallPass === 2 ? buildDarkRoom : buildHallway; }
+
+  // ================= ROOM 3: the dark room =================
+  // a big, nearly black room. several of her stand in it, each throwing a red light across the floor that sweeps slowly round.
+  // step into a light and she has you. the way out is a door somewhere along the walls; you have to find it in the dark
+  function buildDarkRoom(){
+    clearLevel();
+    hallPass += 1;
+    const g = level.group, w = 18, d = 18, h = 3.4;
+    // the way out: on the far wall or the left wall, somewhere different each time
+    const onFront = Math.random() < .5, exitAt = (Math.random() < .5 ? -1 : 1) * (2.5 + Math.random() * 5);
+    shell(g, w, d, h, {floor:'boards', ceil:'ceil', wall:'damask'}, onFront ? {back:0, front:exitAt} : {back:0, left:exitAt});
+    level.bounds = {minX:-w/2 + .35, maxX:w/2 - .35, minZ:-d/2 + .35, maxZ:d/2 + .6};
+    scene.fog = new THREE.Fog(FOGC, 1.2, 7.5);
+    g.add(new THREE.AmbientLight(0x6a6058, .05));
+    level.distort = .5; level.redChance = 0;
+    // a baseboard-dark wall round the exit, and the door itself, standing open
+    const back = door(g, 0, -d/2, 0, 'back');
+    let out;
+    if(onFront){ out = door(g, exitAt, d/2, Math.PI, 'next'); level.exitZ = d/2 + .2; }
+    else{
+      out = door(g, -w/2 + .03, exitAt, Math.PI/2, 'next'); level.bounds.minX = -w/2 - .8;
+      level.solids.push({minX:-w/2 - .2, maxX:-w/2, minZ:-d/2 - 1, maxZ:exitAt - .55}, {minX:-w/2 - .2, maxX:-w/2, minZ:exitAt + .55, maxZ:d/2 + 1});
+      const dark = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 2.45), new THREE.MeshBasicMaterial({color:0x000000})); dark.position.set(-w/2 - .45, 1.07, exitAt); dark.rotation.y = Math.PI/2; g.add(dark);
+    }
+    openDoor(out); out.pivot.rotation.y = out.ry - Math.PI/2; level.doors.push(out);
+    // what else is in here: a few of the tables and chairs from the halls, in the way
+    const railM = new THREE.MeshLambertMaterial({color:0x1a120c}), cabM = mat('dresser', 1, 1);
+    [[-5, -3, .4], [4, 2, 1.9], [-2, 5, .8], [6, -5, 2.4], [1, -1.5, 0]].forEach(([x, z, ry])=>{
+      box(g, .5, .06, .95, cabM, x, .8, z, false); box(g, .44, .62, .88, cabM, x, .46, z, false);
+      level.solids.push({minX:x - .5, maxX:x + .5, minZ:z - .5, maxZ:z + .5});
+    });
+    // her: three of her, each with a red light that sweeps the floor in front of her
+    const GIRLS = [[-4.5, -1.0, .0], [4.0, 3.5, 2.2], [-1.5, 5.5, 4.0]];      // where each stands, and where her light starts
+    level.demons = []; level.watch = null;
+    const beamM = new THREE.MeshBasicMaterial({color:0xff2010, transparent:true, opacity:.03, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide, fog:false});
+    GIRLS.forEach(([gx, gz, a0], i)=>{
+      const lv = level;
+      loadDemon(1.8).then(D=>{
+        if(!D || level !== lv) return;
+        D.group.position.set(gx, .3, gz); D.group.rotation.y = Math.PI; g.add(D.group); D.calm = false;
+        D.group.children.forEach(c=>{ if(c.isPointLight){ c.intensity *= .25; } });      // her own lights, turned well down: the room stays dark
+        D.model.traverse(m => { if(m.isMesh && m.name === 'eyes') m.visible = false; });
+        // the red light: a spotlight from her chest, and a faint cone so the beam itself shows in the dark
+        const piv = new THREE.Group(); piv.position.set(0, 1.25, 0); D.group.add(piv);
+        const sp = new THREE.SpotLight(0xff2010, 4.5, 9, .3, .5, .8); sp.position.set(0, 0, .3); sp.target.position.set(0, -1.2, 5); piv.add(sp); piv.add(sp.target);
+        const cone = new THREE.Mesh(new THREE.ConeGeometry(1.75, 5.6, 24, 1, true), beamM); cone.rotation.x = -Math.PI / 2 + .22; cone.position.set(0, -.6, 3.0); cone.rotation.order = 'YXZ'; piv.add(cone);
+        const pool = new THREE.Mesh(new THREE.CircleGeometry(1.7, 28), new THREE.MeshBasicMaterial({color:0xff2010, transparent:true, opacity:.16, blending:THREE.AdditiveBlending, depthWrite:false})); pool.rotation.x = -Math.PI/2; pool.position.set(0, -1.24, 5.3); piv.add(pool);
+        lv.demons.push({D, piv, a0, speed:.22 + i * .07, swing:1.1 + i * .3, cx:gx, cz:gz});
+      });
+    });
+    camera.position.set(0, EYE, -d/2 + 1.2); yaw = Math.PI; pitch = 0;
+    setHUD('');
+    const scareW = {eyes:[], eyeGlow:{intensity:0}, scaring:false}; level.scareW = scareW; const t0 = performance.now();
+    level.tick = (now)=>{
+      const t = now / 1000;
+      if(scareW.scaring) return;
+      level.demons.forEach(G=>{
+        // she stands still but turns slowly on the spot, and her light with her
+        const ang = G.a0 + Math.sin(t * G.speed) * G.swing;
+        G.D.group.rotation.y = ang;
+        if(!reduce) animateDemonDark(G.D, now);
+        // are you in her light? inside the cone's reach and within its spread, measured flat along the floor
+        const dx = camera.position.x - G.cx, dz = camera.position.z - G.cz, dist = Math.hypot(dx, dz);
+        const fx = Math.sin(ang), fz = Math.cos(ang), along = dx * fx + dz * fz, across = Math.abs(dx * fz - dz * fx);
+        if(now - t0 > 2500 && along > .8 && along < 7.2 && across < .35 + along * .3){      // (a moment's grace as you come in)
+          scareW.scaring = true; redLevel = 1; level.shake = .25;
+          jumpscare(scareW);
+        }
+      });
+      if(camera.position.z > d/2 + .15 || camera.position.x < -w/2 - .15) go(nextRoom());
+    };
+    level.blockZMax = ()=> onFront ? d/2 + 1 : d/2 - .35;
+  }
+  // in the dark room she does not twitch and chase; she sways, head turning, as if listening
+  function animateDemonDark(D, now){
+    const t = now / 1000 + D.seed, B = D.bones;
+    D.arms.forEach(([bn, m])=>{ const lag = {upperarm:0, forearm:.9, hand:1.8}[m[1]], amp = {upperarm:.12, forearm:.3, hand:.36}[m[1]], sg = m[3] === 'L' ? 1 : -1, off = m[2] === 'mid' ? 2 : 0;
+      bn.rotation.z = sg * amp * Math.sin(t * .7 + off - lag); bn.rotation.x = .05 * Math.sin(t * .5 + off); });
+    if(B.bone_head){ B.bone_head.rotation.y = .4 * Math.sin(t * .5); B.bone_head.rotation.x = .12 * Math.sin(t * .8) + .15; B.bone_head.rotation.z = .1 * Math.sin(t * .37); }
+    if(B.bone_wing_L) B.bone_wing_L.rotation.z = .2 * Math.sin(t * .6); if(B.bone_wing_R) B.bone_wing_R.rotation.z = -.2 * Math.sin(t * .6 + .5);
+    D.model.position.set(D.base.x, D.base.y + .03 * Math.sin(t * 1.1), D.base.z);
+    D.rim.intensity = .5 + .3 * Math.sin(t * .8);
   }
 
   // ================= FINAL ROOM: the ritual =================
@@ -4360,7 +4443,9 @@ const LIVING = (function(){
     const P = {RX0, Z0, step:0, active:false, lock:false, done:false, dark:false, held:false, lit:false, litAt:0, nextMove:0, time:PL.TIME, model:null, scareAt:0, push:false, place:i=> plushPlace(P, i)};
     P.spot = new THREE.SpotLight(0xfff0d6, 0, 18, .62, .55, .5); P.spot.position.set(.1, -.1, 0); P.spot.target.position.set(0, -.14, -1);
     camera.add(P.spot); camera.add(P.spot.target);
-    loadDoll().then(m=>{ if(!m || level.plush !== P) return; P.model = m; g.add(m); plushPlace(P, 0); });
+    loadDoll().then(m=>{ if(!m || level.plush !== P) return; P.model = m; g.add(m);
+      P.glow = new THREE.PointLight(0xfff4e4, 0, 3.2, 1.2); P.glow.position.set(0, 120, 60); m.add(P.glow);      // (model units: a little above and in front of its face)
+      plushPlace(P, 0); });
     return P;
   }
   function plushPlace(P, i){
@@ -4384,14 +4469,14 @@ const LIVING = (function(){
     plushClick(false);
   }
   function plushEnd(P){
-    P.lock = false; P.dark = false; P.held = false; P.lit = false; P.spot.intensity = 0; P.active = false; setHUD('');
+    P.lock = false; P.dark = false; P.held = false; P.lit = false; P.spot.intensity = 0; if(P.glow) P.glow.intensity = 0; P.active = false; setHUD('');
     if(P.fog){ scene.fog = P.fog; P.fog = null; }
     wrap.classList.remove('plush-on'); const b = wrap.querySelector('.holdcandle'); if(b) b.classList.remove('on');
     const H1 = level.hall1; H1.door.open = true; level.solids = level.solids.filter(x => x !== H1.block);
   }
   function plushScare(P){
     if(P.scareAt) return; P.scareAt = performance.now(); P.lock = true;
-    plushScream(); redLevel = 1; level.shake = .2; P.spot.intensity = PL.TORCH;      // the light comes on, on its face
+    plushScream(); redLevel = 1; level.shake = .2; P.spot.intensity = PL.TORCH; if(P.glow) P.glow.intensity = 1.6;      // the light comes on, on its face
     const m = P.model;
     if(m){ dollPose(m, 'reach'); camera.add(m); m.position.set(0, -1.05, -.62); m.rotation.set(0, 0, 0); m.scale.setScalar(.0115); }
     setTimeout(()=>{
@@ -4439,7 +4524,7 @@ const LIVING = (function(){
       if(lit){
         P.litAt = now;
         if(P.step === 3){                                         // on the X: caught
-          P.done = true; setHUD(''); P.spot.intensity = PL.TORCH;
+          P.done = true; setHUD(''); P.spot.intensity = PL.TORCH; if(P.glow) P.glow.intensity = 1.6;
           if(P.model){ dollPose(P.model, 'caught'); }
           redLevel = .5; flash('caught');
           setTimeout(()=>{ if(level.plush === P) playMemory(); }, 1900);
@@ -4452,6 +4537,7 @@ const LIVING = (function(){
       }
     }
     P.spot.intensity = lit ? PL.TORCH * (Math.random() < .03 ? .5 : 1) : 0;
+    if(P.glow) P.glow.intensity = lit ? 1.6 : 0;
     if(lit) P.nextMove += dt * 1000;                              // it cannot move while it is in the light
     // the clock (real time, not the frame step, which is held short on a slow machine)
     P.time -= Math.min(.25, (now - (P.lastNow || now)) / 1000); P.lastNow = now; const sec = Math.max(0, Math.ceil(P.time));
@@ -5122,12 +5208,13 @@ const LIVING = (function(){
       }
       if(e.code === 'Space' && level && level.plush && level.plush.lock){ plushHold(true); return; }
       if(e.code === 'KeyE' || e.code === 'Space'){ if(noteOverlay.classList.contains('on')) hideNote(); else wantInteract = true; }
-      if(e.code === 'KeyH' && e.shiftKey){ go(hallPass >= 3 ? buildRitual : buildHallway); }          // TEMPORARY: shift+H jumps on: hallway 1, 2, 3, then straight to the demon's room
+      if(e.code === 'KeyH' && e.shiftKey){ go(nextRoom()); }          // TEMPORARY: shift+H jumps on: the chase, the key hall, the dark room, the plain hall, then the demon's room
       // DEVELOPER: Shift + D skips whatever is in front of you: a memory film ends; the corridor game is won; in hallway 1 you get the key and the side door opens; in the bedroom the door opens
       if(e.code === 'KeyD' && e.shiftKey){
         if(level && level.memory){ level.memory.finish(); }
         else if(level && level.plush && level.plush.active && !level.plush.done){ const P = level.plush; P.held = false; P.lit = false; plushPlace(P, 3); P.nextMove = 1e15; plushHold(true); flash('DEV: caught'); }
         else if(level && level.hall1 && !level.hall1.door.open){ const H1 = level.hall1; H1.hasKey = true; H1.key.visible = false; openDoor(H1.door); level.solids = level.solids.filter(x => x !== H1.block); level.interactives = level.interactives.filter(m => m !== H1.door.leaf && !H1.keyParts.includes(m)); flash('DEV: side door open'); }
+        else if(level && level.demons){ const o = level.doors[0]; if(o){ camera.position.set(o.x + (o.ry === Math.PI ? 0 : .9), EYE, o.z + (o.ry === Math.PI ? -.9 : 0)); yaw = o.ry === Math.PI ? Math.PI : Math.PI / 2; flash('DEV: the door'); } }
         else if(level && level.doors[0] && !level.doors[0].open && artifacts < 4){ artifacts = 3; gained(); flash('DEV: door open'); }
         e.preventDefault();
       }
