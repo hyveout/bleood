@@ -4235,9 +4235,11 @@ const LIVING = (function(){
     camera.position.set(0, EYE, -d/2 + 1.2); yaw = Math.PI; pitch = 0;
     setHUD('');
     const scareW = {eyes:[], eyeGlow:{intensity:0}, scaring:false}; level.scareW = scareW; const t0 = performance.now();
+    hauntSetup(); hauntArm(HAUNT.AGAIN);      // the heads come here too, among the girls
     level.tick = (now)=>{
       const t = now / 1000;
       if(scareW.scaring) return;
+      hauntStep(now, Math.min(.05, (now - (level._ht || now)) / 1000)); level._ht = now;
       level.demons.forEach(G=>{
         // she drifts about the room on a slow loop, turning as she goes, and her light sweeps across the way she is facing
         const nx = G.hx + Math.sin(t * G.wA + G.ph) * G.rA, nz = G.hz + Math.cos(t * G.wB + G.ph) * G.rB;
@@ -4651,8 +4653,11 @@ const LIVING = (function(){
     level.startEnding = startEnding;
 
     let arrivedAt = 0, doorGone = false;
+    hauntSetup(); hauntArm(HAUNT.AGAIN);      // the heads keep coming while the candles are unlit; once the room is revealed they stop
     level.tick = (now)=>{
       if(ending) stepEnding(now);
+      if(!level.revealed && !ending){ hauntStep(now, Math.min(.05, (now - (level._ht || now)) / 1000)); level._ht = now; }
+      else if(level.haunt && level.haunt.on) hauntEnd(false);
       // a couple of seconds after you come in, the door you came through stutters out and the wall is unbroken black
       if(!doorGone){
         if(!arrivedAt) arrivedAt = now;
