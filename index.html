@@ -2719,7 +2719,7 @@ const LIVING = (function(){
       if(!on || (i === 0 && open.back) || (i === 3 && open.noRight)) return;
       const alongX = i < 2, n = Math.max(1, Math.round(len / (open.spacing || 2.1))), step = len / n;
       const holes = (i === 0 ? open.backHoles : i === 1 ? open.frontHoles : i === 2 ? open.leftHoles : null) || [];      // doorways in this wall: no post within reach of one
-      for(let j = 0; j <= n; j++){ const t = -len / 2 + j * step + (j && j < n ? r(-.15, .15) : 0), at = alongX ? cx + t : cz + t; if(holes.some(hh => Math.abs(hh - at) < .85)) continue; if(alongX) post(at, k, ry); else post(k, at, ry); }
+      if(!open.noPosts) for(let j = 0; j <= n; j++){ const t = -len / 2 + j * step + (j && j < n ? r(-.15, .15) : 0), at = alongX ? cx + t : cz + t; if(holes.some(hh => Math.abs(hh - at) < .85)) continue; if(alongX) post(at, k, ry); else post(k, at, ry); }
       if(alongX){ beam(len, cx, k, ry, h - .15, .3); beam(len, cx, k, ry, .075, .15); } else { beam(len, k, cz, ry, h - .15, .3); beam(len, k, cz, ry, .075, .15); }      // the head beam meets the ceiling, the sill stands on the floor
     });
   }
@@ -2803,7 +2803,7 @@ const LIVING = (function(){
     };
     const o = openings || {};
     cove(g, w, d, h, 0, 0, {front:o.front === 'none'});
-    if(kinds.frame) framing(g, w, d, h, 0, 0, {spacing:o.postSpacing, front:o.front === 'none', backHoles:typeof o.back === 'number' ? [o.back] : [], frontHoles:typeof o.front === 'number' ? [o.front] : [], leftHoles:(o.left !== undefined ? [o.left] : []).concat(o.decoLeft || [])});
+    if(kinds.frame) framing(g, w, d, h, 0, 0, {spacing:o.postSpacing, noPosts:o.noPosts, front:o.front === 'none', backHoles:typeof o.back === 'number' ? [o.back] : [], frontHoles:typeof o.front === 'number' ? [o.front] : [], leftHoles:(o.left !== undefined ? [o.left] : []).concat(o.decoLeft || [])});
     wallWithHole(-d/2, 0, o.back);
     wallWithHole(d/2, Math.PI, o.front);
     if(leftHole){
@@ -3784,7 +3784,7 @@ const LIVING = (function(){
     level.bounds = {minX:-w/2+.35, maxX:w/2-.35, minZ:-d/2 - .4, maxZ:d/2+.4};
     // pass two has no doorway at the far end at all
     const SIDE_Z = 2.5;                                  // hallway one: the second door on the left is a real one, into the doll's corridor
-    shell(g, w, d, h, {floor:'floor', ceil:'ceil', wall:'wall', frame:true}, p === 2 ? {postSpacing:4.6, back:0, front:'none', decoLeft:d > 10 ? [-3, 2.5] : [-1.5]} : p === 1 ? {postSpacing:4.6, front:0, back:0, left:SIDE_Z, decoLeft:[-3]} : {postSpacing:4.6, front:0, back:0, decoLeft:d > 10 ? [-3, 2.5] : [-1.5]});
+    shell(g, w, d, h, {floor:'floor', ceil:'ceil', wall:'wall', frame:true}, p === 2 ? {noPosts:true, back:0, front:'none', decoLeft:d > 10 ? [-3, 2.5] : [-1.5]} : p === 1 ? {noPosts:true, front:0, back:0, left:SIDE_Z, decoLeft:[-3]} : {noPosts:true, front:0, back:0, decoLeft:d > 10 ? [-3, 2.5] : [-1.5]});
     if(p === 2){
       // no end wall at all: the corridor runs on past the thing in it, into the dark
       const L = 40, z0 = d/2;
@@ -3794,7 +3794,7 @@ const LIVING = (function(){
         const wl = new THREE.Mesh(new THREE.PlaneGeometry(L, h), wallPiece('wall', L, h, h, sd * w/2, h/2, z0 + L/2, -sd * Math.PI/2)); wl.position.set(sd * w/2, h/2, z0 + L/2); wl.rotation.y = -sd * Math.PI/2; g.add(wl);
       });
       cove(g, w, L, h, 0, z0 + L/2, {back:true});      // the same dark along the top, all the way down; no edge where the hall ends
-      framing(g, w, L, h, 0, z0 + L/2, {back:true, front:true, spacing:4.6});
+      framing(g, w, L, h, 0, z0 + L/2, {back:true, front:true, noPosts:true});
     }
     const railM = new THREE.MeshLambertMaterial({color:0x1a120c});
     const doorZs = d > 10 ? [-3, 2.5] : [-1.5];
