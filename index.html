@@ -2567,6 +2567,33 @@ const LIVING = (function(){
     m.map.offset.set(((u / per[0]) % 1 + 1) % 1, ((v / per[1]) % 1 + 1) % 1);
     return m;
   }
+  let coveTex = null;
+  function coveMat(){
+    if(!coveTex){ const c = document.createElement('canvas'); c.width = 4; c.height = 64; const cg = c.getContext('2d');
+      const gr = cg.createLinearGradient(0, 0, 0, 64); gr.addColorStop(0, 'rgba(0,0,0,.96)'); gr.addColorStop(.35, 'rgba(0,0,0,.6)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); cg.fillStyle = gr; cg.fillRect(0, 0, 4, 64);
+      coveTex = new THREE.CanvasTexture(c); coveTex.wrapS = THREE.RepeatWrapping; }
+    return new THREE.MeshBasicMaterial({map:coveTex, transparent:true, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-1, fog:false});
+  }
+  // the dark that gathers at the top of the walls and down every corner of a room w by d by h, centred on (cx, cz)
+  function cove(g, w, d, h, cx, cz){
+    cx = cx || 0; cz = cz || 0;
+    const CH = Math.min(1.5, h * .5), CW = .9, m = coveMat();
+    const strip = (len, x, y, z, ry, rz, height, width)=>{ const q = new THREE.Mesh(new THREE.PlaneGeometry(len, height), m); q.position.set(x, y, z); q.rotation.order = 'YXZ'; q.rotation.y = ry; q.rotation.z = rz || 0; q.renderOrder = 3; g.add(q); return q; };
+    // along the top of each wall (the gradient runs top to bottom)
+    strip(w, cx, h - CH/2, cz - d/2 + .015, 0, 0, CH); strip(w, cx, h - CH/2, cz + d/2 - .015, Math.PI, 0, CH);
+    strip(d, cx - w/2 + .015, h - CH/2, cz, Math.PI/2, 0, CH); strip(d, cx + w/2 - .015, h - CH/2, cz, -Math.PI/2, 0, CH);
+    // down each corner: a strip on each of the two walls that meet there, the dark end at the corner (the gradient turned on its side)
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz])=>{
+      const x = cx + sx * w/2, z = cz + sz * d/2;
+      // on the wall that runs along x (z fixed): the strip's "top" (dark) points toward the corner
+      strip(h, x - sx * CW/2, h/2, z - sz * .015, sz < 0 ? 0 : Math.PI, (sz < 0 ? -sx : sx) * Math.PI/2, CW);
+      // on the wall that runs along z (x fixed)
+      strip(h, x - sx * .015, h/2, z - sz * CW/2, sx < 0 ? Math.PI/2 : -Math.PI/2, (sx < 0 ? sz : -sz) * Math.PI/2, CW);
+    });
+    // and the ceiling itself, dimmed to almost nothing except right over a light
+    const lid = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshBasicMaterial({color:0x000000, transparent:true, opacity:.55, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-1}));
+    lid.rotation.x = Math.PI/2; lid.position.set(cx, h - .01, cz); lid.renderOrder = 3; g.add(lid);
+  }
   function shell(g, w, d, h, kinds, openings){
     if(FF){
       // the Fatal Frame house: straw mats, paper walls behind lattice, black beams overhead
@@ -2605,6 +2632,7 @@ const LIVING = (function(){
       const dark = new THREE.Mesh(new THREE.PlaneGeometry(DW + .4, DH + .3), new THREE.MeshBasicMaterial({color:0x000000}));
       dark.position.set(hole, DH/2, z + (z > 0 ? .45 : -.45)); dark.rotation.y = ry; g.add(dark);
     };
+    cove(g, w, d, h, 0, 0);
     const o = openings || {};
     wallWithHole(-d/2, 0, o.back);
     wallWithHole(d/2, Math.PI, o.front);
@@ -3544,7 +3572,7 @@ const LIVING = (function(){
     }
     level.exitZ = d/2 - .2;
 
-    const amb = new THREE.AmbientLight(FF ? 0x4e6664 : 0x7a756e, 0.4); g.add(amb);
+    const amb = new THREE.AmbientLight(FF ? 0x4e6664 : 0x7a756e, 0.26); g.add(amb);
     const bulb = new THREE.PointLight(FF ? 0xffb877 : 0xfff2dc, .9, 8, 1.6); bulb.position.set(0, h - .25, 0); g.add(bulb); level.lights.push(bulb);
     const flk = {until:0, next:performance.now() + 1500};
     const bm = new THREE.Mesh(FF ? new THREE.BoxGeometry(.3, .42, .3) : new THREE.SphereGeometry(.05, 6, 6), new THREE.MeshBasicMaterial({color:FF ? 0xf0d9a6 : 0xfff6e0})); bm.position.copy(bulb.position); g.add(bm);
@@ -3669,7 +3697,7 @@ const LIVING = (function(){
       if(!on) tb.shade.material = new THREE.MeshLambertMaterial({color:0x2a0a0a, side:THREE.DoubleSide});
       lights.push({L, on, z:tb.z, seed:Math.random()*10});
     });
-    const hallAmb = new THREE.AmbientLight(FF ? 0x3e5654 : 0x7a6a58, [0.32, 0.14, 0.06][p-1]); hallAmb.userData.base = hallAmb.intensity; g.add(hallAmb);
+    const hallAmb = new THREE.AmbientLight(FF ? 0x3e5654 : 0x7a6a58, [0.2, 0.1, 0.05][p-1]); hallAmb.userData.base = hallAmb.intensity; g.add(hallAmb);
     level.redChance = [0, .01, .03][p-1];
     lights.forEach(o=> o.base = [1.0, .75, .55][p-1]);
     // a chair, not where it was
@@ -3760,6 +3788,7 @@ const LIVING = (function(){
           box(g, .07, 2.1, .1, jambM, x - .48, 1.05, wz - side * .04, false); box(g, .07, 2.1, .1, jambM, x + .48, 1.05, wz - side * .04, false); box(g, 1.03, .08, .1, jambM, x, 2.1, wz - side * .04, false);
         });
       });
+      cove(g, RW, RD, h, rxc, SIDE_Z);
       const skM = new THREE.MeshLambertMaterial({color:0x2a231c});
       box(g, .06, .12, RD, skM, RX0 - RW + .03, .06, SIDE_Z, false);
       // the X on the boards, in old red tape
@@ -4445,6 +4474,7 @@ const LIVING = (function(){
     camera.add(P.spot); camera.add(P.spot.target);
     loadDoll().then(m=>{ if(!m || level.plush !== P) return; P.model = m; g.add(m);
       P.glow = new THREE.PointLight(0xfff4e4, 0, 3.2, 1.2); P.glow.position.set(0, 120, 60); m.add(P.glow);      // (model units: a little above and in front of its face)
+      P.mats = []; m.traverse(o=>{ if(!o.isMesh) return; (Array.isArray(o.material) ? o.material : [o.material]).forEach(mt=>{ if(mt.map && 'emissive' in mt){ mt.emissive.setHex(0xffffff); mt.emissiveMap = mt.map; mt.emissiveIntensity = 0; mt.needsUpdate = true; P.mats.push(mt); } }); });
       plushPlace(P, 0); });
     return P;
   }
@@ -4469,14 +4499,14 @@ const LIVING = (function(){
     plushClick(false);
   }
   function plushEnd(P){
-    P.lock = false; P.dark = false; P.held = false; P.lit = false; P.spot.intensity = 0; if(P.glow) P.glow.intensity = 0; P.active = false; setHUD('');
+    P.lock = false; P.dark = false; P.held = false; P.lit = false; P.spot.intensity = 0; if(P.glow) P.glow.intensity = 0; if(P.mats) P.mats.forEach(mt=> mt.emissiveIntensity = 0); P.active = false; setHUD('');
     if(P.fog){ scene.fog = P.fog; P.fog = null; }
     wrap.classList.remove('plush-on'); const b = wrap.querySelector('.holdcandle'); if(b) b.classList.remove('on');
     const H1 = level.hall1; H1.door.open = true; level.solids = level.solids.filter(x => x !== H1.block);
   }
   function plushScare(P){
     if(P.scareAt) return; P.scareAt = performance.now(); P.lock = true;
-    plushScream(); redLevel = 1; level.shake = .2; P.spot.intensity = PL.TORCH; if(P.glow) P.glow.intensity = 1.6;      // the light comes on, on its face
+    plushScream(); redLevel = 1; level.shake = .2; P.spot.intensity = PL.TORCH; if(P.glow) P.glow.intensity = 1.6; if(P.mats) P.mats.forEach(mt=> mt.emissiveIntensity = .4);      // the light comes on, on its face
     const m = P.model;
     if(m){ dollPose(m, 'reach'); camera.add(m); m.position.set(0, -1.05, -.62); m.rotation.set(0, 0, 0); m.scale.setScalar(.0115); }
     setTimeout(()=>{
@@ -4524,7 +4554,7 @@ const LIVING = (function(){
       if(lit){
         P.litAt = now;
         if(P.step === 3){                                         // on the X: caught
-          P.done = true; setHUD(''); P.spot.intensity = PL.TORCH; if(P.glow) P.glow.intensity = 1.6;
+          P.done = true; setHUD(''); P.spot.intensity = PL.TORCH; if(P.glow) P.glow.intensity = 1.6; if(P.mats) P.mats.forEach(mt=> mt.emissiveIntensity = .4);
           if(P.model){ dollPose(P.model, 'caught'); }
           redLevel = .5; flash('caught');
           setTimeout(()=>{ if(level.plush === P) playMemory(); }, 1900);
@@ -4538,6 +4568,7 @@ const LIVING = (function(){
     }
     P.spot.intensity = lit ? PL.TORCH * (Math.random() < .03 ? .5 : 1) : 0;
     if(P.glow) P.glow.intensity = lit ? 1.6 : 0;
+    if(P.mats) P.mats.forEach(mt=> mt.emissiveIntensity = lit ? .4 : 0);
     if(lit) P.nextMove += dt * 1000;                              // it cannot move while it is in the light
     // the clock (real time, not the frame step, which is held short on a slow machine)
     P.time -= Math.min(.25, (now - (P.lastNow || now)) / 1000); P.lastNow = now; const sec = Math.max(0, Math.ceil(P.time));
