@@ -1043,6 +1043,10 @@ body.mob-full .mob-exit:active{opacity:1; border-color:rgba(232,227,214,.9)}
 .cam-frame .cf-tag{position:absolute; left:clamp(30px,6vmin,56px); bottom:clamp(30px,6vmin,56px); font-family:var(--crtface); font-size:clamp(.6rem,1.3vw,.8rem); letter-spacing:.3em; text-transform:uppercase; color:rgba(230,224,210,.55)}
 .cam-frame .cf-tag::before{content:''; display:inline-block; width:7px; height:7px; border-radius:50%; background:#e2352b; margin-right:8px; vertical-align:middle; animation:tipblink 1.1s ease-in-out infinite}
 .cam-frame .cf-count{position:absolute; right:clamp(30px,6vmin,56px); bottom:clamp(30px,6vmin,56px); font-family:var(--crtface); font-size:clamp(.6rem,1.3vw,.8rem); letter-spacing:.3em; color:rgba(230,224,210,.55)}
+.cam-btn{position:absolute; right:7%; bottom:10%; width:15%; aspect-ratio:1; border-radius:50%; border:1px solid rgba(233,232,228,.45); background:rgba(0,0,0,.4); display:none; z-index:7; touch-action:manipulation}
+.cam-btn span{position:absolute; left:50%; top:50%; width:46%; height:34%; transform:translate(-50%,-50%); border:2px solid rgba(233,232,228,.75); border-radius:4px}
+.cam-btn span::after{content:''; position:absolute; left:50%; top:50%; width:40%; aspect-ratio:1; transform:translate(-50%,-50%); border-radius:50%; border:2px solid rgba(233,232,228,.75)}
+.cam-btn.show{display:block} .cam-btn.on{border-color:#fff; box-shadow:0 0 14px rgba(240,200,104,.45)}
 .cap-ring{position:absolute; left:50%; top:50%; width:min(42vmin,300px); aspect-ratio:1; transform:translate(-50%,-50%); border-radius:50%; border:1.5px solid rgba(230,224,210,.35); box-shadow:0 0 0 6px rgba(0,0,0,.25), inset 0 0 18px rgba(0,0,0,.5); pointer-events:none; opacity:0; transition:opacity .5s; z-index:6}
 .cap-ring.on{opacity:1}
 .cap-ring.full{border-color:rgba(240,120,90,.9); box-shadow:0 0 14px rgba(240,80,60,.55), 0 0 0 6px rgba(0,0,0,.25), inset 0 0 18px rgba(120,20,20,.6)}
@@ -2314,7 +2318,16 @@ const LIVING = (function(){
     if(O.onEnd) O.onEnd();
   }
   function skipOpening(){ if(opening && (openSeen(opening.key) || opening.finished)) endOpening(); }
-  let capEl = null, capHint = null, camFrame = null;
+  let capEl = null, capHint = null, camFrame = null, camBtn = null, camUp = false, hasCamera = false, raiseHinted = false;
+  function haveCamera(){ return hasCamera && level && !level.needCamera; }
+  function setCamUp(on){
+    if(!haveCamera()) on = false;
+    camUp = !!on; camFrame.classList.toggle('on', camUp); capEl.classList.toggle('on', camUp); if(camBtn) camBtn.classList.toggle('on', camUp);
+    if(!camUp){ capHint.classList.remove('on'); }
+    else if(level && level.haunt && level.haunt.on){ capHint.textContent = TOUCH ? 'keep it in the ring. when the runes are lit, tap' : 'keep it in the ring. when the runes are lit, press E'; capHint.classList.add('on'); }
+    else { capHint.textContent = ''; }
+    if(hover){ glowOff(hover); hover = null; reticle.classList.remove('hot'); promptEl.classList.remove('on'); }
+  }
   let watchEl = null, watchedNow = false, creditsEl = null, reticle, hud, noteOverlay, fadeEl, panel, msgEl, storyEl, scareEl, redEl, redLevel = 0, movingNow = false, tipEl, tipOpen = false, tipShown = false, sayEl, photoEl, askEl, promptEl, memoryEl, freshNext = false;
   // lines slide in from one side, hold, and leave through the other. letters only: the face has no punctuation
   const storyQueue = []; let storyBusy = false;
@@ -2826,6 +2839,7 @@ const LIVING = (function(){
     if(tipEl){ tipOpen = false; tipEl.classList.remove('on'); }
   }
   function clearLevel(){
+    if(camFrame){ camUp = false; camFrame.classList.remove('on'); capEl.classList.remove('on', 'full'); capHint.classList.remove('on'); if(camBtn) camBtn.classList.remove('on'); }
     if(creditsEl){ creditsEl.style.opacity = 0; creditsEl.dataset.i = ''; }
     dropCameraChildren();
     { const gr = document.getElementById('grain'); if(gr) gr.style.opacity = LIVING_GRAIN; }
@@ -3444,7 +3458,7 @@ const LIVING = (function(){
       const btn = new THREE.Mesh(new THREE.CylinderGeometry(.012, .012, .015, 8), brassM); btn.position.set(.07, .06, 0); cam.add(btn);
       const strap = new THREE.Mesh(new THREE.TorusGeometry(.09, .006, 5, 18, Math.PI * 1.2), new THREE.MeshLambertMaterial({color:0x2a2420})); strap.rotation.x = Math.PI / 2; strap.position.set(-.16, -.03, .02); cam.add(strap);
       const cd = {kind:'camera', prompt:'pick up the camera'}; cam.children.forEach(c => { c.userData = cd; level.interactives.push(c); });
-      level.cameraProp = cam; level.needCamera = true;
+      level.cameraProp = cam; level.needCamera = true; hasCamera = false; if(camBtn) camBtn.classList.remove('show');
     }
     // a rug, worn through
     const rug = new THREE.Mesh(new THREE.CircleGeometry(1.1, 32), (()=>{ const m = mat('rug', 1, 1, {transparent:true, alphaTest:.5}); m.map.wrapS = m.map.wrapT = THREE.ClampToEdgeWrapping; return m; })()); rug.rotation.x = -Math.PI/2; rug.rotation.z = .4; rug.position.set(.3, .005, 0.4); g.add(rug);
@@ -4067,17 +4081,18 @@ const LIVING = (function(){
     H.on = true; H.t0 = now; H.charge = 0; H.snaps = 0; H.px = px; H.pz = pz; H.py = 1.75; H.seed = Math.random() * 7;
     H.model.position.set(H.px, H.py, H.pz); H.model.visible = true; if(H.mats) H.mats.forEach(mt => mt.emissiveIntensity = .5);
     if(H.who === 'her'){ H.herHead.eyes.forEach(e => e.visible = true); H.herHead.glow.intensity = 1.8; }
-    camFrame.classList.add('on'); camFrame.querySelector('.cf-tag').textContent = H.who === 'him' ? 'past' : 'present'; camFrame.querySelector('.cf-count').textContent = String(H.kills).padStart(2, '0');
-    capEl.classList.add('on'); capHint.textContent = TOUCH ? 'keep it in the ring. when the runes are lit, tap' : 'keep it in the ring. when the runes are lit, press E'; capHint.classList.add('on');
+    camFrame.querySelector('.cf-tag').textContent = H.who === 'him' ? 'past' : 'present'; camFrame.querySelector('.cf-count').textContent = String(H.kills).padStart(2, '0');
+    if(camUp){ capHint.textContent = TOUCH ? 'keep it in the ring. when the runes are lit, tap' : 'keep it in the ring. when the runes are lit, press E'; capHint.classList.add('on'); }
+    else if(!raiseHinted){ raiseHinted = true; flash(TOUCH ? 'something is here. raise the camera' : 'something is here. raise the camera (C)'); }
     if(H.who === 'her'){ if(plushAudio()) burst(AC.currentTime + .01, .6, .3, 200, 600, 0); }
     plushSteps(3, 0); redLevel = Math.max(redLevel, .5);
   }
   function hauntEnd(killed){
-    const H = level.haunt; H.on = false; if(H.model) H.model.visible = false; capEl.classList.remove('on', 'full'); camFrame.classList.remove('on'); capHint.classList.remove('on');
+    const H = level.haunt; H.on = false; if(H.model) H.model.visible = false; capEl.classList.remove('full'); capEl.querySelectorAll('i').forEach(el => el.classList.remove('lit')); capHint.classList.remove('on');
     if(killed){ H.kills++; hauntArm(HAUNT.AGAIN); } else hauntArm(HAUNT.AGAIN);
   }
   function hauntSnap(){
-    const H = level && level.haunt; if(!H || !H.on) return false;
+    const H = level && level.haunt; if(!H || !H.on || !camUp) return false;
     // the shutter: a white flash, a click
     fadeEl.style.background = '#fff'; fade = 1; fadeTo = 0; setTimeout(()=>{ fadeEl.style.background = '#000'; }, 350);
     plushClick(true); if(plushAudio()) burst(AC.currentTime + .06, .05, .3, 1200, 2600, 0);
@@ -4098,7 +4113,7 @@ const LIVING = (function(){
   function hauntStep(now, dt){
     const H = level.haunt; if(!H) return;
     const busy = level.intro || tipOpen || opening || level.memory || noteOverlay.classList.contains('on') || panel.classList.contains('on') || (level.watch && level.watch.scaring) || (level.plush && level.plush.active);
-    if(!H.on){ if(now > H.next){ if(busy) H.next = now + 9000 + Math.random() * 9000; else hauntStart(now); } return; }
+    if(!H.on){ if(now > H.next){ if(busy || !haveCamera()) H.next = now + 9000 + Math.random() * 9000; else hauntStart(now); } return; }
     if(busy) return;
     const m = H.model, t = now / 1000 + H.seed, cam = camera.position;
     // it drifts toward you, weaving, sinking as it comes
@@ -4110,13 +4125,15 @@ const LIVING = (function(){
     m.lookAt(cam.x, cam.y - .1, cam.z);      // its eyes on you, always
     m.rotateZ(Math.sin(t * .8) * .14); m.rotateX(Math.sin(t * 1.1 + 1) * .06);
     if(H.who === 'her'){ m.updateMatrixWorld(true); gazeAt(H.herHead.eyes, H.herHead.group); H.herHead.glow.intensity = 1.4 + Math.random() * .8; }
+    m.visible = camUp;      // without the camera up there is nothing to see: only the feeling of it
+    if(!camUp){ redLevel = Math.max(redLevel, (.15 + Math.max(0, 1 - d / 3) * .45) * (.6 + .4 * Math.sin(now / 160))); }      // the edges of the view pulse red as it comes
     if(d < .55){ hauntEnd(false); const W = {eyes:[], eyeGlow:{intensity:0}, scaring:false, head:null}; jumpscare(W); return; }      // it has you
     // is its face in the ring? (its place on the screen against the ring's size)
     if(!HV) HV = new THREE.Vector3();
     HV.set(H.px, H.py, H.pz).project(camera);
     const r = capEl.getBoundingClientRect(), W2 = wrap.clientWidth, H2 = wrap.clientHeight;
     const sx = (HV.x + 1) / 2 * W2, sy = (1 - HV.y) / 2 * H2, inside = HV.z < 1 && Math.hypot(sx - W2 / 2, sy - H2 / 2) < r.width * .5;
-    const gain = inside ? (1 / HAUNT.CHARGE) * (1 + Math.max(0, 1 - d / 4) * 1.2) : -.3;      // closer, quicker; look away and it drains
+    const gain = inside && camUp ? (1 / HAUNT.CHARGE) * (1 + Math.max(0, 1 - d / 4) * 1.2) : -.3;      // closer, quicker; look away (or lower the camera) and it drains
     H.charge = Math.max(0, Math.min(1, H.charge + gain * dt));
     const lit = Math.floor(H.charge * 8 + 1e-6); capEl.querySelectorAll('i').forEach((el, i)=> el.classList.toggle('lit', i < lit)); capEl.classList.toggle('full', H.charge >= 1);
     if(H.charge >= 1 && !H.toldFull){ H.toldFull = true; }
@@ -4757,7 +4774,7 @@ const LIVING = (function(){
   }
   function plushHold(on){ const P = level && level.plush; if(P && P.lock) P.held = on; }
   function plushStart(P, now){
-    P.active = true; P.lock = true; P.dark = true; P.lastNow = now; P.startAt = now;
+    P.active = true; P.lock = true; P.dark = true; P.lastNow = now; P.startAt = now; setCamUp(false);
     yaw = Math.PI / 2; pitch = 0; fade = .85; fadeTo = 0;          // you are facing down it, as the lights go
     P.nextMove = now + 6500 + Math.random() * 3500; P.push = false;      // it sits in its chair a good while before the first move
     const H1 = level.hall1; H1.door.open = false; H1.door.pivot.rotation.y = H1.door.ry;      // it shuts behind you
@@ -4946,8 +4963,8 @@ const LIVING = (function(){
     const u = o.userData;
     if(u.kind === 'camera'){
       // in your hands: the strap over your wrist, the room wakes up, and the warning about what it is for
-      level.needCamera = false; level.cameraProp.visible = false; level.interactives = level.interactives.filter(m => m.userData !== u);
-      flash('the camera'); openTip(); hauntArm(HAUNT.FIRST);
+      level.needCamera = false; hasCamera = true; level.cameraProp.visible = false; level.interactives = level.interactives.filter(m => m.userData !== u);
+      flash('the camera'); openTip(); hauntArm(HAUNT.FIRST); if(camBtn) camBtn.classList.add('show');
       return;
     }
     if(level.needCamera) return;
@@ -5467,7 +5484,7 @@ const LIVING = (function(){
     });
     photoEl = document.createElement('div'); photoEl.className = 'living-photo'; photoEl.innerHTML = '<img alt="" src="' + PHOTO_A + '"><span>is this me?</span>'; wrap.appendChild(photoEl);
     tipEl = document.createElement('div'); tipEl.className = 'living-tip';
-    tipEl.innerHTML = '<div class="tip-body"><div class="tip-line1">You are haunted by both your past and your present</div><div class="tip-heads"><img class="tip-head" alt="" src="' + TIP_HEAD + '"><img class="tip-head him" alt="" src="' + DOLL_FACE + '"></div><div class="tip-line2">Flash them when your runic meter is full to forget about them</div><div class="tip-go">' + (TOUCH ? 'tap to continue' : 'press any key') + '</div></div>';
+    tipEl.innerHTML = '<div class="tip-body"><div class="tip-line1">You are haunted by both your past and your present</div><div class="tip-heads"><img class="tip-head" alt="" src="' + TIP_HEAD + '"><img class="tip-head him" alt="" src="' + DOLL_FACE + '"></div><div class="tip-line2">Flash them when your runic meter is full to forget about them</div><div class="tip-line3">' + (TOUCH ? 'You can only see them through the camera. The round button raises it.' : 'You can only see them through the camera. C raises it.') + '</div><div class="tip-go">' + (TOUCH ? 'tap to continue' : 'press any key') + '</div></div>';
     wrap.appendChild(tipEl);
     tipEl.addEventListener('touchend', e=>{ e.preventDefault(); e.stopPropagation(); closeTip(); });
     redEl = document.createElement('div'); redEl.className = 'living-red'; wrap.appendChild(redEl);
@@ -5483,6 +5500,8 @@ const LIVING = (function(){
     wrap.classList.add('vig');
     if(TOUCH){
       wrap.classList.add('touch');
+      { camBtn = document.createElement('div'); camBtn.className = 'cam-btn'; camBtn.innerHTML = '<span></span>'; wrap.appendChild(camBtn);
+        camBtn.addEventListener('touchstart', e=>{ e.preventDefault(); e.stopPropagation(); if(haveCamera() && !(level.plush && level.plush.active)) setCamUp(!camUp); }, {passive:false}); }
       { const lb = document.createElement('div'); lb.className = 'holdcandle'; lb.innerHTML = '<span></span>'; wrap.appendChild(lb);      // the light button for the corridor game
         const dn = e=>{ e.preventDefault(); e.stopPropagation(); plushHold(true); }, up = e=>{ e.preventDefault(); e.stopPropagation(); plushHold(false); };
         lb.addEventListener('touchstart', dn, {passive:false}); lb.addEventListener('touchend', up, {passive:false}); lb.addEventListener('touchcancel', up, {passive:false}); }
@@ -5517,6 +5536,7 @@ const LIVING = (function(){
       if(panel.classList.contains('on')) return;
       if(level && level.plush && level.plush.lock){ plushHold(true); if(document.pointerLockElement !== wrap && wrap.requestPointerLock) wrap.requestPointerLock(); return; }      // the corridor game: hold for the light
       if(document.pointerLockElement !== wrap){ wrap.requestPointerLock && wrap.requestPointerLock(); return; }
+      if(e.button === 2 && haveCamera() && !(level.plush && level.plush.active)){ setCamUp(!camUp); return; }      // right button: the camera up or down
       if(e.button === 0) wantInteract = true;       // left button: use what you're looking at
     });
     wrap.addEventListener('contextmenu', e=>e.preventDefault());
@@ -5544,6 +5564,7 @@ const LIVING = (function(){
         return;
       }
       if(e.code === 'Space' && level && level.plush && level.plush.lock){ plushHold(true); return; }
+      if(e.code === 'KeyC' && !e.repeat && haveCamera() && !(level.plush && level.plush.active)){ setCamUp(!camUp); e.preventDefault(); return; }
       if(e.code === 'KeyE' || e.code === 'Space'){ if(noteOverlay.classList.contains('on')) hideNote(); else wantInteract = true; }
       if(e.code === 'KeyH' && e.shiftKey){ go(nextRoom()); }          // TEMPORARY: shift+H jumps on: the chase, the key hall, the dark room, the plain hall, then the demon's room
       // DEVELOPER: Shift + D skips whatever is in front of you: a memory film ends; the corridor game is won; in hallway 1 you get the key and the side door opens; in the bedroom the door opens
@@ -5658,6 +5679,7 @@ const LIVING = (function(){
     // what you're looking at
     let target = pick();
     if(level && level.needCamera && !(target && target.userData && target.userData.kind === 'camera')) target = null;      // nothing but the camera, until you have it
+    if(camUp) target = null;      // through the camera you only take pictures
     if(target !== hover){
       if(hover) glowOff(hover);
       hover = target;
@@ -5670,7 +5692,7 @@ const LIVING = (function(){
       // during the opening, a press of E, space or a tap skips ahead once it has had a moment to play
       if(level && level.intro){ if(now - level.intro.t0 > 1500) endIntro(); }
       else if(level && level.memory){ }      // (the memory ends on its own: the film, or her words)
-      else if(level && level.haunt && level.haunt.on){ hauntSnap(); }
+      else if(camUp){ hauntSnap(); }
       else if(hover) interact(hover);
     }
 
