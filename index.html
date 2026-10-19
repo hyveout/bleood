@@ -3855,8 +3855,8 @@ const LIVING = (function(){
     const onFront = Math.random() < .5, exitAt = (Math.random() < .5 ? -1 : 1) * (2.5 + Math.random() * 5);
     shell(g, w, d, h, {floor:'boards', ceil:'ceil', wall:'damask'}, onFront ? {back:0, front:exitAt} : {back:0, left:exitAt});
     level.bounds = {minX:-w/2 + .35, maxX:w/2 - .35, minZ:-d/2 + .35, maxZ:d/2 + .6};
-    scene.fog = new THREE.Fog(FOGC, 1.2, 7.5);
-    g.add(new THREE.AmbientLight(0x6a6058, .05));
+    scene.fog = new THREE.Fog(FOGC, 1.5, 12);
+    g.add(new THREE.AmbientLight(0x6a6058, .06));
     level.distort = .5; level.redChance = 0;
     // a baseboard-dark wall round the exit, and the door itself, standing open
     const back = door(g, 0, -d/2, 0, 'back');
@@ -3877,7 +3877,7 @@ const LIVING = (function(){
     // her: three of her, each with a red light that sweeps the floor in front of her
     const GIRLS = [[-4.5, -1.0, .0], [4.0, 3.5, 2.2], [-1.5, 5.5, 4.0]];      // where each stands, and where her light starts
     level.demons = []; level.watch = null;
-    const beamM = new THREE.MeshBasicMaterial({color:0xff2010, transparent:true, opacity:.03, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide, fog:false});
+    const beamM = new THREE.MeshBasicMaterial({color:0xff2010, transparent:true, opacity:.07, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide, fog:false});
     GIRLS.forEach(([gx, gz, a0], i)=>{
       const lv = level;
       loadDemon(1.8).then(D=>{
@@ -3887,9 +3887,9 @@ const LIVING = (function(){
         D.model.traverse(m => { if(m.isMesh && m.name === 'eyes') m.visible = false; });
         // the red light: a spotlight from her chest, and a faint cone so the beam itself shows in the dark
         const piv = new THREE.Group(); piv.position.set(0, 1.25, 0); D.group.add(piv);
-        const sp = new THREE.SpotLight(0xff2010, 4.5, 9, .3, .5, .8); sp.position.set(0, 0, .3); sp.target.position.set(0, -1.2, 5); piv.add(sp); piv.add(sp.target);
+        const sp = new THREE.SpotLight(0xff2010, 7, 10, .3, .5, .7); sp.position.set(0, 0, .3); sp.target.position.set(0, -1.2, 5); piv.add(sp); piv.add(sp.target);
         const cone = new THREE.Mesh(new THREE.ConeGeometry(1.75, 5.6, 24, 1, true), beamM); cone.rotation.x = -Math.PI / 2 + .22; cone.position.set(0, -.6, 3.0); cone.rotation.order = 'YXZ'; piv.add(cone);
-        const pool = new THREE.Mesh(new THREE.CircleGeometry(1.7, 28), new THREE.MeshBasicMaterial({color:0xff2010, transparent:true, opacity:.16, blending:THREE.AdditiveBlending, depthWrite:false})); pool.rotation.x = -Math.PI/2; pool.position.set(0, -1.24, 5.3); piv.add(pool);
+        const pool = new THREE.Mesh(new THREE.CircleGeometry(1.7, 28), new THREE.MeshBasicMaterial({color:0xff2010, transparent:true, opacity:.4, blending:THREE.AdditiveBlending, depthWrite:false, fog:false})); pool.rotation.x = -Math.PI/2; pool.position.set(0, -1.24, 5.3); piv.add(pool);
         lv.demons.push({D, piv, a0, speed:.22 + i * .07, swing:1.1 + i * .3, cx:gx, cz:gz});
       });
     });
