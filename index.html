@@ -2218,7 +2218,7 @@ const LIVING = (function(){
   const FF = false;      // the Japanese-house dressing (tatami, shoji, lanterns). off: the original rooms
   const GRADE = false;   // the Fatal Frame colour grade and vignette. off: the original look
   const FOGC = GRADE ? 0x040709 : 0x000000;
-  const LIVING_GRAIN = '.04';   // the page's film grain while you play (the front page uses .09)
+  const LIVING_GRAIN = '.15';   // the page's film grain while you play: heavy, the whole game through (the front page uses .09)
   let renderer, scene, camera, ray, raf = null, running = false, built = false, post = null;
   let yaw = 0, pitch = 0, last = 0, fade = 1, fadeTo = 0;
   const keys = {}; let stickVec = {x:0, y:0}; let candleUp = false;
@@ -2399,7 +2399,7 @@ const LIVING = (function(){
     const c = document.createElement('canvas'); c.width = c.height = size || 64;
     const g = c.getContext('2d'); const S = c.width;
     const base = {wall:'#5a544b', floor:'#2a2521', ceil:'#3a3630', bed:'#4a4640', sheet:'#8f8a80', pillow:'#a39d92',
-                  wood:'#1f1812', bark:'#221d18', sheet:'#6e685e', pillow:'#7f776c', hall:'#33302b', hallfloor:'#191715', door:'#3b2d21', doorback:'#3b2d21', panel:'#3a2a1d', ritual:'#151311', black:'#010101', paper:'#d9d3c4', dresser:'#3a2a1d', shade:'#5a1212', cloth:'#2a1a16', mirror:'#0a0a0c'}[kind] || '#333';
+                  wood:'#1f1812', bark:'#221d18', sheet:'#6e685e', pillow:'#7f776c', hall:'#33302b', hallfloor:'#191715', door:'#221810', doorback:'#221810', panel:'#241a12', ritual:'#151311', black:'#010101', paper:'#d9d3c4', dresser:'#271c13', shade:'#5a1212', cloth:'#2a1a16', mirror:'#0a0a0c'}[kind] || '#333';
     g.fillStyle = base; g.fillRect(0,0,S,S);
     if(!['wall','hall','ceil','dresser','door','doorback','panel','damask','carpet','stain','tatami','shoji','plank','black','boards','shade','cloth','rug','rust','plaster'].includes(kind)) for(let i = 0; i < S*S/4; i++){
       const v = (Math.random() * 40 - 20) | 0;
@@ -3910,9 +3910,9 @@ const LIVING = (function(){
         {minX:-RW - 4, maxX:-w/2 - .12, minZ:rz1 + .02, maxZ:d/2 + 1});
       level.bounds.minX = RX0 - RW + .35;
 
-      const rWall = mat('wall', RD / 1.2, 1), rCeil = mat('ceil', RW / 1.5, RD / 1.5);
-      const rp = (m, pw, ph, x, y, z, ry, rx)=>{ if(m === rWall) m = wallPiece('wall', pw, ph, h, x, y, z, ry || 0); const q = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), m); q.position.set(x, y, z); q.rotation.set(rx || 0, ry || 0, 0); g.add(q); return q; };
-      rp(mat('floor', RW, RD), RW, RD, rxc, 0, SIDE_Z, 0, -Math.PI/2);
+      const rWall = mat('wall', RD / 1.2, 1), rCeil = mat('ceil', RW / 1.5, RD / 1.5, {color:0x404040});
+      const rp = (m, pw, ph, x, y, z, ry, rx)=>{ if(m === rWall){ m = wallPiece('wall', pw, ph, h, x, y, z, ry || 0); m.color.setHex(0x505050); } const q = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), m); q.position.set(x, y, z); q.rotation.set(rx || 0, ry || 0, 0); g.add(q); return q; };
+      rp(mat('floor', RW, RD, {color:0x505050}), RW, RD, rxc, 0, SIDE_Z, 0, -Math.PI/2);
       rp(rCeil, RW, RD, rxc, h, SIDE_Z, 0, Math.PI/2);
       rp(rWall, RD, h, RX0 - RW, h/2, SIDE_Z, Math.PI/2);                       // the far wall, behind the chair
       rp(rWall, RW, h, rxc, h/2, rz0, 0);                                        // the two long walls
@@ -3932,7 +3932,7 @@ const LIVING = (function(){
           box(g, .07, 2.1, .1, jambM, x - .48, 1.05, wz - side * .04, false); box(g, .07, 2.1, .1, jambM, x + .48, 1.05, wz - side * .04, false); box(g, 1.03, .08, .1, jambM, x, 2.1, wz - side * .04, false);
         });
       });
-      cove(g, RW, RD, h, rxc, SIDE_Z); framing(g, RW, RD, h, rxc, SIDE_Z, {noRight:true});
+      cove(g, RW, RD, h, rxc, SIDE_Z);
       const skM = new THREE.MeshLambertMaterial({color:0x2a231c});
       box(g, .06, .12, RD, skM, RX0 - RW + .03, .06, SIDE_Z, false);
       // the X on the boards, in old red tape
@@ -4073,8 +4073,8 @@ const LIVING = (function(){
     if(d > .01){ H.px += dx / d * sp + Math.cos(t * .9) * .006; H.pz += dz / d * sp + Math.sin(t * 1.1) * .006; }
     H.py += ((1.25 + Math.min(1, d / 3) * .5 + Math.sin(t * 1.3) * .1) - H.py) * .04;
     m.position.set(H.px + Math.sin(t * 2.1) * .03, H.py, H.pz + Math.cos(t * 1.7) * .03);
-    const want = Math.atan2(cam.x - m.position.x, cam.z - m.position.z); let dd = want - m.rotation.y; dd = Math.atan2(Math.sin(dd), Math.cos(dd)); m.rotation.y += dd * .1;
-    m.rotation.z = Math.sin(t * .8) * .14; m.rotation.x = Math.sin(t * 1.1 + 1) * .1;
+    m.lookAt(cam.x, cam.y - .1, cam.z);      // its eyes on you, always
+    m.rotateZ(Math.sin(t * .8) * .14); m.rotateX(Math.sin(t * 1.1 + 1) * .06);
     if(d < .75){ hauntEnd(false); const W = {eyes:[], eyeGlow:{intensity:0}, scaring:false, head:null}; jumpscare(W); return; }      // it has you
     // is its face in the ring? (its place on the screen against the ring's size)
     if(!HV) HV = new THREE.Vector3();
@@ -4368,7 +4368,7 @@ const LIVING = (function(){
       // that fades into that same dark grey
       scene.background.setHex(0x070707);
       scene.fog = new THREE.Fog(0x070707, 4, 22);      // the far trees go into the dark before the ring of them ends
-      { const gr = document.getElementById('grain'); if(gr) gr.style.opacity = '.15'; }      // the film grain over everything, as on the front page
+      { const gr = document.getElementById('grain'); if(gr) gr.style.opacity = LIVING_GRAIN; }
       {   // a sky of grey mist, following you so it can never be reached
         const sc = document.createElement('canvas'); sc.width = 4; sc.height = 256; const s2 = sc.getContext('2d'), sg = s2.createLinearGradient(0, 0, 0, 256);
         sg.addColorStop(0, '#171717'); sg.addColorStop(.35, '#121212'); sg.addColorStop(.5, '#0a0a0a'); sg.addColorStop(1, '#060606');      // just light enough overhead that the trunks show against it
@@ -4451,7 +4451,7 @@ const LIVING = (function(){
       fadeEl.style.background = '#fff'; fade = 1; fadeTo = 0; setTimeout(()=>{ if(!E.leaving) fadeEl.style.background = '#000'; }, 1400);
       level.group.children.slice().forEach(o => { if(o !== E.group) level.group.remove(o); });      // the clearing and her, gone
       level.demon = null; level.sky = null; candles.length = 0; level.solids = [];
-      { const gr = document.getElementById('grain'); if(gr) gr.style.opacity = ''; }
+      { const gr = document.getElementById('grain'); if(gr) gr.style.opacity = LIVING_GRAIN; }
       pitch = 0; buildAbyss(); level.shake = .2;
       level.bounds = {minX:-1e5, maxX:1e5, minZ:-1e5, maxZ:1e5}; level.blockZMax = ()=> 1e5; level.blockZMin = ()=> -1e5;
     }
@@ -4798,9 +4798,8 @@ const LIVING = (function(){
       m.position.set(P.RX0 - S.d + Math.sin(t * .9) * .06 + Math.sin(t * 2.3) * .02 + (Math.random() - .5) * sh,
                      P.baseY + Math.sin(t * 1.3) * .07 + Math.sin(t * 3.1) * .025 + (Math.random() - .5) * sh,
                      P.Z0 + S.z + Math.cos(t * .7) * .05 + (Math.random() - .5) * sh);
-      const want = Math.atan2(camera.position.x - m.position.x, camera.position.z - m.position.z);
-      let dd = want - m.rotation.y; dd = Math.atan2(Math.sin(dd), Math.cos(dd)); m.rotation.y += dd * .08 + Math.sin(t * .6) * .004;     // it turns to keep you in front of it
-      m.rotation.z = Math.sin(t * .8) * .12 + Math.sin(t * 2.7) * .03; m.rotation.x = Math.sin(t * 1.1 + 1) * .09 + (Math.random() - .5) * sh;
+      m.lookAt(camera.position.x, camera.position.y - .1, camera.position.z);      // its eyes on you, always
+      m.rotateZ(Math.sin(t * .8) * .12 + Math.sin(t * 2.7) * .03); m.rotateX(Math.sin(t * 1.1 + 1) * .06 + (Math.random() - .5) * sh);
     }
     plushShow(P, lit);
     if(lit) P.nextMove += dt * 1000;                              // it cannot move while it is in the light
