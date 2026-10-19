@@ -1059,10 +1059,10 @@ body.mob-full .mob-exit:active{opacity:1; border-color:rgba(232,227,214,.9)}
 .cap-ring.cold b{animation:tipblink .5s steps(1) infinite}
 .cam-frame .cf-charge{position:absolute; left:0; right:0; top:calc(50% - min(21vmin,150px) - 30px); text-align:center; font-family:var(--crtface); font-size:clamp(.58rem,1.2vw,.76rem); letter-spacing:.3em; text-transform:uppercase; color:rgba(230,120,90,.85); opacity:0; transition:opacity .2s}
 .cam-frame .cf-charge.on{opacity:1}
-.cam-frame .cf-mode{position:absolute; left:0; right:0; top:clamp(30px,6vmin,56px); text-align:center; font-family:var(--crtface); font-size:clamp(.62rem,1.35vw,.84rem); letter-spacing:.32em; text-transform:uppercase; pointer-events:auto}
+.cam-frame .cf-mode{position:absolute; left:0; right:0; bottom:clamp(24px,5vmin,46px); text-align:center; font-family:var(--crtface); font-size:clamp(.62rem,1.35vw,.84rem); letter-spacing:.32em; text-transform:uppercase; pointer-events:auto}
 .cam-frame .cf-mode span{display:inline-block; padding:6px 14px; margin:0 6px; color:rgba(230,224,210,.3); border:1px solid transparent; cursor:pointer; touch-action:manipulation}
 .cam-frame .cf-mode span.on{color:#f0c868; border-color:rgba(240,200,104,.55); text-shadow:0 0 8px rgba(240,200,104,.6)}
-.cam-frame .cf-mode small{display:block; margin-top:5px; font-size:.72em; letter-spacing:.22em; color:rgba(230,224,210,.3)}
+.cam-frame .cf-mode small{display:block; margin-top:4px; font-size:.72em; letter-spacing:.22em; color:rgba(230,224,210,.3)}
 .cap-hint{position:absolute; left:0; right:0; top:calc(50% + min(21vmin,150px) + 14px); text-align:center; font-family:var(--crtface); font-size:clamp(.62rem,1.3vw,.82rem); letter-spacing:.26em; text-transform:uppercase; color:rgba(230,224,210,.55); pointer-events:none; opacity:0; transition:opacity .5s; z-index:6}
 .cap-hint.on{opacity:1}
 .living-tip{position:absolute; inset:0; z-index:8; display:none; align-items:center; justify-content:center; flex-direction:column; cursor:pointer;
@@ -1086,6 +1086,9 @@ body.mob-full .mob-exit:active{opacity:1; border-color:rgba(232,227,214,.9)}
 .tip-heads{display:flex; gap:clamp(10px,3vw,30px); justify-content:center; align-items:center}
 .tip-heads .tip-head{width:clamp(96px,24vmin,190px)}
 .tip-heads .tip-head.him{filter:contrast(1.15) brightness(1.1)}
+.tip-film{width:min(52vw,560px); max-height:38vh; aspect-ratio:16/10; object-fit:cover; background:#000; border:1px solid rgba(233,232,228,.18); box-shadow:0 0 30px rgba(0,0,0,.8)}
+.tip-heads .tip-head{width:clamp(70px,14vmin,130px)}
+.living.touch .tip-heads{flex-wrap:wrap} .living.touch .tip-film{width:92vw; order:-1}
 .tip-body .tip-line1{font-size:clamp(1.2rem,4vw,2.2rem)}
 .tip-line3{font-family:var(--display); font-size:clamp(.95rem,2.8vw,1.4rem); line-height:1.3; color:#a8a399; margin-top:clamp(8px,2vh,18px); padding:0 6%}
 @keyframes tipjit{0%,86%,100%{transform:translate(0,0)} 87%{transform:translate(-4px,1px)} 88%{transform:translate(3px,-1px)} 89%{transform:translate(0,0)} 94%{transform:translate(2px,1px)} 95%{transform:translate(0,0)}}
@@ -3201,7 +3204,7 @@ const LIVING = (function(){
     // (the warning comes when you pick the camera up off the rug)
   }
   let tipAt = 0;
-  function openTip(){ tipOpen = true; tipAt = performance.now(); tipEl.classList.add('on'); }
+  function openTip(){ tipOpen = true; tipAt = performance.now(); tipEl.classList.add('on'); const v = tipEl.querySelector('.tip-film'); if(v){ v.currentTime = 0; const p = v.play(); if(p && p.catch) p.catch(()=>{}); } }
   function closeTip(){ if(performance.now() - tipAt < 900) return;      // ignore the press that skipped the opening
     tipOpen = false; tipShown = true; tipEl.classList.remove('on'); if(level && level.watch) level.watch.next = performance.now() + 4500; }
   function stepIntro(now){
@@ -5543,7 +5546,7 @@ const LIVING = (function(){
     });
     photoEl = document.createElement('div'); photoEl.className = 'living-photo'; photoEl.innerHTML = '<img alt="" src="' + PHOTO_A + '"><span>is this me?</span>'; wrap.appendChild(photoEl);
     tipEl = document.createElement('div'); tipEl.className = 'living-tip';
-    tipEl.innerHTML = '<div class="tip-body"><div class="tip-line1">You are haunted by both your past and your present</div><div class="tip-heads"><img class="tip-head" alt="" src="' + TIP_HEAD + '"><img class="tip-head him" alt="" src="' + DOLL_FACE + '"></div><div class="tip-line2">Flash them when your runic meter is full. REMEMBER her. FORGET him.</div><div class="tip-line3">' + (TOUCH ? 'You can only see them through the camera. The round button raises it; tap FORGET or REMEMBER on the frame to choose the flash. It needs a moment to recharge after each one.' : 'You can only see them through the camera. C raises it. 1 and 2 (or the scroll wheel) choose FORGET or REMEMBER. It needs a moment to recharge after each flash.') + '</div><div class="tip-go">' + (TOUCH ? 'tap to continue' : 'press any key') + '</div></div>';
+    tipEl.innerHTML = '<div class="tip-body"><div class="tip-line1">You are haunted by both your past and your present</div><div class="tip-heads"><img class="tip-head" alt="" src="' + TIP_HEAD + '"><video class="tip-film" src="bleood_cam_tip.mp4" muted loop playsinline autoplay preload="auto"></video><img class="tip-head him" alt="" src="' + DOLL_FACE + '"></div><div class="tip-line2">Flash them when your runic meter is full. REMEMBER her. FORGET him.</div><div class="tip-line3">' + (TOUCH ? 'You can only see them through the camera. The round button raises it; tap FORGET or REMEMBER on the frame to choose the flash. It needs a moment to recharge after each one.' : 'You can only see them through the camera. C raises it. 1 and 2 (or the scroll wheel) choose FORGET or REMEMBER. It needs a moment to recharge after each flash.') + '</div><div class="tip-go">' + (TOUCH ? 'tap to continue' : 'press any key') + '</div></div>';
     wrap.appendChild(tipEl);
     tipEl.addEventListener('touchend', e=>{ e.preventDefault(); e.stopPropagation(); closeTip(); });
     redEl = document.createElement('div'); redEl.className = 'living-red'; wrap.appendChild(redEl);
