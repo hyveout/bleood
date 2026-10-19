@@ -4030,7 +4030,7 @@ const LIVING = (function(){
   // ---------- the doll's head in the bedroom (the camera, after Fatal Frame): it drifts in from a corner and comes for you. a ring comes up in the
   // middle of the view; keep its face inside the ring and the runes light, faster the closer it is. when they are all lit, a press takes the
   // picture and it is gone. a picture taken early only knocks it back. if it reaches you, it has you ----------
-  const HAUNT = {FIRST:[14, 26], AGAIN:[30, 55], CHARGE:2.6, SPEED:.26, START:3.0, SNAPS:3};
+  const HAUNT = {FIRST:[14, 26], AGAIN:[30, 55], CHARGE:2.6, SPEED:.2, START:1.9, SNAPS:3};
   function hauntSetup(){
     const H = level.haunt = {on:false, next:performance.now() + 1e9, model:null, charge:0, kills:0, snaps:0};
     loadDollHead().then(m=>{ if(!m || level.haunt !== H) return; const car = new THREE.Group(); car.rotation.order = 'YXZ'; m.position.y = -HEAD_CY * HEAD_S; car.add(m); car.visible = false; level.group.add(car); H.model = car; H.mats = m.userData.mats;
@@ -4084,7 +4084,7 @@ const LIVING = (function(){
     m.position.set(H.px + Math.sin(t * 2.1) * .03, H.py, H.pz + Math.cos(t * 1.7) * .03);
     m.lookAt(cam.x, cam.y - .1, cam.z);      // its eyes on you, always
     m.rotateZ(Math.sin(t * .8) * .14); m.rotateX(Math.sin(t * 1.1 + 1) * .06);
-    if(d < .75){ hauntEnd(false); const W = {eyes:[], eyeGlow:{intensity:0}, scaring:false, head:null}; jumpscare(W); return; }      // it has you
+    if(d < .55){ hauntEnd(false); const W = {eyes:[], eyeGlow:{intensity:0}, scaring:false, head:null}; jumpscare(W); return; }      // it has you
     // is its face in the ring? (its place on the screen against the ring's size)
     if(!HV) HV = new THREE.Vector3();
     HV.set(H.px, H.py, H.pz).project(camera);
