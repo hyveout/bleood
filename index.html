@@ -1027,6 +1027,12 @@ body.mob-full .mob-exit:active{opacity:1; border-color:rgba(232,227,214,.9)}
 .living-red{position:absolute; inset:0; z-index:4; pointer-events:none; opacity:0;
   background:radial-gradient(ellipse at center, rgba(150,0,0,.35) 0%, rgba(70,0,0,.8) 60%, rgba(10,0,0,.97) 100%); mix-blend-mode:multiply}
 /* the warning: no box. the room fades to black, her head floats in the dark, and the words are scratched under it */
+.game-panel .paint-look{position:relative; width:min(70vmin,420px); max-width:86%; padding:14px 14px 18px; background:#0d0a08; border:2px solid #000; box-shadow:0 18px 30px rgba(0,0,0,.85); display:flex; flex-direction:column; align-items:center; gap:10px}
+.game-panel .paint-img{display:block; width:100%; height:auto; image-rendering:pixelated; filter:contrast(1.1) brightness(.9)}
+.game-panel .paint-key{position:absolute; left:50%; top:76%; width:16%; aspect-ratio:1; transform:translate(-50%,-50%) rotate(-55deg); background:none; border:0; padding:0; cursor:pointer; filter:drop-shadow(0 2px 3px #000)}
+.game-panel .paint-key img{width:100%; height:100%; object-fit:contain; image-rendering:pixelated}
+.game-panel .paint-key.hot img, .game-panel .paint-key:hover img{filter:brightness(1.4) drop-shadow(0 0 6px rgba(240,200,104,.9))}
+.game-panel .paint-cap{font-family:var(--crtface); font-size:clamp(.62rem,1.3vw,.8rem); letter-spacing:.2em; text-transform:uppercase; color:rgba(230,224,210,.6); text-align:center}
 .cap-ring{position:absolute; left:50%; top:50%; width:min(42vmin,300px); aspect-ratio:1; transform:translate(-50%,-50%); border-radius:50%; border:1.5px solid rgba(230,224,210,.35); box-shadow:0 0 0 6px rgba(0,0,0,.25), inset 0 0 18px rgba(0,0,0,.5); pointer-events:none; opacity:0; transition:opacity .5s; z-index:6}
 .cap-ring.on{opacity:1}
 .cap-ring.full{border-color:rgba(240,120,90,.9); box-shadow:0 0 14px rgba(240,80,60,.55), 0 0 0 6px rgba(0,0,0,.25), inset 0 0 18px rgba(120,20,20,.6)}
@@ -1054,6 +1060,7 @@ body.mob-full .mob-exit:active{opacity:1; border-color:rgba(232,227,214,.9)}
   text-shadow:-2px 0 rgba(255,20,60,.6), 2px 0 rgba(0,235,220,.4), 0 0 18px rgba(0,0,0,.95), 0 3px 12px rgba(0,0,0,.9)}
 .tip-line1{font-size:clamp(1.5rem,5.4vw,2.9rem); animation:tipjit 2.6s steps(1) infinite}
 .tip-line2{font-size:clamp(1.05rem,3.4vw,1.7rem); color:#b9b4a8; margin-top:2px}
+.tip-line3{font-family:var(--display); font-size:clamp(.95rem,2.8vw,1.4rem); line-height:1.3; color:#a8a399; margin-top:clamp(8px,2vh,18px); padding:0 6%}
 @keyframes tipjit{0%,86%,100%{transform:translate(0,0)} 87%{transform:translate(-4px,1px)} 88%{transform:translate(3px,-1px)} 89%{transform:translate(0,0)} 94%{transform:translate(2px,1px)} 95%{transform:translate(0,0)}}
 .tip-go{margin-top:clamp(10px,3vh,26px); font-family:var(--crtface); font-size:clamp(.6rem,1.3vw,.78rem); letter-spacing:.3em; text-transform:uppercase; color:rgba(233,232,228,.42); animation:tipblink 1.8s ease-in-out infinite}
 @keyframes tipblink{0%,100%{opacity:.25} 50%{opacity:.7}}
@@ -2218,7 +2225,7 @@ const LIVING = (function(){
   const FF = false;      // the Japanese-house dressing (tatami, shoji, lanterns). off: the original rooms
   const GRADE = false;   // the Fatal Frame colour grade and vignette. off: the original look
   const FOGC = GRADE ? 0x040709 : 0x000000;
-  const LIVING_GRAIN = '.15';   // the page's film grain while you play: heavy, the whole game through (the front page uses .09)
+  const LIVING_GRAIN = '';      // the page's film grain while you play: the site's own, the same as the other two games
   let renderer, scene, camera, ray, raf = null, running = false, built = false, post = null;
   let yaw = 0, pitch = 0, last = 0, fade = 1, fadeTo = 0;
   const keys = {}; let stickVec = {x:0, y:0}; let candleUp = false;
@@ -4002,6 +4009,7 @@ const LIVING = (function(){
       }
       if(level.backDoor){ const bd = level.backDoor; bd.pivot.rotation.y += ((bd.ry + (bd.open ? -Math.PI/2 : 0)) - bd.pivot.rotation.y) * .12; }
       if(level.exitDoor){ const dd = level.exitDoor; dd.pivot.rotation.y += ((dd.ry + (dd.open ? -Math.PI/2 : 0)) - dd.pivot.rotation.y) * 0.08; }
+      if(level.haunt && !(level.plush && level.plush.active)) hauntStep(now, dtS);
       if(level.hall1){
         const H1 = level.hall1;
         H1.drawer.position.x += ((w/2 - .3 - (H1.drawerOpen ? .3 : 0)) - H1.drawer.position.x) * .12;
@@ -4014,6 +4022,7 @@ const LIVING = (function(){
         go(nextRoom());
       }
     };
+    if(p !== 2){ hauntSetup(); hauntArm(HAUNT.AGAIN); }
     level.blockZMax = ()=> p === 2 ? d/2 + 30 : (p === 1 && !level.memoryDone ? d/2 - .5 : d/2 + .6);
     level.blockZMin = ()=> p === 2 ? (level.backDoor && level.backDoor.open ? -d/2 - .6 : -d/2 + .35) : -d/2 + .35;
   }
@@ -4063,7 +4072,7 @@ const LIVING = (function(){
   let HV = null;
   function hauntStep(now, dt){
     const H = level.haunt; if(!H) return;
-    const busy = level.intro || tipOpen || opening || level.memory || noteOverlay.classList.contains('on') || panel.classList.contains('on') || (level.watch && level.watch.scaring);
+    const busy = level.intro || tipOpen || opening || level.memory || noteOverlay.classList.contains('on') || panel.classList.contains('on') || (level.watch && level.watch.scaring) || (level.plush && level.plush.active);
     if(!H.on){ if(now > H.next){ if(busy) H.next = now + 9000 + Math.random() * 9000; else hauntStart(now); } return; }
     if(busy) return;
     const m = H.model, t = now / 1000 + H.seed, cam = camera.position;
@@ -4633,7 +4642,7 @@ const LIVING = (function(){
     {d:1.35, z:-.22, y:1.5}];             // right in front of you
   // sounds, made here: little running steps (louder and to one side as it comes), the click of the light, the scream when it jumps
   // the doll's head: the Attention doll with its body hidden. the full file (its own textures) sits next to the page; if it can't be fetched, the copy Attention carries is used
-  const DOLL_URL = 'bleood_doll.glb', HEAD_CY = 92, HEAD_S = .02, PAINTING_FILE = 'bleood_painting.png';      // where the head's centre is in the model (model units), and how big it floats
+  const DOLL_URL = 'bleood_doll.glb', HEAD_CY = 92, HEAD_S = .02, PAINTING_FILE = 'bleood_painting.png', KEY_ICON = "data:image/webp;base64,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";      // where the head's centre is in the model (model units), and how big it floats
   let dollLoading = null;
   function loadDollHead(){
     if(dollLoading) return dollLoading;
@@ -4713,8 +4722,9 @@ const LIVING = (function(){
   }
   function plushHold(on){ const P = level && level.plush; if(P && P.lock) P.held = on; }
   function plushStart(P, now){
-    P.active = true; P.lock = true; P.dark = true; P.time = PL.TIME; P.lastNow = now;
-    yaw = Math.PI / 2; pitch = 0; fade = .85; fadeTo = 0;          // you are facing down it, as the lights go P.nextMove = now + 2600; P.push = false;
+    P.active = true; P.lock = true; P.dark = true; P.lastNow = now; P.startAt = now;
+    yaw = Math.PI / 2; pitch = 0; fade = .85; fadeTo = 0;          // you are facing down it, as the lights go
+    P.nextMove = now + 6500 + Math.random() * 3500; P.push = false;      // it sits in its chair a good while before the first move
     const H1 = level.hall1; H1.door.open = false; H1.door.pivot.rotation.y = H1.door.ry;      // it shuts behind you
     P.fog = scene.fog; scene.fog = new THREE.Fog(FOGC, 7, 17);      // the torch reaches the chair
     level.solids.push(H1.block);
@@ -4803,14 +4813,13 @@ const LIVING = (function(){
     }
     plushShow(P, lit);
     if(lit) P.nextMove += dt * 1000;                              // it cannot move while it is in the light
-    // the clock (real time, not the frame step, which is held short on a slow machine)
-    P.time -= Math.min(.25, (now - (P.lastNow || now)) / 1000); P.lastNow = now; const sec = Math.max(0, Math.ceil(P.time));
-    setHUD('0:' + String(sec).padStart(2, '0'));
-    if(P.time <= 0){ plushScare(P); return; }
+    P.lastNow = now;
     // in the dark it moves
     if(!lit && now > P.nextMove){
       const i = P.step, r = Math.random(); let to = i;
-      if(P.push){ to = i - 1; P.push = false; }
+      if(P.flashBack !== undefined){ to = P.flashBack; P.flashBack = undefined; }                                   // back from its moment in your face
+      else if(i >= 1 && i <= 3 && r < .14){ P.flashBack = i; plushPlace(P, 5); plushSteps(1.2, 0); P.nextMove = now + 900 + Math.random() * 500; return; }
+      else if(P.push){ to = i - 1; P.push = false; }
       else if(i < 3) to = r < .85 ? i + 1 : i;
       else if(i === 3) to = r < .7 ? i + 1 : i - 1;
       else to = r < .6 ? i + 1 : i - 1;
@@ -4819,7 +4828,7 @@ const LIVING = (function(){
         plushPlace(P, Math.max(0, to));
         const S = PL.STOPS[P.step]; plushSteps(S.d, Math.max(-1, Math.min(1, -S.z * .9)));
       }
-      const hurry = 1 - Math.max(0, P.time) / PL.TIME * .45;      // a little quicker as the clock runs down
+      const hurry = Math.min(1, (now - P.startAt) / 90000) * .45;      // a little quicker the longer it goes on
       P.nextMove = now + (P.step === 3 ? 700 + Math.random() * 650 : (1000 + Math.random() * 1400) / (.55 + hurry * .6));
     }
   }
@@ -4909,8 +4918,7 @@ const LIVING = (function(){
       return;
     }
     if(u.kind === 'hallkey'){ const H1 = level.hall1; H1.hasKey = true; H1.key.visible = false; level.interactives = level.interactives.filter(m => !H1.keyParts.includes(m)); flash('a small key'); return; }
-    if(u.kind === 'painting'){ const H1 = level.hall1, P = H1.painting; if(H1.hasKey){ flash('him, healing the man of his demons'); return; }
-      H1.hasKey = true; P.key.visible = false; u.prompt = ''; level.interactives = level.interactives.filter(m => !(m.userData === u) || m === P.pic); flash('a small key, tucked into the frame'); return; }
+    if(u.kind === 'painting'){ openPainting(); return; }
     if(u.kind === 'sidedoor'){
       const H1 = level.hall1;
       if(!H1.hasKey){ flash('locked'); return; }
@@ -5352,6 +5360,24 @@ const LIVING = (function(){
   }
   // ---------- a little synth for the corridor game's sounds ----------
   let AC = null;
+  // the painting, looked at close: the picture fills the view, and the key sits in the bottom of the frame until you take it
+  function openPainting(){
+    const H1 = level.hall1, P = H1.painting;
+    panel.classList.add('on'); panel.dataset.game = 'painting';
+    panel.innerHTML = '<div class="paint-look"><img class="paint-img" alt="" src="' + PAINTING_FILE + '">' + (H1.hasKey ? '' : '<button type="button" class="paint-key" aria-label="take the key"><img alt="" src="' + KEY_ICON + '"></button>') + '<div class="paint-cap">' + (H1.hasKey ? 'him, healing the man of his demons' : 'something is tucked into the frame') + '</div><button type="button" class="safe-back" data-k="back">back</button></div>';
+    const take = ()=>{ if(H1.hasKey) return; H1.hasKey = true; P.key.visible = false; P.pic.userData.prompt = 'look'; level.interactives = level.interactives.filter(m => !(m.userData === P.pic.userData) || m === P.pic);
+      const k = panel.querySelector('.paint-key'); if(k) k.remove(); panel.querySelector('.paint-cap').textContent = 'a small key'; flash('a small key'); if(plushAudio()) burst(AC.currentTime + .01, .08, .2, 2000, 4000, 0); };
+    const kb = panel.querySelector('.paint-key'); if(kb) kb.addEventListener('click', e=>{ e.stopPropagation(); take(); });
+    panel.querySelector('.safe-back').addEventListener('click', e=>{ e.stopPropagation(); closePanel(); });
+    // the mouse (locked while you play) drives a pointer over the picture, as in the other panels
+    const box = panel.querySelector('.paint-look'), cur = document.createElement('b'); cur.className = 'safe-cur'; box.appendChild(cur);
+    let cx = .5, cy = .5, hot = null;
+    const place = ()=>{ cur.style.left = (cx * 100) + '%'; cur.style.top = (cy * 100) + '%'; const r = box.getBoundingClientRect(), el = document.elementFromPoint(r.left + cx * r.width, r.top + cy * r.height);
+      const k = el && el.closest ? el.closest('.paint-key, .safe-back') : null; if(k !== hot){ if(hot) hot.classList.remove('hot'); hot = k; if(hot) hot.classList.add('hot'); } };
+    penMove = (dx, dy)=>{ const r = box.getBoundingClientRect(); cx = Math.max(0, Math.min(1, cx + dx / r.width)); cy = Math.max(0, Math.min(1, cy + dy / r.height)); place(); };
+    penDown = ()=>{ if(!hot) return; if(hot.classList.contains('safe-back')) closePanel(); else take(); };
+    penUp = null; setTimeout(place, 30);
+  }
   function closePanel(){ if(pullCleanup){ const f = pullCleanup; pullCleanup = null; try{ f(); }catch(e){} } panel.classList.remove('on'); panel.innerHTML = ''; panel.dataset.game = ''; penMove = penDown = penUp = null; tracing = false; }
 
   function showNote(text, ending){
@@ -5398,7 +5424,7 @@ const LIVING = (function(){
     });
     photoEl = document.createElement('div'); photoEl.className = 'living-photo'; photoEl.innerHTML = '<img alt="" src="' + PHOTO_A + '"><span>is this me?</span>'; wrap.appendChild(photoEl);
     tipEl = document.createElement('div'); tipEl.className = 'living-tip';
-    tipEl.innerHTML = '<div class="tip-body"><img class="tip-head" alt="" src="' + TIP_HEAD + '"><div class="tip-line1">She is obsessed with you</div><div class="tip-line2">Do not let her see your movement</div><div class="tip-go">' + (TOUCH ? 'tap to continue' : 'press any key') + '</div></div>';
+    tipEl.innerHTML = '<div class="tip-body"><img class="tip-head" alt="" src="' + TIP_HEAD + '"><div class="tip-line1">She is obsessed with you</div><div class="tip-line2">Do not let her see your movement</div><div class="tip-line3">Your past self haunts you.<br>Flash him when the runic meter is full to forget about him.</div><div class="tip-go">' + (TOUCH ? 'tap to continue' : 'press any key') + '</div></div>';
     wrap.appendChild(tipEl);
     tipEl.addEventListener('touchend', e=>{ e.preventDefault(); e.stopPropagation(); closeTip(); });
     redEl = document.createElement('div'); redEl.className = 'living-red'; wrap.appendChild(redEl);
