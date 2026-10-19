@@ -2725,7 +2725,7 @@ const LIVING = (function(){
     };
     const o = openings || {};
     cove(g, w, d, h, 0, 0, {front:o.front === 'none'});
-    if(kinds.wall === 'plaster') framing(g, w, d, h, 0, 0, {front:o.front === 'none', backHoles:typeof o.back === 'number' ? [o.back] : [], frontHoles:typeof o.front === 'number' ? [o.front] : [], leftHoles:(o.left !== undefined ? [o.left] : []).concat(o.decoLeft || [])});
+    if(kinds.frame) framing(g, w, d, h, 0, 0, {front:o.front === 'none', backHoles:typeof o.back === 'number' ? [o.back] : [], frontHoles:typeof o.front === 'number' ? [o.front] : [], leftHoles:(o.left !== undefined ? [o.left] : []).concat(o.decoLeft || [])});
     wallWithHole(-d/2, 0, o.back);
     wallWithHole(d/2, Math.PI, o.front);
     if(leftHole){
@@ -3707,46 +3707,20 @@ const LIVING = (function(){
     level.bounds = {minX:-w/2+.35, maxX:w/2-.35, minZ:-d/2 - .4, maxZ:d/2+.4};
     // pass two has no doorway at the far end at all
     const SIDE_Z = 2.5;                                  // hallway one: the second door on the left is a real one, into the doll's corridor
-    shell(g, w, d, h, {floor:'boards', ceil:'ceil', wall:'plaster'}, p === 2 ? {back:0, front:'none', decoLeft:d > 10 ? [-3, 2.5] : [-1.5]} : p === 1 ? {front:0, back:0, left:SIDE_Z, decoLeft:[-3]} : {front:0, back:0, decoLeft:d > 10 ? [-3, 2.5] : [-1.5]});
+    shell(g, w, d, h, {floor:'floor', ceil:'ceil', wall:'wall', frame:true}, p === 2 ? {back:0, front:'none', decoLeft:d > 10 ? [-3, 2.5] : [-1.5]} : p === 1 ? {front:0, back:0, left:SIDE_Z, decoLeft:[-3]} : {front:0, back:0, decoLeft:d > 10 ? [-3, 2.5] : [-1.5]});
     if(p === 2){
       // no end wall at all: the corridor runs on past the thing in it, into the dark
       const L = 40, z0 = d/2;
-      const fl = new THREE.Mesh(new THREE.PlaneGeometry(w, L), mat('boards', w / 1.2, L / 1.2)); fl.rotation.x = -Math.PI/2; fl.position.set(0, 0, z0 + L/2); g.add(fl);
+      const fl = new THREE.Mesh(new THREE.PlaneGeometry(w, L), mat('floor', w, L)); fl.rotation.x = -Math.PI/2; fl.position.set(0, 0, z0 + L/2); g.add(fl);
       const cl = new THREE.Mesh(new THREE.PlaneGeometry(w, L), mat('ceil', w / 1.5, L / 1.5)); cl.rotation.x = Math.PI/2; cl.position.set(0, h, z0 + L/2); g.add(cl);
       [-1, 1].forEach(sd=>{
-        const wl = new THREE.Mesh(new THREE.PlaneGeometry(L, h), mat('plaster', L / 2.2, 1)); wl.position.set(sd * w/2, h/2, z0 + L/2); wl.rotation.y = -sd * Math.PI/2; g.add(wl);
-        const wn = new THREE.Mesh(new THREE.BoxGeometry(.04, .95, L), mat('boards', L / 1.2, .38)); wn.position.set(sd * (w/2 - .025), .475, z0 + L/2); g.add(wn);
-        box(g, .07, .05, L, new THREE.MeshLambertMaterial({color:0x1a120c}), sd * (w/2 - .035), .97, z0 + L/2, false);
+        const wl = new THREE.Mesh(new THREE.PlaneGeometry(L, h), wallPiece('wall', L, h, h, sd * w/2, h/2, z0 + L/2, -sd * Math.PI/2)); wl.position.set(sd * w/2, h/2, z0 + L/2); wl.rotation.y = -sd * Math.PI/2; g.add(wl);
       });
       cove(g, w, L, h, 0, z0 + L/2, {back:true});      // the same dark along the top, all the way down; no edge where the hall ends
       framing(g, w, L, h, 0, z0 + L/2, {back:true, front:true});
     }
-    // dark wood wainscoting and a chair rail along both walls
-    const wainM = mat('boards', d / 1.2, .38), railM = new THREE.MeshLambertMaterial({color:0x1a120c});      // dark boards, standing on end
-    // the left wall has doors in it, so its panelling and rail stop at each door frame instead of running across it
+    const railM = new THREE.MeshLambertMaterial({color:0x1a120c});
     const doorZs = d > 10 ? [-3, 2.5] : [-1.5];
-    [-1, 1].forEach(sd=>{
-      const wx = sd * (w/2 - .025);
-      const cuts = sd < 0 ? doorZs.slice().sort((a, b)=> a - b) : [];
-      const spans = []; let from = -d/2;
-      cuts.forEach(z=>{ spans.push([from, z - .64]); from = z + .64; });
-      spans.push([from, d/2]);
-      spans.forEach(([z0, z1])=>{
-        const len = z1 - z0; if(len <= .02) return; const zc = (z0 + z1) / 2;
-        const wm2 = mat('boards', len / 1.2, .38);
-        const wain = new THREE.Mesh(new THREE.BoxGeometry(.04, .95, len), wm2); wain.position.set(wx, .475, zc); g.add(wain);
-        box(g, .07, .05, len, railM, sd * (w/2 - .035), .97, zc, false);
-      });
-    });
-    // and across both end walls, either side of the door, the same panelling and rail (these walls had none, so they looked bare)
-    [[-1, -d/2], [1, d/2]].forEach(([sg, ez])=>{
-      if(sg > 0 && p === 2) return;                                         // pass two has no end wall there
-      [[-w/2, -.64], [.64, w/2]].forEach(([x0, x1])=>{
-        const len = x1 - x0, xc = (x0 + x1) / 2, zz = ez - sg * .025;
-        const wn = new THREE.Mesh(new THREE.BoxGeometry(len, .95, .04), mat('boards', len / 1.2, .38)); wn.position.set(xc, .475, zz); g.add(wn);
-        box(g, len, .05, .07, railM, xc, .97, ez - sg * .035, false);
-      });
-    });
     // side tables with lamps along the right wall, doors along the left
     const tables = [], tzs = d > 10 ? [-4, 0, 4] : [-2.5, 1.5];
     const cabM = mat('dresser', 1, 1), shadeM = FF ? new THREE.MeshLambertMaterial({color:0xe6d3a4, emissive:0x6a4a1a}) : (()=>{ const m = mat('shade', 1, 1, {side:THREE.DoubleSide, emissive:0x2a0505}); m.map.magFilter = THREE.LinearFilter; return m; })();      // the shades: old cloth, stained and scorched
@@ -3816,9 +3790,19 @@ const LIVING = (function(){
       if(!on){ if(tb.flame) tb.flame.visible = false; else if(!tb.glass) tb.shade.material = new THREE.MeshLambertMaterial({color:0x2a0a0a, side:THREE.DoubleSide}); }
       lights.push({L, on, z:tb.z, seed:Math.random()*10});
     });
-    const hallAmb = new THREE.AmbientLight(FF ? 0x3e5654 : 0x7a6a58, [0.5, 0.3, 0.18][p-1]); hallAmb.userData.base = hallAmb.intensity; g.add(hallAmb);
+    const hallAmb = new THREE.AmbientLight(FF ? 0x3e5654 : 0x7a756e, [0.26, 0.2, 0.14][p-1]); hallAmb.userData.base = hallAmb.intensity; g.add(hallAmb);
+    // bare bulbs down the middle of the ceiling, as in the bedroom, stuttering now and then; in the plain hall only one still works
+    level.bulbs = [];
+    const bzs = d > 10 ? [-4.5, 0, 4.5] : [-2, 2];
+    bzs.forEach((bz, i)=>{
+      const on = p !== 3 || i === 0;
+      const bl = new THREE.PointLight(FF ? 0xffb877 : 0xfff2dc, on ? .9 : 0, 8, 1.6); bl.position.set(0, h - .25, bz); g.add(bl);
+      const bmesh = new THREE.Mesh(new THREE.SphereGeometry(.05, 6, 6), new THREE.MeshBasicMaterial({color:on ? 0xfff6e0 : 0x2a2622})); bmesh.position.copy(bl.position); g.add(bmesh);
+      const cord = new THREE.Mesh(new THREE.CylinderGeometry(.006, .006, .25, 4), new THREE.MeshLambertMaterial({color:0x14100b})); cord.position.set(0, h - .12, bz); g.add(cord);
+      if(on) level.bulbs.push({L:bl, m:bmesh, flk:{until:0, next:performance.now() + 800 + Math.random() * 3000}});
+    });
     level.redChance = [0, .01, .03][p-1];
-    lights.forEach(o=> o.base = [1.7, 1.2, .9][p-1]);
+    lights.forEach(o=> o.base = [.7, .55, .45][p-1]);
     // a chair, not where it was
     const chairX = [0.7, -0.6, 0.0][p-1], chairZ = [-3.5, 1.5, 2.0][p-1];
     if(p === 2){
@@ -3872,8 +3856,18 @@ const LIVING = (function(){
       const hkBow = new THREE.Mesh(new THREE.TorusGeometry(.018, .005, 6, 10), hkM); hkBow.rotation.x = Math.PI/2; hkBow.position.x = -.06; hk.add(hkBow);
       const hkBit = new THREE.Mesh(new THREE.BoxGeometry(.018, .01, .026), hkM); hkBit.position.set(.04, 0, .01); hk.add(hkBit);
       drFront.userData = {kind:'halldrawer', prompt:'open'}; drKnob.userData = drFront.userData; level.interactives.push(drFront, drKnob);
-      [hkShaft, hkBow, hkBit].forEach(m => m.userData = {kind:'hallkey'});
+      hk.visible = false;      // (the drawer is empty now: the key is up on the wall)
       level.hall1 = {drawer:dr, drawerOpen:false, key:hk, keyParts:[hkShaft, hkBow, hkBit], hasKey:false};
+      // the painting from the house (the healing), hung over the dressing table; the small key is tucked into the bottom of its frame
+      const ptx = new THREE.TextureLoader().load(PAINTING_FILE); ptx.magFilter = THREE.NearestFilter; ptx.encoding = THREE.sRGBEncoding;
+      const pic = new THREE.Mesh(new THREE.PlaneGeometry(.72, .8), new THREE.MeshLambertMaterial({map:ptx, transparent:true, alphaTest:.5})); pic.position.set(w/2 - .04, 1.72, tz); pic.rotation.y = -Math.PI / 2; pic.rotation.z = .02; g.add(pic);
+      const pk = new THREE.Group(); pk.position.set(w/2 - .07, 1.36, tz + .18); pk.rotation.y = -Math.PI / 2 + .2; pk.rotation.z = -1.1; pk.scale.setScalar(1.3); g.add(pk);
+      const pkM = new THREE.MeshPhongMaterial({color:0xb8a060, specular:0xffffff, shininess:80});
+      const pkShaft = new THREE.Mesh(new THREE.BoxGeometry(.1, .01, .01), pkM); pk.add(pkShaft);
+      const pkBow = new THREE.Mesh(new THREE.TorusGeometry(.018, .005, 6, 10), pkM); pkBow.rotation.x = Math.PI/2; pkBow.position.x = -.06; pk.add(pkBow);
+      const pkBit = new THREE.Mesh(new THREE.BoxGeometry(.018, .01, .026), pkM); pkBit.position.set(.04, 0, .01); pk.add(pkBit);
+      pic.userData = {kind:'painting', prompt:'look closer'}; [pkShaft, pkBow, pkBit].forEach(m => m.userData = pic.userData); level.interactives.push(pic, pkShaft, pkBow, pkBit);
+      level.hall1.painting = {pic, key:pk};
 
       // ---- the side door: locked until you have the key; it swings in, into the room
       const sd = door(g, -w/2 + .03, SIDE_Z, Math.PI/2, 'side');
@@ -3891,9 +3885,9 @@ const LIVING = (function(){
         {minX:-RW - 4, maxX:-w/2 - .12, minZ:rz1 + .02, maxZ:d/2 + 1});
       level.bounds.minX = RX0 - RW + .35;
 
-      const rWall = mat('plaster', RD / 2.2, 1), rCeil = mat('ceil', RW / 1.5, RD / 1.5);
-      const rp = (m, pw, ph, x, y, z, ry, rx)=>{ if(m === rWall) m = wallPiece('plaster', pw, ph, h, x, y, z, ry || 0); const q = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), m); q.position.set(x, y, z); q.rotation.set(rx || 0, ry || 0, 0); g.add(q); return q; };
-      rp(mat('boards', RW / 1.2, RD / 1.2), RW, RD, rxc, 0, SIDE_Z, 0, -Math.PI/2);
+      const rWall = mat('wall', RD / 1.2, 1), rCeil = mat('ceil', RW / 1.5, RD / 1.5);
+      const rp = (m, pw, ph, x, y, z, ry, rx)=>{ if(m === rWall) m = wallPiece('wall', pw, ph, h, x, y, z, ry || 0); const q = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), m); q.position.set(x, y, z); q.rotation.set(rx || 0, ry || 0, 0); g.add(q); return q; };
+      rp(mat('floor', RW, RD), RW, RD, rxc, 0, SIDE_Z, 0, -Math.PI/2);
       rp(rCeil, RW, RD, rxc, h, SIDE_Z, 0, Math.PI/2);
       rp(rWall, RD, h, RX0 - RW, h/2, SIDE_Z, Math.PI/2);                       // the far wall, behind the chair
       rp(rWall, RW, h, rxc, h/2, rz0, 0);                                        // the two long walls
@@ -3903,17 +3897,10 @@ const LIVING = (function(){
       rp(rWall, a1, h, RX0 - .005, h/2, rz0 + a1/2, -Math.PI/2);
       rp(rWall, a1, h, RX0 - .005, h/2, rz1 - a1/2, -Math.PI/2);
       rp(rWall, DWh, h - DHh, RX0 - .005, DHh + (h - DHh)/2, SIDE_Z, -Math.PI/2);
-      const wnR = (len, x, z, alongZ, inset)=>{ const wn = new THREE.Mesh(alongZ ? new THREE.BoxGeometry(.04, .95, len) : new THREE.BoxGeometry(len, .95, .04), mat('boards', len / 1.2, .38)); wn.position.set(x, .475, z); g.add(wn);
-        box(g, alongZ ? .07 : len, .05, alongZ ? len : .07, railM, x + (alongZ ? inset : 0), .97, z + (alongZ ? 0 : inset), false); };
-      wnR(RD, RX0 - RW + .025, SIDE_Z, true, .01);
-      // the long walls: panelling broken by the dark doorways it hides in
+      // the long walls: the dark doorways it hides in
       const jambM = new THREE.MeshLambertMaterial({color:0x140e0a}), voidM = new THREE.MeshBasicMaterial({color:0x000000});
       [1, -1].forEach(side=>{
         const wz = side > 0 ? rz1 : rz0, cuts = PL.ALCOVES.filter(a => a.side === side).map(a => a.d).sort((x, y)=> x - y);
-        let from = .3;
-        cuts.concat([RW]).forEach(dc=>{
-          const to = dc === RW ? RW : dc - .55; if(to - from > .05) wnR(to - from, RX0 - (from + to) / 2, wz - side * .025, false, -side * .01); from = dc + .55;
-        });
         cuts.forEach(dc=>{
           const x = RX0 - dc;
           const v = new THREE.Mesh(new THREE.PlaneGeometry(.9, 2.05), voidM); v.position.set(x, 1.025, wz - side * .006); v.rotation.y = side > 0 ? Math.PI : 0; g.add(v);   // nothing past it but dark
@@ -3958,6 +3945,8 @@ const LIVING = (function(){
     level.tick = (now)=>{
       const D = level.distort;
       const dtS = Math.min(.05, (now - (level._t || now)) / 1000); level._t = now;
+      level.bulbs.forEach(b=>{ const f = b.flk; if(now > f.next){ f.until = now + 90 + Math.random() * 900; f.next = f.until + 900 + Math.random() * 5200; }
+        const on = now < f.until ? (Math.random() < .55 ? .04 : .85) : 1; b.L.intensity = (level.plush && level.plush.dark ? 0 : .9) * on; b.m.material.color.setRGB(on, on * .96, on * .88); });
       lights.forEach(o=>{ if(o.on){
         const flick = Math.random() < (0.02 + 0.12 * D) ? -0.6 * Math.random() : 0;
         o.L.intensity = Math.max(0, (o.base || 1) + flick + Math.sin(now / (120 + o.seed * 30)) * 0.12 * D);
@@ -4082,7 +4071,7 @@ const LIVING = (function(){
     const g = level.group, w = 18, d = 18, h = 3.4;
     // the way out: on the far wall or the left wall, somewhere different each time
     const onFront = Math.random() < .5, exitAt = (Math.random() < .5 ? -1 : 1) * (2.5 + Math.random() * 5);
-    shell(g, w, d, h, {floor:'boards', ceil:'ceil', wall:'plaster'}, onFront ? {back:0, front:exitAt} : {back:0, left:exitAt});
+    shell(g, w, d, h, {floor:'floor', ceil:'ceil', wall:'wall', frame:true}, onFront ? {back:0, front:exitAt} : {back:0, left:exitAt});
     level.bounds = {minX:-w/2 + .35, maxX:w/2 - .35, minZ:-d/2 + .35, maxZ:d/2 + .6};
     scene.fog = new THREE.Fog(FOGC, 1.5, 12);
     g.add(new THREE.AmbientLight(0x6a6058, .06));
@@ -4608,17 +4597,17 @@ const LIVING = (function(){
   // it hangs in the air over the chair at the far end. in the dark it comes closer, doorway to doorway, and you only hear it; while your light is on it you see it, and it cannot move.
   // turn the light on while it stands on the X and you have it: the memory plays and the hall door opens.
   // let it reach you, or run out of time, and it jumps at you and goes back to its chair (you can go in and try again)
-  const PL = {L:11, W:2.2, X_D:4.6, TIME:60, TORCH:5, ALCOVES:[{d:8.0, side:1}, {d:6.5, side:-1}, {d:3.1, side:1}, {d:3.1, side:-1}]};
+  const PL = {L:7.5, W:2.2, X_D:2.7, TIME:60, TORCH:5, ALCOVES:[{d:5.5, side:1}, {d:4.3, side:-1}, {d:1.9, side:1}, {d:1.9, side:-1}]};
   PL.STOPS = [
     {d:PL.L - .55, z:0, y:1.25},          // over the chair
-    {d:8.0, z:.72, y:1.45},               // the far doorway
-    {d:6.5, z:-.72, y:1.35},              // the doorway across from it
+    {d:5.5, z:.72, y:1.45},               // the far doorway
+    {d:4.3, z:-.72, y:1.35},              // the doorway across from it
     {d:PL.X_D, z:0, y:.62},               // on the X: low, right over the tape
-    {d:3.1, z:.68, y:.75},                // close, low, in the near doorway
-    {d:1.75, z:-.22, y:1.5}];             // right in front of you
+    {d:1.9, z:.68, y:.75},                // close, low, in the near doorway
+    {d:1.35, z:-.22, y:1.5}];             // right in front of you
   // sounds, made here: little running steps (louder and to one side as it comes), the click of the light, the scream when it jumps
   // the doll's head: the Attention doll with its body hidden. the full file (its own textures) sits next to the page; if it can't be fetched, the copy Attention carries is used
-  const DOLL_URL = 'bleood_doll.glb', HEAD_CY = 92, HEAD_S = .02;      // where the head's centre is in the model (model units), and how big it floats
+  const DOLL_URL = 'bleood_doll.glb', HEAD_CY = 92, HEAD_S = .02, PAINTING_FILE = 'bleood_painting.png';      // where the head's centre is in the model (model units), and how big it floats
   let dollLoading = null;
   function loadDollHead(){
     if(dollLoading) return dollLoading;
@@ -4890,11 +4879,13 @@ const LIVING = (function(){
     if(u.kind === 'memory'){ playMemory(); return; }
     if(u.kind === 'halldrawer'){
       const H1 = level.hall1; H1.drawerOpen = !H1.drawerOpen; u.prompt = H1.drawerOpen ? 'close' : 'open';
-      if(H1.drawerOpen && !H1.hasKey) H1.keyParts.forEach(m => { if(!level.interactives.includes(m)) level.interactives.push(m); });
+      // (nothing in the drawer any more)
       if(!H1.drawerOpen) level.interactives = level.interactives.filter(m => !H1.keyParts.includes(m));
       return;
     }
     if(u.kind === 'hallkey'){ const H1 = level.hall1; H1.hasKey = true; H1.key.visible = false; level.interactives = level.interactives.filter(m => !H1.keyParts.includes(m)); flash('a small key'); return; }
+    if(u.kind === 'painting'){ const H1 = level.hall1, P = H1.painting; if(H1.hasKey){ flash('him, healing the man of his demons'); return; }
+      H1.hasKey = true; P.key.visible = false; u.prompt = ''; level.interactives = level.interactives.filter(m => !(m.userData === u) || m === P.pic); flash('a small key, tucked into the frame'); return; }
     if(u.kind === 'sidedoor'){
       const H1 = level.hall1;
       if(!H1.hasKey){ flash('locked'); return; }
