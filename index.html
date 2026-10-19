@@ -4201,7 +4201,8 @@ const LIVING = (function(){
     H.on = true; H.t0 = now; H.grace = now + HAUNT.GRACE; H.charge = 0; H.snaps = 0; H.px = px; H.pz = pz; H.py = 1.75; H.seed = Math.random() * 7; H.toldFull = false;
     H.model.position.set(H.px, H.py, H.pz); H.model.visible = true; if(H.mats) H.mats.forEach(mt => mt.emissiveIntensity = .5);
     if(H.who === 'her'){ H.herHead.eyes.forEach(e => e.visible = true); H.herHead.glow.intensity = 1.8; }
-    if(camUp){ capHint.textContent = ringHint(H); capHint.classList.add('on'); }
+    const inFight = level.arena && level.arena.state === 'fighting';      // (in the big room you are past instructions)
+    if(camUp && !inFight){ capHint.textContent = ringHint(H); capHint.classList.add('on'); }
     else if(!raiseHinted){ raiseHinted = true; flash(TOUCH ? 'something is here. raise the camera' : 'something is here. raise the camera (C)'); }      // the first time only
     if(H.who === 'her'){ if(plushAudio()) burst(AC.currentTime + .01, .6, .3, 200, 600, 0); }
     plushSteps(3, 0); redLevel = Math.max(redLevel, .5); lsfx('sting', .9);
@@ -4328,7 +4329,8 @@ const LIVING = (function(){
     }
     capEl.classList.toggle('cold', charging); camFrame.querySelector('.cf-charge').classList.toggle('on', charging && camUp);
     const ch = T ? T.charge : 0, lit = Math.floor(ch * 7 + 1e-6); capEl.querySelectorAll('i').forEach((el, i)=> el.classList.toggle('lit', i < lit)); capEl.classList.toggle('full', ch >= 1);
-    if(T && camUp && capHint.textContent !== ringHint(T)){ capHint.textContent = ringHint(T); capHint.classList.add('on'); }
+    if(A && A.state === 'fighting') capHint.classList.remove('on');
+    else if(T && camUp && capHint.textContent !== ringHint(T)){ capHint.textContent = ringHint(T); capHint.classList.add('on'); }
   }
   function nextRoom(){ return hallPass >= 4 ? buildRitual : hallPass === 2 ? buildDarkRoom : buildHallway; }
 
@@ -5928,7 +5930,7 @@ const LIVING = (function(){
     }else if(camera.fov !== 70){ camera.fov = 70; camera.updateProjectionMatrix(); }
 
     if(level && level.tick && !switching) level.tick(now);
-    if(level && level.haunt) edgeMarkers();
+    if(level) edgeMarkers();
     if(level && level.demon && !reduce) animateDemon(level.demon, now);
     if(level && level.watch && !switching && !level.intro && !tipOpen) watchStep(level.watch, now);
 
