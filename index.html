@@ -4187,6 +4187,15 @@ const LIVING = (function(){
     (H.fx || []).forEach(f => { f.age += dt; f.o.position.addScaledVector(f.v, dt); f.v.y -= 4 * dt; f.o.rotation.z += f.w * dt; f.o.lookAt(cam); f.o.material.opacity = Math.max(0, 1 - f.age / f.life); });
     if(t > .7){ (H.fx || []).forEach(f => level.group.remove(f.o)); H.fx = null; H.dying = 0; m.scale.setScalar(1); hauntEnd(true); }
   }
+  // caught by the doll's head: the corridor's scare, the head on the camera shaking in your face, then everything starts over
+  function hauntScareHim(H){
+    const m = H.model; H.scare = performance.now(); H.next = performance.now() + 1e9; capEl.classList.remove('full'); capHint.classList.remove('on');
+    plushScream(); redLevel = 1; level.shake = .2; lsfx('sting', .9);
+    if(m){ m.visible = true; camera.add(m); m.position.set(0, -.1, -1.8); m.rotation.set(0, 0, 0); m.scale.setScalar(1.7); }
+    const lv = level;
+    setTimeout(()=>{ if(level !== lv) return; level.shake = 0; fadeTo = 1;
+      setTimeout(()=>{ if(level !== lv) return; if(m){ camera.remove(m); m.scale.setScalar(1); m.visible = false; } restart(true); }, 750); }, 950);
+  }
   function hauntEnd(killed){
     const H = level.haunt; H.on = false; if(H.model) H.model.visible = false; capEl.classList.remove('full'); capEl.querySelectorAll('i').forEach(el => el.classList.remove('lit')); capHint.classList.remove('on');
     const A = level.arena;
@@ -4231,6 +4240,7 @@ const LIVING = (function(){
     if(!H.on){ if(now > H.next){ if(busy || !haveCamera()) H.next = now + 4000 + Math.random() * 4000; else hauntStart(now); } return; }
     if(busy) return;
     if(H.dying){ hauntDieStep(H, now, dt); return; }
+    if(H.scare){ const m = H.model; if(m && m.parent === camera){ const e = 1 - Math.pow(1 - Math.min(1, (now - H.scare) / 240), 3); m.position.set((Math.random() - .5) * .05, -.12 + (Math.random() - .5) * .04, -1.8 + 1.1 * e); m.rotation.z = (Math.random() - .5) * .08; } return; }
     const m = H.model, t = now / 1000 + H.seed, cam = camera.position;
     // it drifts toward you, weaving, sinking as it comes
     const dx = cam.x - H.px, dz = cam.z - H.pz, d = Math.hypot(dx, dz);
@@ -4243,7 +4253,7 @@ const LIVING = (function(){
     if(H.who === 'her'){ m.updateMatrixWorld(true); gazeAt(H.herHead.eyes, H.herHead.group); H.herHead.glow.intensity = 1.4 + Math.random() * .8; }
     m.visible = camUp;      // without the camera up there is nothing to see: only the feeling of it
     if(!camUp){ redLevel = Math.max(redLevel, (.3 + Math.max(0, 1 - d / 3) * .5) * (.55 + .45 * Math.sin(now / 160))); }      // the edges of the view pulse red as it comes
-    if(d < .55 && now > H.grace){ hauntEnd(false); const W = {eyes:[], eyeGlow:{intensity:0}, scaring:false, head:null}; jumpscare(W); return; }      // it has you
+    if(d < .55 && now > H.grace){ if(H.who === 'him') hauntScareHim(H); else { hauntEnd(false); const W = {eyes:[], eyeGlow:{intensity:0}, scaring:false, head:null}; jumpscare(W); } return; }      // it has you
     // is its face in the ring? (its place on the screen against the ring's size)
     if(!HV) HV = new THREE.Vector3();
     HV.set(H.px, H.py, H.pz).project(camera);
@@ -5221,9 +5231,8 @@ const LIVING = (function(){
   }
   function typeChar(ch){
     const want = WORDS[twIndex];
-    lsfx('tick', .9);      // the hammer on the page, right or wrong
-    if(ch === want[twTyped.length]){ twTyped += ch; }
-    else { twTyped = ''; panel.classList.add('jolt'); setTimeout(()=>panel.classList.remove('jolt'), 200); }
+    if(ch === want[twTyped.length]){ lsfx('tick', .9); twTyped += ch; }      // the hammer on the page
+    else { lsfx('locked', .9); twTyped = ''; panel.classList.add('jolt'); setTimeout(()=>panel.classList.remove('jolt'), 200); }
     if(twTyped === want){
       twIndex++; twTyped = '';
       if(twIndex >= WORDS.length){ closePanel(); done.type = true; gained(); return; }
