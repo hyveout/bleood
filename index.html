@@ -3899,7 +3899,7 @@ const LIVING = (function(){
     for(let i = 0; i < 6; i++){ const s = new THREE.Mesh(new THREE.PlaneGeometry(.6 + Math.random() * .8, .6 + Math.random() * .8), stainMat());
       s.rotation.x = -Math.PI/2; s.rotation.z = Math.random() * 6; s.position.set(-w/2 + .4 + Math.random() * (w - .8), .006 + i * .0005, -d/2 + .6 + Math.random() * (d - 1.2)); g.add(s); }
     level.distort = [0, 0.6, 1.0][p-1];
-    scene.fog = new THREE.Fog(FOGC, [3.5, 3.0, 1.8][Math.min(p, 3) - 1], [11, 10, 6][Math.min(p, 3) - 1]);      // the second (the chase) lets you see about nine metres down it
+    scene.fog = new THREE.Fog(FOGC, [2.0, 3.0, 1.8][Math.min(p, 3) - 1], [6.5, 10, 6][Math.min(p, 3) - 1]);      // the key hall is as dark as the chase ends up      // the second (the chase) lets you see about nine metres down it
 
     // the lamps are the light: warm under red shades, fewer of them each time
     const lights = [];
