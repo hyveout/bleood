@@ -2401,7 +2401,7 @@ const LIVING = (function(){
     const base = {wall:'#5a544b', floor:'#2a2521', ceil:'#3a3630', bed:'#4a4640', sheet:'#8f8a80', pillow:'#a39d92',
                   wood:'#1f1812', bark:'#221d18', sheet:'#6e685e', pillow:'#7f776c', hall:'#33302b', hallfloor:'#191715', door:'#3b2d21', doorback:'#3b2d21', panel:'#3a2a1d', ritual:'#151311', black:'#010101', paper:'#d9d3c4', dresser:'#3a2a1d', shade:'#5a1212', cloth:'#2a1a16', mirror:'#0a0a0c'}[kind] || '#333';
     g.fillStyle = base; g.fillRect(0,0,S,S);
-    if(!['wall','hall','ceil','dresser','door','doorback','panel','damask','carpet','stain','tatami','shoji','plank','black','boards','shade','cloth'].includes(kind)) for(let i = 0; i < S*S/4; i++){
+    if(!['wall','hall','ceil','dresser','door','doorback','panel','damask','carpet','stain','tatami','shoji','plank','black','boards','shade','cloth','rug','rust','plaster'].includes(kind)) for(let i = 0; i < S*S/4; i++){
       const v = (Math.random() * 40 - 20) | 0;
       g.fillStyle = 'rgba(' + (128+v) + ',' + (124+v) + ',' + (116+v) + ',.16)';
       g.fillRect((Math.random()*S)|0, (Math.random()*S)|0, 2, 2);
@@ -2441,6 +2441,27 @@ const LIVING = (function(){
         for(let k = 0; k < 9; k++){ g.strokeStyle = 'rgba(0,0,0,' + (.1 + Math.random()*.2) + ')'; g.lineWidth = 1; g.beginPath(); const yy = y + 4 + Math.random()*(S/4 - 6); g.moveTo(0, yy); g.bezierCurveTo(S*.3, yy + (Math.random()-.5)*3, S*.7, yy + (Math.random()-.5)*3, S, yy); g.stroke(); }
         g.fillStyle = 'rgba(255,200,140,.05)'; g.fillRect(0, y + 3, S, 2); }
       const T = new THREE.CanvasTexture(c); T.magFilter = THREE.NearestFilter; T.minFilter = THREE.NearestFilter; T.wrapS = T.wrapT = THREE.RepeatWrapping; return T;
+    }
+    if(kind === 'rust'){
+      g.fillStyle = '#231a14'; g.fillRect(0, 0, S, S);
+      for(let i = 0; i < S * S / 2; i++){ const v = Math.random(); g.fillStyle = v < .5 ? 'rgba(120,55,25,' + (.15 + Math.random() * .35) + ')' : 'rgba(20,16,14,' + (.2 + Math.random() * .4) + ')'; g.fillRect((Math.random() * S) | 0, (Math.random() * S) | 0, 1 + (Math.random() * 2 | 0), 1); }
+      for(let i = 0; i < 5; i++){ const x = Math.random() * S, y = Math.random() * S, rad = S * (.08 + Math.random() * .2), gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, 'rgba(150,70,30,.5)'); gr.addColorStop(1, 'rgba(150,70,30,0)'); g.fillStyle = gr; g.fillRect(0, 0, S, S); }
+      const T = new THREE.CanvasTexture(c); T.magFilter = THREE.NearestFilter; T.minFilter = THREE.NearestFilter; T.wrapS = T.wrapT = THREE.RepeatWrapping; return T;
+    }
+    if(kind === 'rug'){
+      // an old round rug: dark red wool with a faded border and a worn ring of pattern, bald where feet went, moth-eaten to holes at the edge
+      const cx = S / 2, cy = S / 2, R = S / 2;
+      g.fillStyle = '#2e1916'; g.fillRect(0, 0, S, S);
+      g.strokeStyle = 'rgba(90,60,40,.5)'; g.lineWidth = Math.max(1, S * .05); g.beginPath(); g.arc(cx, cy, R * .9, 0, Math.PI * 2); g.stroke();
+      g.strokeStyle = 'rgba(120,80,50,.35)'; g.lineWidth = Math.max(1, S * .02); g.beginPath(); g.arc(cx, cy, R * .6, 0, Math.PI * 2); g.stroke();
+      for(let i = 0; i < 12; i++){ const a = i / 12 * Math.PI * 2; g.fillStyle = 'rgba(110,70,45,.3)'; g.beginPath(); g.arc(cx + Math.cos(a) * R * .75, cy + Math.sin(a) * R * .75, S * .035, 0, Math.PI * 2); g.fill(); }
+      for(let i = 0; i < S * S / 6; i++){ const v = (Math.random() * 30 - 15) | 0; g.fillStyle = 'rgba(' + (70 + v) + ',' + (40 + v) + ',' + (32 + v) + ',.3)'; g.fillRect((Math.random() * S) | 0, (Math.random() * S) | 0, 1, 2); }      // the weave
+      for(let i = 0; i < 6; i++){ const x = cx + (Math.random() - .5) * R, y = cy + (Math.random() - .5) * R, rad = S * (.06 + Math.random() * .14), gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, 'rgba(60,48,40,.55)'); gr.addColorStop(1, 'rgba(60,48,40,0)'); g.fillStyle = gr; g.fillRect(0, 0, S, S); }      // worn bald
+      for(let i = 0; i < 5; i++){ const x = cx + (Math.random() - .5) * R * 1.2, y = cy + (Math.random() - .5) * R * 1.2, rad = S * (.1 + Math.random() * .2), gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, 'rgba(0,0,0,.5)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, S, S); }      // grime
+      g.globalCompositeOperation = 'destination-out';
+      for(let i = 0; i < 7; i++){ const a = Math.random() * Math.PI * 2, rr = R * (.62 + Math.random() * .36), x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr; g.beginPath(); g.ellipse(x, y, S * (.02 + Math.random() * .05), S * (.015 + Math.random() * .04), Math.random() * 3, 0, Math.PI * 2); g.fill(); }      // holes
+      g.globalCompositeOperation = 'source-over';
+      const T = new THREE.CanvasTexture(c); T.magFilter = THREE.NearestFilter; T.minFilter = THREE.NearestFilter; return T;
     }
     if(kind === 'plaster'){
       // old lime plaster: grey-beige, mottled, cracked, water running down it in dark tongues from the top, grubby at the foot
@@ -2638,7 +2659,7 @@ const LIVING = (function(){
   }
   function framing(g, w, d, h, cx, cz, open){
     cx = cx || 0; cz = cz || 0; open = open || {};
-    const postM = mat('dresser', 1, 4), beamM = mat('dresser', 6, 1), r = (a, b) => a + Math.random() * (b - a);      // grained, grimy timber
+    const postM = mat('dresser', 1, 4, {color:0x5a5048}), beamM = mat('dresser', 6, 1, {color:0x5a5048}), r = (a, b) => a + Math.random() * (b - a);      // grained, grimy timber, dark
     const post = (x, z, ry)=>{ const p = new THREE.Mesh(new THREE.BoxGeometry(.16, h, .11), postM); p.position.set(x, h / 2, z); p.rotation.y = ry; p.rotation.z = r(-.012, .012); g.add(p);
       if(Math.random() < .3){ const ch = new THREE.Mesh(new THREE.PlaneGeometry(.09, .34), charmMat()); ch.position.set(0, r(.1, .5), .06); ch.rotation.z = r(-.08, .08); p.add(ch); } };
     const beam = (len, x, z, ry, y, sz)=>{ const b = new THREE.Mesh(new THREE.BoxGeometry(len, sz, .13), beamM); b.position.set(x, y, z); b.rotation.y = ry; g.add(b); };
@@ -2647,7 +2668,7 @@ const LIVING = (function(){
       const alongX = i < 2, n = Math.max(1, Math.round(len / 2.1)), step = len / n;
       const holes = (i === 0 ? open.backHoles : i === 1 ? open.frontHoles : i === 2 ? open.leftHoles : null) || [];      // doorways in this wall: no post within reach of one
       for(let j = 0; j <= n; j++){ const t = -len / 2 + j * step + (j && j < n ? r(-.15, .15) : 0), at = alongX ? cx + t : cz + t; if(holes.some(hh => Math.abs(hh - at) < .85)) continue; if(alongX) post(at, k, ry); else post(k, at, ry); }
-      if(alongX){ beam(len, cx, k, ry, h - .22, .2); beam(len, cx, k, ry, .1, .14); } else { beam(len, k, cz, ry, h - .22, .2); beam(len, k, cz, ry, .1, .14); }
+      if(alongX){ beam(len, cx, k, ry, h - .22, .2); beam(len, cx, k, ry, .075, .15); } else { beam(len, k, cz, ry, h - .22, .2); beam(len, k, cz, ry, .075, .15); }      // the sill stands on the floor
     });
   }
   let coveTex = null;
@@ -2660,7 +2681,7 @@ const LIVING = (function(){
   // the dark that gathers at the top of the walls and down every corner of a room w by d by h, centred on (cx, cz)
   function cove(g, w, d, h, cx, cz, open){
     cx = cx || 0; cz = cz || 0; open = open || {};      // open.front / open.back: that end has no wall, so no dark across it and no corners there
-    const CH = Math.min(1.9, h * .6), CW = .9, m = coveMat();
+    const CH = Math.min(2.1, h * .66), CW = 1.3, m = coveMat();
     const strip = (len, x, y, z, ry, rz, height, width)=>{ const q = new THREE.Mesh(new THREE.PlaneGeometry(len, height), m); q.position.set(x, y, z); q.rotation.order = 'YXZ'; q.rotation.y = ry; q.rotation.z = rz || 0; q.renderOrder = 3; g.add(q); return q; };
     // along the top of each wall (the gradient runs top to bottom)
     if(!open.back) strip(w, cx, h - CH/2, cz - d/2 + .015, 0, 0, CH); if(!open.front) strip(w, cx, h - CH/2, cz + d/2 - .015, Math.PI, 0, CH);
@@ -2681,8 +2702,13 @@ const LIVING = (function(){
       const m = cobweb(g, x, h - sz2/2 - .01, z, sz < 0 ? 0 : Math.PI, sz2);
       m.rotation.z = sx * sz < 0 ? 0 : Math.PI / 2; if(sx < 0 && sz < 0) m.rotation.z = -Math.PI / 2; if(sx > 0 && sz > 0) m.rotation.z = -Math.PI / 2;      // (the web's corner into the room's corner)
     });
+    // the floor along every wall, dark at the skirting and fading in
+    [[0, cz - d/2 + .45, 0], [0, cz + d/2 - .45, Math.PI], [cx - w/2 + .45, 0, Math.PI / 2], [cx + w/2 - .45, 0, -Math.PI / 2]].forEach(([x, z, ry], i)=>{
+      if((i === 0 && open.back) || (i === 1 && open.front)) return;
+      const len = i < 2 ? w : d, q = new THREE.Mesh(new THREE.PlaneGeometry(len, .9), m); q.position.set(i < 2 ? cx : x, .012, i < 2 ? z : cz); q.rotation.order = 'YXZ'; q.rotation.y = ry; q.rotation.x = -Math.PI / 2; q.renderOrder = 3; g.add(q);
+    });
     // and the ceiling itself, dimmed to almost nothing except right over a light
-    const lid = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshBasicMaterial({color:0x000000, transparent:true, opacity:.93, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-1}));
+    const lid = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshBasicMaterial({color:0x000000, transparent:true, opacity:.97, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-1}));
     lid.rotation.x = Math.PI/2; lid.position.set(cx, h - .01, cz); lid.renderOrder = 3; g.add(lid);
   }
   function shell(g, w, d, h, kinds, openings){
@@ -3401,8 +3427,7 @@ const LIVING = (function(){
         H.updateMatrixWorld(true); gazeAt(W.eyes, H);
       }};
     // a rug, worn through
-    const rug = new THREE.Mesh(new THREE.CircleGeometry(1.1, 32), new THREE.MeshLambertMaterial({color:FF ? 0x3a2622 : 0x2e1916})); rug.rotation.x = -Math.PI/2; rug.position.set(.3, .005, 0.4); g.add(rug);
-    const rugEdge = new THREE.Mesh(new THREE.RingGeometry(1.0, 1.1, 32), new THREE.MeshLambertMaterial({color:0x1c0f0d})); rugEdge.rotation.x = -Math.PI/2; rugEdge.position.set(.3, .006, 0.4); g.add(rugEdge);
+    const rug = new THREE.Mesh(new THREE.CircleGeometry(1.1, 32), (()=>{ const m = mat('rug', 1, 1, {transparent:true, alphaTest:.5}); m.map.wrapS = m.map.wrapT = THREE.ClampToEdgeWrapping; return m; })()); rug.rotation.x = -Math.PI/2; rug.rotation.z = .4; rug.position.set(.3, .005, 0.4); g.add(rug);
     // frames on the walls, whatever was in them gone dark
 
     // blood
@@ -3546,7 +3571,7 @@ const LIVING = (function(){
     // the chest, locked, near the far corner
     const cx = -2.6, cz = 2.5;
     const chest = new THREE.Group(); chest.position.set(cx, 0, cz); chest.rotation.y = Math.atan2(-cx, -cz); g.add(chest);
-    const cm = new THREE.MeshLambertMaterial({map:tex('dresser'), color:0x8a8078}), ironM = new THREE.MeshPhongMaterial({color:0x2a2a2a, specular:0x666666, shininess:30});
+    const cm = new THREE.MeshLambertMaterial({map:tex('dresser'), color:0x58504a}), ironM = new THREE.MeshLambertMaterial({map:tex('rust'), color:0xffffff});      // dark, filthy wood; the iron gone to rust
     // a flat trunk: an open box (so you can see and reach inside) with a flat lid hinged at the back
     const chestData = {kind:'chest', open:false};
     const part = (w2, h2, d2, x, y, z, m)=>{ const p = new THREE.Mesh(new THREE.BoxGeometry(w2, h2, d2), m || cm); p.position.set(x, y, z); p.userData = chestData; chest.add(p); level.interactives.push(p); return p; };
@@ -4024,7 +4049,7 @@ const LIVING = (function(){
     plushClick(true); if(plushAudio()) burst(AC.currentTime + .06, .05, .3, 1200, 2600, 0);
     if(H.charge >= 1){
       // caught in full: it screams, it is thrown back, it comes apart in the light and is gone
-      plushScream(); redLevel = 1; level.shake = .18;
+      plushScream(); redLevel = 1; level.shake = .18; setTimeout(()=>{ if(level && level.haunt === H) level.shake = 0; }, 450);
       flash('it is gone'); setTimeout(()=>{ if(level.haunt === H) hauntEnd(true); }, 420);
     }else{
       // too soon: only knocked back a few feet, and the runes go dark
