@@ -4673,9 +4673,10 @@ const LIVING = (function(){
       // the flames: real light flickers hard, the tall ones only breathe
       candles.forEach(c=>{
         if(!c.lit){ if(c.L) c.L.intensity = 0; return; }
-        const k = 1 + Math.sin(now / 85 + c.seed) * .13 + Math.sin(now / 37 + c.seed * 2) * .06 + (Math.random() - .5) * .16;
+        // a slow breathing, no frame-to-frame jitter: the room should feel still
+        const k = 1 + Math.sin(now / 420 + c.seed) * .06 + Math.sin(now / 190 + c.seed * 2) * .03;
         if(c.L) c.L.intensity = 1.7 * k;
-        c.fl.scale.set(.85 + (Math.random() - .5) * .3, 1.5 + (Math.random() - .5) * .8, .85);
+        c.fl.scale.set(.85 + Math.sin(now / 230 + c.seed) * .05, 1.5 + Math.sin(now / 160 + c.seed * 3) * .12, .85);
         c.halo.scale.setScalar(.72 * (.92 + (k - 1) * 1.2)); c.halo.material.opacity = .78 + (k - 1) * .5;
       });
       crown.intensity = level.revealed ? Math.min(1, (now - level.revealed) / 1500) * (1.35 + Math.sin(now / 900) * .22) : 0;
