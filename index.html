@@ -3780,7 +3780,7 @@ const LIVING = (function(){
     }
 
     camera.position.set(bx + 1.35, EYE, bz + .05); yaw = Math.atan2(-1.35, -3.3); pitch = 0;
-    setHUD('puzzles 0 / 4');
+    setHUD('challenges 0 / 4');
     // the game opens on the bed: you lie looking at the ceiling, roll off the edge, hit the floor, and get up
     level.intro = {t0:performance.now(), bedX:bx, spawn:spawnAt};
     if(openNext){ openNext = false; showOpening(); }
@@ -3802,12 +3802,12 @@ const LIVING = (function(){
       if(out && !inv.key && !level.interactives.includes(level.keyMesh)) level.interactives.push(level.keyMesh);
       if(!out && level.interactives.includes(level.keyMesh)) level.interactives.splice(level.interactives.indexOf(level.keyMesh), 1);
       level.safe.piv.rotation.y += ((level.safe.open ? -1.6 : 0) - level.safe.piv.rotation.y) * .08;
-      if(level.safe.open && !level.safe.taken && level.safe.piv.rotation.y < -1){ level.safe.taken = true; level.safe.glow.intensity = .8; setTimeout(()=>{ if(level.safe){ level.safe.note.visible = false; level.safe.glow.intensity = 0; lsfx('pick'); flash('you take it'); gained(); } }, 600); }      // the door swings and what is inside is simply yours
+      if(level.safe.open && !level.safe.taken && level.safe.piv.rotation.y < -1){ level.safe.taken = true; level.safe.glow.intensity = .8; setTimeout(()=>{ if(level.safe){ level.safe.note.visible = false; level.safe.glow.intensity = 0; lsfx('pick'); flash('relic obtained'); gained(); } }, 600); }      // the door swings and what is inside is simply yours
       if(!level.safe.taken){ level.safe.note.rotation.z = now / 700; level.safe.note.position.y = .07 + Math.sin(now / 450) * .01; }
       const c = level.chest;
       c.lidPivot.rotation.x += (((c.base.userData.open) ? -1.9 : 0) - c.lidPivot.rotation.x) * 0.08;
       if(c.base.userData.open && !done.chest && !c.relic.visible && c.lidPivot.rotation.x < -1.3){ c.relic.visible = true; c.relicLight.intensity = 1.2; done.chest = true;
-        setTimeout(()=>{ if(level.chest === c){ c.relic.visible = false; c.relicLight.intensity = 0; lsfx('pick'); flash('you take it'); gained(); } }, 700); }
+        setTimeout(()=>{ if(level.chest === c){ c.relic.visible = false; c.relicLight.intensity = 0; lsfx('pick'); flash('relic obtained'); gained(); } }, 700); }
       if(c.relic.visible){ c.relic.rotation.y = now / 600; c.relic.position.y = .3 + Math.sin(now / 500) * .03; }
       const dr = level.doors[0];
       dr.pivot.rotation.y += ((dr.ry + (dr.open ? -Math.PI/2 : 0)) - dr.pivot.rotation.y) * 0.08;
@@ -5197,7 +5197,7 @@ const LIVING = (function(){
   }
   function gained(){
     artifacts++; setTimeout(()=> lsfx('artifact', .9), 250);      // the "artifact obtained" note from Attention, after any pickup sound has landed
-    setHUD('puzzles ' + artifacts + ' / 4');
+    setHUD('challenges ' + artifacts + ' / 4');
     if(artifacts >= 4 && level.doors[0] && !level.doors[0].open){ openDoor(level.doors[0]); setHUD('the door is open'); }
   }
   function interact(o){
@@ -5206,7 +5206,7 @@ const LIVING = (function(){
     if(u.kind === 'camera'){
       // in your hands: the strap over your wrist, the room wakes up, and the warning about what it is for
       level.needCamera = false; hasCamera = true; level.cameraProp.visible = false; level.interactives = level.interactives.filter(m => m.userData !== u);
-      lsfx('pick'); openTip(); hauntArm(HAUNT.FIRST); if(camBtn) camBtn.classList.add('show');
+      flash('camera obtained'); lsfx('pick'); openTip(); hauntArm(HAUNT.FIRST); if(camBtn) camBtn.classList.add('show');
       return;
     }
     if(level.needCamera) return;
@@ -5218,7 +5218,7 @@ const LIVING = (function(){
       if(!H1.drawerOpen) level.interactives = level.interactives.filter(m => !H1.keyParts.includes(m));
       return;
     }
-    if(u.kind === 'hallkey'){ const H1 = level.hall1; H1.hasKey = true; H1.key.visible = false; level.interactives = level.interactives.filter(m => !H1.keyParts.includes(m)); flash('a small key'); lsfx('pick'); return; }
+    if(u.kind === 'hallkey'){ const H1 = level.hall1; H1.hasKey = true; H1.key.visible = false; level.interactives = level.interactives.filter(m => !H1.keyParts.includes(m)); flash('key obtained'); lsfx('pick'); return; }
     if(u.kind === 'painting'){ openPainting(); return; }
     if(u.kind === 'arenadoor'){
       const A = level.arena; if(A.state === 'fighting') return;
@@ -5235,7 +5235,7 @@ const LIVING = (function(){
     if(u.kind === 'shutdoor'){ flash('it will not open'); return; }
     if(u.kind === 'drawer'){ u.open = !u.open; return; }
     if(u.kind === 'knife'){ openPull(u); return; }
-    if(u.kind === 'key'){ inv.key = true; lsfx('pick'); level.keyGroup.visible = false; level.interactives.splice(level.interactives.indexOf(o), 1); return; }
+    if(u.kind === 'key'){ inv.key = true; lsfx('pick'); flash('key obtained'); level.keyGroup.visible = false; level.interactives.splice(level.interactives.indexOf(o), 1); return; }
     if(u.kind === 'typewriter'){ if(done.type){ flash('the page is finished'); return; } openTypewriter(); return; }
     if(u.kind === 'sigil'){
       if(done.trace){ flash('it is drawn'); return; }
@@ -5252,7 +5252,7 @@ const LIVING = (function(){
       if(c.relic.visible && !done.chest){
         done.chest = true; c.relic.visible = false; c.relicLight.intensity = 0;
         const i = level.interactives.indexOf(c.relic); if(i > -1) level.interactives.splice(i, 1);
-        flash('you take it'); lsfx('pick'); gained();
+        flash('relic obtained'); lsfx('pick'); gained();
       }
       return;
     }
@@ -5314,7 +5314,7 @@ const LIVING = (function(){
     else { lsfx('locked', .9); twTyped = ''; panel.classList.add('jolt'); setTimeout(()=>panel.classList.remove('jolt'), 200); }
     if(twTyped === want){
       twIndex++; twTyped = '';
-      if(twIndex >= WORDS.length){ closePanel(); done.type = true; gained(); return; }
+      if(twIndex >= WORDS.length){ closePanel(); done.type = true; flash('challenge complete'); gained(); return; }
     }
     renderTypewriter();
   }
@@ -5351,7 +5351,7 @@ const LIVING = (function(){
       tracePts.forEach((pt, i)=>{ if(!traceHit[i] && Math.hypot(pt[0]-q[0], pt[1]-q[1]) < 17) traceHit[i] = true; });
       const cover = traceHit.filter(Boolean).length / traceHit.length;
       const bar = panel.querySelector('.trace-bar i'); if(bar) bar.style.width = (cover * 100) + '%';
-      if(cover > 0.96 && !finished){ finished = true; tracing = false; KNIFE_CUT.stop(); setTimeout(()=>{ closePanel(); done.trace = true; level.sigilRing.material.opacity = 1; gained(); }, 700); }
+      if(cover > 0.96 && !finished){ finished = true; tracing = false; KNIFE_CUT.stop(); setTimeout(()=>{ closePanel(); done.trace = true; level.sigilRing.material.opacity = 1; flash('challenge complete'); gained(); }, 700); }
     };
     penMove = (dx, dy)=>{ pen = [Math.max(0, Math.min(360, pen[0] + dx * 0.9)), Math.max(0, Math.min(480, pen[1] + dy * 0.9))]; if(tracing){ stroke(pen.slice()); if(!finished) KNIFE_CUT.rub(); } paint(); };
     penDown = ()=>{ tracing = true; lastP = pen.slice(); paint(); KNIFE_CUT.ready(); };
@@ -5639,7 +5639,7 @@ const LIVING = (function(){
         done = true; draw(); KNIFE_CUT.stop();
         setTimeout(()=>{
           closePanel(); inv.knife = true; kn.visible = false; level.interactives = level.interactives.filter(m => m.userData !== u);
-          flash('it comes free');
+          flash('knife obtained');
         }, 450);
       }
       draw();
