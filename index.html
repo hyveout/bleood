@@ -3671,7 +3671,7 @@ const LIVING = (function(){
     const brassM = new THREE.MeshPhongMaterial({color:0x7a6232, specular:0x5a4a30, shininess:40}), ironM = new THREE.MeshLambertMaterial({color:0x1a1816});
     tzs.forEach(tz=>{
       const tx = w/2 - .3;
-      if(p === 2){
+      if(p === 2 || (p === 1 && tz === 0)){      // (the key hall keeps its dressing table, the one with the drawer and the key, as it was)
         box(g, .5, .06, .95, cabM, tx, .8, tz, false);
         box(g, .44, .62, .88, cabM, tx, .46, tz, false);
         const fr = new THREE.Mesh(new THREE.BoxGeometry(.03, .5, .8), (()=>{ const m = mat('panel', 1, 1); m.map.wrapS = m.map.wrapT = THREE.ClampToEdgeWrapping; return m; })()); fr.position.set(tx - .23, .46, tz); g.add(fr);
