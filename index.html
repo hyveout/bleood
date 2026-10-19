@@ -5745,7 +5745,7 @@ const LIVING = (function(){
       if((e.code === 'Digit1' || e.code === 'Numpad1') && haveCamera()){ setCamMode('forget'); return; }
       if((e.code === 'Digit2' || e.code === 'Numpad2') && haveCamera()){ setCamMode('remember'); return; }
       if(e.code === 'KeyE' || e.code === 'Space'){ if(noteOverlay.classList.contains('on')) hideNote(); else wantInteract = true; }
-      if(e.code === 'KeyH' && e.shiftKey){ go(nextRoom()); }          // TEMPORARY: shift+H jumps on: the chase, the key hall, the dark room, the plain hall, then the demon's room
+      if(e.code === 'KeyH' && e.shiftKey){ hasCamera = true; tipShown = true; if(level){ level.needCamera = false; if(level.cameraProp) level.cameraProp.visible = false; } if(camBtn) camBtn.classList.add('show'); go(nextRoom()); }      // (the camera comes along)          // TEMPORARY: shift+H jumps on: the chase, the key hall, the dark room, the plain hall, then the demon's room
       // DEVELOPER: Shift + D skips whatever is in front of you: a memory film ends; the corridor game is won; in hallway 1 you get the key and the side door opens; in the bedroom the door opens
       if(e.code === 'KeyD' && e.shiftKey){
         if(level && level.memory){ level.memory.finish(); }
