@@ -3802,12 +3802,12 @@ const LIVING = (function(){
       if(out && !inv.key && !level.interactives.includes(level.keyMesh)) level.interactives.push(level.keyMesh);
       if(!out && level.interactives.includes(level.keyMesh)) level.interactives.splice(level.interactives.indexOf(level.keyMesh), 1);
       level.safe.piv.rotation.y += ((level.safe.open ? -1.6 : 0) - level.safe.piv.rotation.y) * .08;
-      if(level.safe.open && !level.safe.taken && level.safe.piv.rotation.y < -1){ level.safe.taken = true; level.safe.glow.intensity = .8; setTimeout(()=>{ if(level.safe){ level.safe.note.visible = false; level.safe.glow.intensity = 0; lsfx('pick'); flash('relic obtained'); gained(); } }, 600); }      // the door swings and what is inside is simply yours
+      if(level.safe.open && !level.safe.taken && level.safe.piv.rotation.y < -1){ level.safe.taken = true; level.safe.glow.intensity = .8; setTimeout(()=>{ if(level.safe){ level.safe.note.visible = false; level.safe.glow.intensity = 0; lsfx('pick'); flash('challenge complete'); gained(); } }, 600); }      // the door swings and what is inside is simply yours
       if(!level.safe.taken){ level.safe.note.rotation.z = now / 700; level.safe.note.position.y = .07 + Math.sin(now / 450) * .01; }
       const c = level.chest;
       c.lidPivot.rotation.x += (((c.base.userData.open) ? -1.9 : 0) - c.lidPivot.rotation.x) * 0.08;
       if(c.base.userData.open && !done.chest && !c.relic.visible && c.lidPivot.rotation.x < -1.3){ c.relic.visible = true; c.relicLight.intensity = 1.2; done.chest = true;
-        setTimeout(()=>{ if(level.chest === c){ c.relic.visible = false; c.relicLight.intensity = 0; lsfx('pick'); flash('relic obtained'); gained(); } }, 700); }
+        setTimeout(()=>{ if(level.chest === c){ c.relic.visible = false; c.relicLight.intensity = 0; lsfx('pick'); flash('challenge complete'); gained(); } }, 700); }
       if(c.relic.visible){ c.relic.rotation.y = now / 600; c.relic.position.y = .3 + Math.sin(now / 500) * .03; }
       const dr = level.doors[0];
       dr.pivot.rotation.y += ((dr.ry + (dr.open ? -Math.PI/2 : 0)) - dr.pivot.rotation.y) * 0.08;
@@ -5252,7 +5252,7 @@ const LIVING = (function(){
       if(c.relic.visible && !done.chest){
         done.chest = true; c.relic.visible = false; c.relicLight.intensity = 0;
         const i = level.interactives.indexOf(c.relic); if(i > -1) level.interactives.splice(i, 1);
-        flash('relic obtained'); lsfx('pick'); gained();
+        flash('challenge complete'); lsfx('pick'); gained();
       }
       return;
     }
