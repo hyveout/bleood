@@ -4075,7 +4075,7 @@ const LIVING = (function(){
   // ---------- the doll's head in the bedroom (the camera, after Fatal Frame): it drifts in from a corner and comes for you. a ring comes up in the
   // middle of the view; keep its face inside the ring and the runes light, faster the closer it is. when they are all lit, a press takes the
   // picture and it is gone. a picture taken early only knocks it back. if it reaches you, it has you ----------
-  const HAUNT = {FIRST:[14, 26], AGAIN:[30, 55], CHARGE:2.6, SPEED:.2, START:1.9, SNAPS:3};
+  const HAUNT = {FIRST:[8, 14], AGAIN:[10, 20], CHARGE:2.6, SPEED:.2, START:1.9, SNAPS:3};
   let hauntTurn = 0;      // whose turn: his, hers, his...
   // drawn once where you cannot see it, so the first real appearance costs nothing
   function warmUp(obj){ obj.visible = true; obj.position.set(camera.position.x, -40, camera.position.z); setTimeout(()=>{ obj.visible = false; }, 120); }
@@ -4102,7 +4102,7 @@ const LIVING = (function(){
       x = Math.max(b.minX + .5, Math.min(b.maxX - .5, x)); z = Math.max(b.minZ + .5, Math.min(b.maxZ - .5, z));
       const d = Math.hypot(x - camera.position.x, z - camera.position.z); if(d > best){ best = d; px = x; pz = z; }
     }
-    if(best < 1.5){ H.next = now + 4000 + Math.random() * 4000; return; }      // nowhere to stand: wait for you to move on
+    if(best < 1.5){ H.next = now + 2500 + Math.random() * 2500; return; }      // nowhere to stand: wait for you to move on
     H.on = true; H.t0 = now; H.grace = now + 3200; H.charge = 0; H.snaps = 0; H.px = px; H.pz = pz; H.py = 1.75; H.seed = Math.random() * 7;
     H.model.position.set(H.px, H.py, H.pz); H.model.visible = true; if(H.mats) H.mats.forEach(mt => mt.emissiveIntensity = .5);
     if(H.who === 'her'){ H.herHead.eyes.forEach(e => e.visible = true); H.herHead.glow.intensity = 1.8; }
@@ -4146,7 +4146,7 @@ const LIVING = (function(){
   function hauntStep(now, dt){
     const H = level.haunt; if(!H) return;
     const busy = level.intro || tipOpen || opening || level.memory || noteOverlay.classList.contains('on') || panel.classList.contains('on') || (level.watch && level.watch.scaring) || (level.plush && level.plush.active);
-    if(!H.on){ if(now > H.next){ if(busy || !haveCamera()) H.next = now + 9000 + Math.random() * 9000; else hauntStart(now); } return; }
+    if(!H.on){ if(now > H.next){ if(busy || !haveCamera()) H.next = now + 4000 + Math.random() * 4000; else hauntStart(now); } return; }
     if(busy) return;
     const m = H.model, t = now / 1000 + H.seed, cam = camera.position;
     // it drifts toward you, weaving, sinking as it comes
