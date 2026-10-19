@@ -4291,7 +4291,7 @@ const LIVING = (function(){
     dollLoading = (async ()=>{
       if(!THREE.GLTFLoader) return null;
       let buf = null;
-      try{ const r = await fetch(DOLL_URL); if(r.ok) buf = await r.arrayBuffer(); }catch(e){}
+      for(const u of [DOLL_URL, DOLL_URL.replace(/\.glb$/, '.txt')]){ if(buf) break; try{ const r = await fetch(u); if(r.ok) buf = await r.arrayBuffer(); }catch(e){} }      // (.txt: the preview host serves no .glb)
       let tex = null;
       if(!buf){ const M = window.__dollModel; if(!M) return null; const t = atob(M.b64); const u = new Uint8Array(t.length); for(let i = 0; i < t.length; i++) u[i] = t.charCodeAt(i); buf = u.buffer; tex = M.tex; }
       const gltf = await new Promise(res => new THREE.GLTFLoader().parse(buf, '', res, ()=> res(null)));
