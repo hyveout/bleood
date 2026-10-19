@@ -1329,14 +1329,14 @@ body.mob-full .mob-exit:active{opacity:1; border-color:rgba(232,227,214,.9)}
        (blood, the closet clothes, the painted numbers) keeps most of its colour, so the safe code still reads -->
   <filter id="livgrade" color-interpolation-filters="sRGB">
     <!-- A: the grey. 30% of the colour left, a faint warm cast -->
-    <feColorMatrix in="SourceGraphic" type="matrix" result="A0" values="0.462 0.515 0.052 0 0
-                                          0.149 0.799 0.050 0 0
-                                          0.138 0.465 0.325 0 0
+    <feColorMatrix in="SourceGraphic" type="matrix" result="A0" values="0.400 0.460 0.050 0 0
+                                          0.160 0.790 0.060 0 0
+                                          0.170 0.540 0.360 0 0
                                           0     0     0     1 0"/>
     <feComponentTransfer in="A0" result="A">
-      <feFuncR type="table" tableValues="0 .07 .27 .4 .475 .55 .596 .642 .688 .734 .78 .808 .836 .864 .892 .92 .936 .952 .968 .984 1"/>
-      <feFuncG type="table" tableValues="0 .07 .27 .4 .475 .55 .596 .642 .688 .734 .78 .808 .836 .864 .892 .92 .936 .952 .968 .984 1"/>
-      <feFuncB type="table" tableValues="0 .07 .27 .4 .475 .55 .596 .642 .688 .734 .78 .808 .836 .864 .892 .92 .936 .952 .968 .984 1"/>
+      <feFuncR type="table" tableValues="0 .06 .26 .4 .48 .555 .6 .645 .69 .735 .78 .808 .836 .864 .892 .92 .936 .952 .968 .984 1"/>
+      <feFuncG type="table" tableValues="0 .06 .26 .4 .48 .555 .6 .645 .69 .735 .78 .808 .836 .864 .892 .92 .936 .952 .968 .984 1"/>
+      <feFuncB type="table" tableValues="0 .06 .26 .4 .48 .555 .6 .645 .69 .735 .78 .808 .836 .864 .892 .92 .936 .952 .968 .984 1"/>
     </feComponentTransfer>
     <!-- B: the same tone curve with 85% of the colour kept -->
     <feColorMatrix in="SourceGraphic" type="matrix" result="B0" values="0.913 0.111 0.011 0 0
@@ -1344,9 +1344,9 @@ body.mob-full .mob-exit:active{opacity:1; border-color:rgba(232,227,214,.9)}
                                           0.030 0.100 0.806 0 0
                                           0     0     0     1 0"/>
     <feComponentTransfer in="B0" result="B">
-      <feFuncR type="table" tableValues="0 .07 .27 .4 .475 .55 .596 .642 .688 .734 .78 .808 .836 .864 .892 .92 .936 .952 .968 .984 1"/>
-      <feFuncG type="table" tableValues="0 .07 .27 .4 .475 .55 .596 .642 .688 .734 .78 .808 .836 .864 .892 .92 .936 .952 .968 .984 1"/>
-      <feFuncB type="table" tableValues="0 .07 .27 .4 .475 .55 .596 .642 .688 .734 .78 .808 .836 .864 .892 .92 .936 .952 .968 .984 1"/>
+      <feFuncR type="table" tableValues="0 .06 .26 .4 .48 .555 .6 .645 .69 .735 .78 .808 .836 .864 .892 .92 .936 .952 .968 .984 1"/>
+      <feFuncG type="table" tableValues="0 .06 .26 .4 .48 .555 .6 .645 .69 .735 .78 .808 .836 .864 .892 .92 .936 .952 .968 .984 1"/>
+      <feFuncB type="table" tableValues="0 .06 .26 .4 .48 .555 .6 .645 .69 .735 .78 .808 .836 .864 .892 .92 .936 .952 .968 .984 1"/>
     </feComponentTransfer>
     <!-- how coloured each pixel is: |r-g| + |g-b| + |b-r|, built from two clamped difference passes -->
     <feColorMatrix in="SourceGraphic" type="matrix" result="d1" values="1 -1 0 0 0  0 1 -1 0 0  -1 0 1 0 0  0 0 0 1 0"/>
@@ -2428,6 +2428,18 @@ const LIVING = (function(){
         g.fillStyle = 'rgba(255,200,140,.05)'; g.fillRect(0, y + 3, S, 2); }
       const T = new THREE.CanvasTexture(c); T.magFilter = THREE.NearestFilter; T.minFilter = THREE.NearestFilter; T.wrapS = T.wrapT = THREE.RepeatWrapping; return T;
     }
+    if(kind === 'plaster'){
+      // old lime plaster: grey-beige, mottled, cracked, water running down it in dark tongues from the top, grubby at the foot
+      g.fillStyle = '#9a9384'; g.fillRect(0, 0, S, S);
+      for(let i = 0; i < S * S / 3; i++){ const v = (Math.random() * 34 - 17) | 0; g.fillStyle = 'rgba(' + (140 + v) + ',' + (133 + v) + ',' + (118 + v) + ',.35)'; g.fillRect((Math.random() * S) | 0, (Math.random() * S) | 0, 2, 2); }
+      for(let i = 0; i < 9; i++){ const x = Math.random() * S, y = Math.random() * S, rad = S * (.1 + Math.random() * .3), gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, 'rgba(50,45,38,' + (.15 + Math.random() * .3) + ')'); gr.addColorStop(1, 'rgba(50,45,38,0)'); g.fillStyle = gr; g.fillRect(0, 0, S, S); }
+      for(let i = 0; i < 4; i++){ const x = Math.random() * S, wdt = S * (.04 + Math.random() * .1), ln = S * (.3 + Math.random() * .7), gr = g.createLinearGradient(0, 0, 0, ln); gr.addColorStop(0, 'rgba(30,28,24,.45)'); gr.addColorStop(1, 'rgba(30,28,24,0)'); g.fillStyle = gr; g.fillRect(x, 0, wdt, ln); }      // water from above
+      g.lineWidth = 1;
+      for(let i = 0; i < 5; i++){ let x = Math.random() * S, y = Math.random() * S * .6; g.strokeStyle = 'rgba(20,18,15,' + (.5 + Math.random() * .4) + ')'; g.beginPath(); g.moveTo(x, y); for(let k = 0; k < 7; k++){ x += (Math.random() - .5) * S * .12; y += Math.random() * S * .1; g.lineTo(x, y); } g.stroke(); }      // cracks
+      const ft = g.createLinearGradient(0, S * .7, 0, S); ft.addColorStop(0, 'rgba(0,0,0,0)'); ft.addColorStop(1, 'rgba(10,8,6,.6)'); g.fillStyle = ft; g.fillRect(0, 0, S, S);
+      const hd = g.createLinearGradient(0, 0, 0, S * .25); hd.addColorStop(0, 'rgba(10,8,6,.5)'); hd.addColorStop(1, 'rgba(10,8,6,0)'); g.fillStyle = hd; g.fillRect(0, 0, S, S);
+      const T = new THREE.CanvasTexture(c); T.magFilter = THREE.NearestFilter; T.minFilter = THREE.NearestFilter; T.wrapS = T.wrapT = THREE.RepeatWrapping; return T;
+    }
     if(kind === 'damask'){
       // cream paper, columns of faded red-brown floral motifs, aged and grubby
       g.fillStyle = '#cdb99a'; g.fillRect(0,0,S,S);
@@ -2555,7 +2567,7 @@ const LIVING = (function(){
     T.wrapS = T.wrapT = THREE.RepeatWrapping;
     return T;
   }
-  function mat(kind, rx, ry, opts){ const T = tex(kind, ['door','doorback','panel','damask','carpet','tatami','shoji','plank','boards'].includes(kind) ? 128 : 64); T.repeat.set(rx || 1, ry || 1); return new THREE.MeshLambertMaterial(Object.assign({map:T}, opts || {})); }
+  function mat(kind, rx, ry, opts){ const T = tex(kind, ['door','doorback','panel','damask','carpet','tatami','shoji','plank','boards','plaster'].includes(kind) ? 128 : 64); T.repeat.set(rx || 1, ry || 1); return new THREE.MeshLambertMaterial(Object.assign({map:T}, opts || {})); }
   function imgTex(src, cb){ new THREE.TextureLoader().load(src, tx=>{ tx.magFilter = THREE.NearestFilter; tx.minFilter = THREE.NearestFilter; cb(tx); }); }
 
   // ---------- the dither pass: everything becomes hard black and white ----------
@@ -2594,12 +2606,35 @@ const LIVING = (function(){
   // wallpaper for one piece of wall: the pattern is sized to that piece (not stretched from another wall's length), and shifted so
   // pieces that meet round a doorway line up. the pattern's scale is the same on every wall
   function wallPiece(kind, pw, ph, h, x, y, z, ry){
-    const per = kind === 'damask' ? [1.4, h / 2] : kind === 'shoji' ? [1.0, 1.0] : kind === 'plank' ? [1.2, 1.2] : [1.2, h];
+    const per = kind === 'damask' ? [1.4, h / 2] : kind === 'plaster' ? [2.2, h] : kind === 'shoji' ? [1.0, 1.0] : kind === 'plank' ? [1.2, 1.2] : [1.2, h];
     const m = mat(kind, pw / per[0], ph / per[1]);
     const ax = Math.cos(ry), az = -Math.sin(ry);                         // which way the piece's width runs along the floor
     const u = (x - ax * pw / 2) * ax + (z - az * pw / 2) * az, v = y - ph / 2;
     m.map.offset.set(((u / per[0]) % 1 + 1) % 1, ((v / per[1]) % 1 + 1) % 1);
     return m;
+  }
+  // the timber frame that holds the plaster: dark posts every couple of metres with a head beam over them and a sill at the foot, and
+  // on a few posts a paper charm, the ink run. nothing of this is square any more
+  let charmTex = null;
+  function charmMat(){
+    if(!charmTex){ const c = document.createElement('canvas'); c.width = 16; c.height = 64; const q = c.getContext('2d');
+      q.fillStyle = '#d9d2c0'; q.fillRect(0, 0, 16, 64); q.fillStyle = 'rgba(120,20,14,.8)'; for(let i = 0; i < 9; i++){ q.fillRect(4 + Math.random() * 6, 6 + i * 6, 2 + Math.random() * 5, 2); }
+      q.fillStyle = 'rgba(60,40,20,.35)'; q.fillRect(0, 52, 16, 12); q.fillRect(0, 0, 16, 3); charmTex = new THREE.CanvasTexture(c); charmTex.magFilter = THREE.NearestFilter; }
+    return new THREE.MeshLambertMaterial({map:charmTex});
+  }
+  function framing(g, w, d, h, cx, cz, open){
+    cx = cx || 0; cz = cz || 0; open = open || {};
+    const postM = mat('wood', 1, 3), beamM = mat('wood', 4, 1), r = (a, b) => a + Math.random() * (b - a);
+    const post = (x, z, ry)=>{ const p = new THREE.Mesh(new THREE.BoxGeometry(.16, h, .11), postM); p.position.set(x, h / 2, z); p.rotation.y = ry; p.rotation.z = r(-.012, .012); g.add(p);
+      if(Math.random() < .3){ const ch = new THREE.Mesh(new THREE.PlaneGeometry(.09, .34), charmMat()); ch.position.set(0, r(.1, .5), .06); ch.rotation.z = r(-.08, .08); p.add(ch); } };
+    const beam = (len, x, z, ry, y, sz)=>{ const b = new THREE.Mesh(new THREE.BoxGeometry(len, sz, .13), beamM); b.position.set(x, y, z); b.rotation.y = ry; g.add(b); };
+    [[cz - d/2 + .06, 0, w, true], [cz + d/2 - .06, Math.PI, w, !open.front && !open.frontOpen], [cx - w/2 + .06, Math.PI / 2, d, true], [cx + w/2 - .06, -Math.PI / 2, d, true]].forEach(([k, ry, len, on], i)=>{
+      if(!on || (i === 0 && open.back) || (i === 3 && open.noRight)) return;
+      const alongX = i < 2, n = Math.max(1, Math.round(len / 2.1)), step = len / n;
+      const holes = (i === 0 ? open.backHoles : i === 1 ? open.frontHoles : i === 2 ? open.leftHoles : null) || [];      // doorways in this wall: no post within reach of one
+      for(let j = 0; j <= n; j++){ const t = -len / 2 + j * step + (j && j < n ? r(-.15, .15) : 0), at = alongX ? cx + t : cz + t; if(holes.some(hh => Math.abs(hh - at) < .85)) continue; if(alongX) post(at, k, ry); else post(k, at, ry); }
+      if(alongX){ beam(len, cx, k, ry, h - .22, .2); beam(len, cx, k, ry, .1, .14); } else { beam(len, k, cz, ry, h - .22, .2); beam(len, k, cz, ry, .1, .14); }
+    });
   }
   let coveTex = null;
   function coveMat(){
@@ -2676,6 +2711,7 @@ const LIVING = (function(){
     };
     const o = openings || {};
     cove(g, w, d, h, 0, 0, {front:o.front === 'none'});
+    if(kinds.wall === 'plaster') framing(g, w, d, h, 0, 0, {front:o.front === 'none', backHoles:typeof o.back === 'number' ? [o.back] : [], frontHoles:typeof o.front === 'number' ? [o.front] : [], leftHoles:(o.left !== undefined ? [o.left] : []).concat(o.decoLeft || [])});
     wallWithHole(-d/2, 0, o.back);
     wallWithHole(d/2, Math.PI, o.front);
     if(leftHole){
@@ -3655,18 +3691,19 @@ const LIVING = (function(){
     level.bounds = {minX:-w/2+.35, maxX:w/2-.35, minZ:-d/2 - .4, maxZ:d/2+.4};
     // pass two has no doorway at the far end at all
     const SIDE_Z = 2.5;                                  // hallway one: the second door on the left is a real one, into the doll's corridor
-    shell(g, w, d, h, {floor:'boards', ceil:'ceil', wall:'damask'}, p === 2 ? {back:0, front:'none'} : p === 1 ? {front:0, back:0, left:SIDE_Z} : {front:0, back:0});
+    shell(g, w, d, h, {floor:'boards', ceil:'ceil', wall:'plaster'}, p === 2 ? {back:0, front:'none', decoLeft:d > 10 ? [-3, 2.5] : [-1.5]} : p === 1 ? {front:0, back:0, left:SIDE_Z, decoLeft:[-3]} : {front:0, back:0, decoLeft:d > 10 ? [-3, 2.5] : [-1.5]});
     if(p === 2){
       // no end wall at all: the corridor runs on past the thing in it, into the dark
       const L = 40, z0 = d/2;
       const fl = new THREE.Mesh(new THREE.PlaneGeometry(w, L), mat('boards', w / 1.2, L / 1.2)); fl.rotation.x = -Math.PI/2; fl.position.set(0, 0, z0 + L/2); g.add(fl);
       const cl = new THREE.Mesh(new THREE.PlaneGeometry(w, L), mat('ceil', w / 1.5, L / 1.5)); cl.rotation.x = Math.PI/2; cl.position.set(0, h, z0 + L/2); g.add(cl);
       [-1, 1].forEach(sd=>{
-        const wl = new THREE.Mesh(new THREE.PlaneGeometry(L, h), mat('damask', L / 1.4, 2)); wl.position.set(sd * w/2, h/2, z0 + L/2); wl.rotation.y = -sd * Math.PI/2; g.add(wl);
+        const wl = new THREE.Mesh(new THREE.PlaneGeometry(L, h), mat('plaster', L / 2.2, 1)); wl.position.set(sd * w/2, h/2, z0 + L/2); wl.rotation.y = -sd * Math.PI/2; g.add(wl);
         const wn = new THREE.Mesh(new THREE.BoxGeometry(.04, .95, L), mat('panel', L / 1.1, 1)); wn.position.set(sd * (w/2 - .025), .475, z0 + L/2); g.add(wn);
         box(g, .07, .05, L, new THREE.MeshLambertMaterial({color:0x1a120c}), sd * (w/2 - .035), .97, z0 + L/2, false);
       });
       cove(g, w, L, h, 0, z0 + L/2, {back:true});      // the same dark along the top, all the way down; no edge where the hall ends
+      framing(g, w, L, h, 0, z0 + L/2, {back:true, front:true});
     }
     // dark wood wainscoting and a chair rail along both walls
     const wainM = mat('panel', d / 1.1, 1), railM = new THREE.MeshLambertMaterial({color:0x1a120c});
@@ -3735,6 +3772,19 @@ const LIVING = (function(){
       }
     });
     doorZs.forEach(z=>{ if(!(p === 1 && z === SIDE_Z)) door(g, -w/2 + .03, z, Math.PI/2, 'deco'); });
+    // what else stands about: rough crates against the walls, one with a candle burning on it; a cupboard with its doors gone
+    if(p !== 2){
+      const crateM = mat('wood', 1, 1), r = (a, b) => a + Math.random() * (b - a);
+      const crate = (x, z, sz, ry)=>{ const c = new THREE.Mesh(new THREE.BoxGeometry(sz, sz * .8, sz), crateM); c.position.set(x, sz * .4, z); c.rotation.y = ry; g.add(c);
+        [[0, 1], [0, -1]].forEach(([a, b2])=>{ const sl = new THREE.Mesh(new THREE.BoxGeometry(sz * .9, .03, .03), railM); sl.position.set(0, sz * .25, b2 * sz / 2); c.add(sl); const sl2 = sl.clone(); sl2.position.y = -sz * .25; c.add(sl2); });
+        level.solids.push({minX:x - sz / 2, maxX:x + sz / 2, minZ:z - sz / 2, maxZ:z + sz / 2}); return c; };
+      const c1 = crate(-w/2 + .5, d/2 - 2.2, .62, r(-.2, .2)); crate(-w/2 + .45, d/2 - 2.85, .5, r(-.3, .3));
+      if(p === 3){ crate(w/2 - .5, -d/2 + 1.6, .56, r(-.2, .2)); }
+      // a candle on the top crate, the only warm light in the plain hall
+      const cd = new THREE.Mesh(new THREE.CylinderGeometry(.02, .024, .12, 8), new THREE.MeshLambertMaterial({color:0xd8cfb8})); cd.position.set(0, .62 * .4 + .06, 0); c1.add(cd);
+      const fl = new THREE.Mesh(new THREE.SphereGeometry(.014, 6, 6), new THREE.MeshBasicMaterial({color:0xffd9a0})); fl.scale.y = 2; fl.position.set(0, .62 * .4 + .14, 0); c1.add(fl);
+      const cl = new THREE.PointLight(0xffc070, .7, 3.5, 1.8); cl.position.set(0, .62 * .4 + .3, 0); c1.add(cl); level.candleLight = cl;
+    }
     // stains soaked into the boards
     const stainMat = ()=> new THREE.MeshLambertMaterial({map:tex('stain', 128), transparent:true, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-2});
     for(let i = 0; i < 6; i++){ const s = new THREE.Mesh(new THREE.PlaneGeometry(.6 + Math.random() * .8, .6 + Math.random() * .8), stainMat());
@@ -3746,13 +3796,13 @@ const LIVING = (function(){
     const lights = [];
     tables.forEach((tb, i)=>{
       const on = p === 1 ? true : p === 2 ? (i !== 1) : (i === 0);
-      const L = new THREE.PointLight(FF ? 0xffb070 : 0xffc88c, on ? 1.0 : 0, 6, 1.6); L.position.set(tb.x - .05, tb.ly || 1.1, tb.z); g.add(L);
+      const L = new THREE.PointLight(FF ? 0xffb070 : 0xffc88c, on ? 1.4 : 0, 7, 1.5); L.position.set(tb.x - .05, tb.ly || 1.1, tb.z); g.add(L);
       if(!on){ if(tb.flame) tb.flame.visible = false; else if(!tb.glass) tb.shade.material = new THREE.MeshLambertMaterial({color:0x2a0a0a, side:THREE.DoubleSide}); }
       lights.push({L, on, z:tb.z, seed:Math.random()*10});
     });
-    const hallAmb = new THREE.AmbientLight(FF ? 0x3e5654 : 0x7a6a58, [0.2, 0.1, 0.05][p-1]); hallAmb.userData.base = hallAmb.intensity; g.add(hallAmb);
+    const hallAmb = new THREE.AmbientLight(FF ? 0x3e5654 : 0x7a6a58, [0.5, 0.3, 0.18][p-1]); hallAmb.userData.base = hallAmb.intensity; g.add(hallAmb);
     level.redChance = [0, .01, .03][p-1];
-    lights.forEach(o=> o.base = [1.0, .75, .55][p-1]);
+    lights.forEach(o=> o.base = [1.7, 1.2, .9][p-1]);
     // a chair, not where it was
     const chairX = [0.7, -0.6, 0.0][p-1], chairZ = [-3.5, 1.5, 2.0][p-1];
     if(p === 2){
@@ -3825,8 +3875,8 @@ const LIVING = (function(){
         {minX:-RW - 4, maxX:-w/2 - .12, minZ:rz1 + .02, maxZ:d/2 + 1});
       level.bounds.minX = RX0 - RW + .35;
 
-      const rWall = mat('damask', RD / 1.4, 2), rCeil = mat('ceil', RW / 1.5, RD / 1.5);
-      const rp = (m, pw, ph, x, y, z, ry, rx)=>{ if(m === rWall) m = wallPiece('damask', pw, ph, h, x, y, z, ry || 0); const q = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), m); q.position.set(x, y, z); q.rotation.set(rx || 0, ry || 0, 0); g.add(q); return q; };
+      const rWall = mat('plaster', RD / 2.2, 1), rCeil = mat('ceil', RW / 1.5, RD / 1.5);
+      const rp = (m, pw, ph, x, y, z, ry, rx)=>{ if(m === rWall) m = wallPiece('plaster', pw, ph, h, x, y, z, ry || 0); const q = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), m); q.position.set(x, y, z); q.rotation.set(rx || 0, ry || 0, 0); g.add(q); return q; };
       rp(mat('boards', RW / 1.2, RD / 1.2), RW, RD, rxc, 0, SIDE_Z, 0, -Math.PI/2);
       rp(rCeil, RW, RD, rxc, h, SIDE_Z, 0, Math.PI/2);
       rp(rWall, RD, h, RX0 - RW, h/2, SIDE_Z, Math.PI/2);                       // the far wall, behind the chair
@@ -3854,7 +3904,7 @@ const LIVING = (function(){
           box(g, .07, 2.1, .1, jambM, x - .48, 1.05, wz - side * .04, false); box(g, .07, 2.1, .1, jambM, x + .48, 1.05, wz - side * .04, false); box(g, 1.03, .08, .1, jambM, x, 2.1, wz - side * .04, false);
         });
       });
-      cove(g, RW, RD, h, rxc, SIDE_Z);
+      cove(g, RW, RD, h, rxc, SIDE_Z); framing(g, RW, RD, h, rxc, SIDE_Z, {noRight:true});
       const skM = new THREE.MeshLambertMaterial({color:0x2a231c});
       box(g, .06, .12, RD, skM, RX0 - RW + .03, .06, SIDE_Z, false);
       // the X on the boards, in old red tape
@@ -3900,6 +3950,7 @@ const LIVING = (function(){
         if(level.plush && level.plush.dark) o.L.intensity = 0;      // in the corridor game the hall goes dark behind you
       }});
       if(level.hallAmb) level.hallAmb.intensity = level.plush && level.plush.dark ? .004 : level.hallAmb.userData.base;
+      if(level.candleLight) level.candleLight.intensity = (level.plush && level.plush.dark ? 0 : .7) + Math.sin(now / 70) * .06 + (Math.random() - .5) * .15;
       if(p === 2 && level.demon && level.watch && !level.watch.scaring){
         const gp = level.demon.group.position, dx = camera.position.x - gp.x, dz = camera.position.z - gp.z, dist = Math.hypot(dx, dz);
         if(!level.chase){
@@ -3948,7 +3999,7 @@ const LIVING = (function(){
     const g = level.group, w = 18, d = 18, h = 3.4;
     // the way out: on the far wall or the left wall, somewhere different each time
     const onFront = Math.random() < .5, exitAt = (Math.random() < .5 ? -1 : 1) * (2.5 + Math.random() * 5);
-    shell(g, w, d, h, {floor:'boards', ceil:'ceil', wall:'damask'}, onFront ? {back:0, front:exitAt} : {back:0, left:exitAt});
+    shell(g, w, d, h, {floor:'boards', ceil:'ceil', wall:'plaster'}, onFront ? {back:0, front:exitAt} : {back:0, left:exitAt});
     level.bounds = {minX:-w/2 + .35, maxX:w/2 - .35, minZ:-d/2 + .35, maxZ:d/2 + .6};
     scene.fog = new THREE.Fog(FOGC, 1.5, 12);
     g.add(new THREE.AmbientLight(0x6a6058, .06));
@@ -3975,7 +4026,14 @@ const LIVING = (function(){
     // her: three of her, each with a red light that sweeps the floor in front of her
     const GIRLS = [[-4.5, -1.0, .0], [4.0, 3.5, 2.2], [-1.5, 5.5, 4.0]];      // where each stands, and where her light starts
     level.demons = []; level.watch = null;
-    const beamM = new THREE.MeshBasicMaterial({color:0xff2010, transparent:true, opacity:.07, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide, fog:false});
+    // the beam: a cone wearing a texture that fades along its length and is strongest down its middle, so it reads as light in dust, not a shape
+    const beamC = document.createElement('canvas'); beamC.width = 64; beamC.height = 64; { const q = beamC.getContext('2d');
+      const lg = q.createLinearGradient(0, 0, 0, 64); lg.addColorStop(0, 'rgba(255,40,20,.0)'); lg.addColorStop(.25, 'rgba(255,40,20,.55)'); lg.addColorStop(1, 'rgba(255,40,20,0)'); q.fillStyle = lg; q.fillRect(0, 0, 64, 64);
+      const d2 = q.getImageData(0, 0, 64, 64); for(let y = 0; y < 64; y++) for(let x = 0; x < 64; x++){ const o = (y * 64 + x) * 4, e = Math.sin(x / 64 * Math.PI); d2.data[o + 3] *= .35 + .65 * e * e; } q.putImageData(d2, 0, 0); }
+    const beamT = new THREE.CanvasTexture(beamC); beamT.wrapS = THREE.RepeatWrapping;
+    const beamM = new THREE.MeshBasicMaterial({map:beamT, color:0xff3018, transparent:true, opacity:.5, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide, fog:false});
+    const poolC = document.createElement('canvas'); poolC.width = poolC.height = 128; { const q = poolC.getContext('2d'); const rg = q.createRadialGradient(64, 64, 4, 64, 64, 64); rg.addColorStop(0, 'rgba(255,60,30,.9)'); rg.addColorStop(.45, 'rgba(255,40,20,.45)'); rg.addColorStop(1, 'rgba(255,30,15,0)'); q.fillStyle = rg; q.fillRect(0, 0, 128, 128); }
+    const poolM = new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(poolC), transparent:true, opacity:.55, blending:THREE.AdditiveBlending, depthWrite:false, fog:false});
     GIRLS.forEach(([gx, gz, a0], i)=>{
       const lv = level;
       loadDemon(1.8).then(D=>{
@@ -3986,9 +4044,15 @@ const LIVING = (function(){
         // the red light: a spotlight from her chest, and a faint cone so the beam itself shows in the dark
         const piv = new THREE.Group(); piv.position.set(0, 1.25, 0); D.group.add(piv);
         const sp = new THREE.SpotLight(0xff2010, 7, 10, .3, .5, .7); sp.position.set(0, 0, .3); sp.target.position.set(0, -1.2, 5); piv.add(sp); piv.add(sp.target);
-        const cone = new THREE.Mesh(new THREE.ConeGeometry(1.75, 5.6, 24, 1, true), beamM); cone.rotation.x = -Math.PI / 2 + .22; cone.position.set(0, -.6, 3.0); cone.rotation.order = 'YXZ'; piv.add(cone);
-        const pool = new THREE.Mesh(new THREE.CircleGeometry(1.7, 28), new THREE.MeshBasicMaterial({color:0xff2010, transparent:true, opacity:.4, blending:THREE.AdditiveBlending, depthWrite:false, fog:false})); pool.rotation.x = -Math.PI/2; pool.position.set(0, -1.24, 5.3); piv.add(pool);
-        lv.demons.push({D, piv, a0, speed:.22 + i * .07, swing:1.1 + i * .3, cx:gx, cz:gz});
+        const cone = new THREE.Mesh(new THREE.ConeGeometry(2.0, 6.2, 32, 1, true), beamM); cone.rotation.x = -Math.PI / 2 + .22; cone.position.set(0, -.6, 3.3); cone.rotation.order = 'YXZ'; piv.add(cone);
+        const pool = new THREE.Mesh(new THREE.PlaneGeometry(5.2, 4.4), poolM); pool.rotation.x = -Math.PI/2; pool.position.set(0, -1.24, 5.3); piv.add(pool);
+        // her eyes, red and searching: two hot points with a halo each, on her head
+        const hb = D.bones.bone_head;
+        if(hb){ const eyeM = new THREE.MeshBasicMaterial({map:eyeTex(), transparent:true, depthWrite:false, fog:false}), haloM = new THREE.SpriteMaterial({map:haloTex(), color:0xff2a10, transparent:true, opacity:.7, blending:THREE.AdditiveBlending, depthWrite:false, fog:false});
+          D.gaze = [[.2, .69, .64], [-.24, .69, .64]].map(([ex, ey, ez])=>{ const e = new THREE.Group(); e.position.set(ex, ey, ez); const eye = new THREE.Mesh(new THREE.PlaneGeometry(.62, .31), eyeM); eye.renderOrder = 2; e.add(eye); const halo = new THREE.Sprite(haloM); halo.scale.set(1.8, 1.8, 1); e.add(halo); hb.add(e); return e; });
+          const eg = new THREE.PointLight(0xff2a10, 1.6, 4, 1.5); eg.position.set(0, .9, 1.4); hb.add(eg); }
+        // each one wanders on her own slow loop about her place, never still
+        lv.demons.push({D, piv, a0, speed:.22 + i * .07, swing:1.1 + i * .3, cx:gx, cz:gz, hx:gx, hz:gz, rA:2.2 + i * .6, rB:1.6 + i * .5, wA:.07 + i * .02, wB:.11 - i * .02, ph:i * 2.1});
       });
     });
     camera.position.set(0, EYE, -d/2 + 1.2); yaw = Math.PI; pitch = 0;
@@ -3998,13 +4062,17 @@ const LIVING = (function(){
       const t = now / 1000;
       if(scareW.scaring) return;
       level.demons.forEach(G=>{
-        // she stands still but turns slowly on the spot, and her light with her
-        const ang = G.a0 + Math.sin(t * G.speed) * G.swing;
-        G.D.group.rotation.y = ang;
+        // she drifts about the room on a slow loop, turning as she goes, and her light sweeps across the way she is facing
+        const nx = G.hx + Math.sin(t * G.wA + G.ph) * G.rA, nz = G.hz + Math.cos(t * G.wB + G.ph) * G.rB;
+        const vx = nx - G.cx, vz = nz - G.cz; G.cx = nx; G.cz = nz; G.D.group.position.set(nx, .3 + Math.sin(t * .9 + G.ph) * .06, nz);
+        if(Math.hypot(vx, vz) > 1e-4) G.face = Math.atan2(vx, vz);
+        const ang = (G.face === undefined ? G.a0 : G.face) + Math.sin(t * G.speed) * G.swing * .7;
+        let dd = ang - G.D.group.rotation.y; dd = Math.atan2(Math.sin(dd), Math.cos(dd)); G.D.group.rotation.y += dd * .04;
         if(!reduce) animateDemonDark(G.D, now);
+        G.D.group.updateMatrixWorld(true); if(G.D.gaze) gazeAt(G.D.gaze, G.D.bones.bone_head);
         // are you in her light? inside the cone's reach and within its spread, measured flat along the floor
-        const dx = camera.position.x - G.cx, dz = camera.position.z - G.cz, dist = Math.hypot(dx, dz);
-        const fx = Math.sin(ang), fz = Math.cos(ang), along = dx * fx + dz * fz, across = Math.abs(dx * fz - dz * fx);
+        const dx = camera.position.x - G.cx, dz = camera.position.z - G.cz, dist = Math.hypot(dx, dz), ry = G.D.group.rotation.y;
+        const fx = Math.sin(ry), fz = Math.cos(ry), along = dx * fx + dz * fz, across = Math.abs(dx * fz - dz * fx);
         if(now - t0 > 2500 && along > .8 && along < 7.2 && across < .35 + along * .3){      // (a moment's grace as you come in)
           scareW.scaring = true; redLevel = 1; level.shake = .25;
           jumpscare(scareW);
