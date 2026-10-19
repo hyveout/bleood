@@ -1073,7 +1073,7 @@ body.mob-full .mob-exit:active{opacity:1; border-color:rgba(232,227,214,.9)}
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
   animation:tipgrain .5s steps(4) infinite}
 @keyframes tipgrain{0%{transform:translate(0,0)} 25%{transform:translate(-3%,2%)} 50%{transform:translate(2%,-3%)} 75%{transform:translate(-2%,-1%)} 100%{transform:translate(0,0)}}
-.tip-body{position:relative; display:flex; flex-direction:column; align-items:center; gap:clamp(6px,1.6vh,16px); width:min(92%,640px); text-align:center}
+.tip-body{position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:clamp(4px,1.3cqh,14px); width:min(92%,640px); max-height:96cqh; text-align:center}
 .tip-head{width:clamp(150px,44vmin,330px); aspect-ratio:1; object-fit:cover; mix-blend-mode:screen; filter:contrast(1.15) saturate(.9);
   -webkit-mask-image:radial-gradient(closest-side, #000 52%, transparent 100%); mask-image:radial-gradient(closest-side, #000 52%, transparent 100%);
   animation:tipfloat 5.5s ease-in-out infinite, tipflick 3.7s steps(1) infinite}
@@ -1081,18 +1081,18 @@ body.mob-full .mob-exit:active{opacity:1; border-color:rgba(232,227,214,.9)}
 @keyframes tipflick{0%,91%,100%{opacity:1} 92%{opacity:.55} 93%{opacity:1} 96%{opacity:.7} 97%{opacity:1}}
 .tip-line1, .tip-line2{font-family:var(--crtface); letter-spacing:.08em; color:#e9e6de; line-height:1.25; padding:0 4%;
   text-shadow:-2px 0 rgba(255,20,60,.6), 2px 0 rgba(0,235,220,.4), 0 0 18px rgba(0,0,0,.95), 0 3px 12px rgba(0,0,0,.9)}
-.tip-line1{font-size:clamp(1.5rem,5.4vw,2.9rem); animation:tipjit 2.6s steps(1) infinite}
-.tip-line2{font-size:clamp(.9rem,2.6vw,1.3rem); color:#b9b4a8; margin-top:2px}
+.tip-line1{font-size:clamp(1.1rem,5.2cqh,2.9rem); animation:tipjit 2.6s steps(1) infinite}
+.tip-line2{font-size:clamp(.8rem,3.1cqh,1.3rem); color:#b9b4a8; margin-top:2px}
 .tip-heads{display:flex; gap:clamp(10px,3vw,30px); justify-content:center; align-items:center}
 .tip-heads .tip-head{width:clamp(96px,24vmin,190px)}
 .tip-heads .tip-head.him{filter:contrast(1.15) brightness(1.1)}
-.tip-film{width:min(52vw,560px); max-height:38vh; aspect-ratio:16/10; object-fit:cover; background:#000; border:1px solid rgba(233,232,228,.18); box-shadow:0 0 30px rgba(0,0,0,.8)}
-.tip-heads .tip-head{width:clamp(70px,14vmin,130px)}
+.tip-film{width:min(60cqw,560px); max-height:36cqh; aspect-ratio:16/10; object-fit:cover; background:#000; border:1px solid rgba(233,232,228,.18); box-shadow:0 0 30px rgba(0,0,0,.8)}
+.tip-heads .tip-head{width:clamp(56px,14cqh,130px)}
 .living.touch .tip-heads{flex-wrap:wrap} .living.touch .tip-film{width:92vw; order:-1}
-.tip-body .tip-line1{font-size:clamp(1.05rem,3.2vw,1.8rem)}
-.tip-line3{font-family:var(--crtface); letter-spacing:.06em; font-size:clamp(.8rem,2.1vw,1.1rem); line-height:1.4; color:#a8a399; margin-top:clamp(8px,2vh,18px); padding:0 6%}
+.tip-body .tip-line1{font-size:clamp(.95rem,3.8cqh,1.8rem)}
+.tip-line3{font-family:var(--crtface); letter-spacing:.06em; font-size:clamp(.7rem,2.4cqh,1.1rem); line-height:1.4; color:#a8a399; margin-top:clamp(4px,1.4cqh,16px); padding:0 6%}
 @keyframes tipjit{0%,86%,100%{transform:translate(0,0)} 87%{transform:translate(-4px,1px)} 88%{transform:translate(3px,-1px)} 89%{transform:translate(0,0)} 94%{transform:translate(2px,1px)} 95%{transform:translate(0,0)}}
-.tip-go{margin-top:clamp(10px,3vh,26px); font-family:var(--crtface); font-size:clamp(.6rem,1.3vw,.78rem); letter-spacing:.3em; text-transform:uppercase; color:rgba(233,232,228,.42); animation:tipblink 1.8s ease-in-out infinite}
+.tip-go{margin-top:clamp(6px,2cqh,24px); font-family:var(--crtface); font-size:clamp(.55rem,1.7cqh,.78rem); letter-spacing:.3em; text-transform:uppercase; color:rgba(233,232,228,.42); animation:tipblink 1.8s ease-in-out infinite}
 @keyframes tipblink{0%,100%{opacity:.25} 50%{opacity:.7}}
 .jumpscare{position:absolute; inset:0; z-index:9; display:none; align-items:center; justify-content:center; background:#300; overflow:hidden}
 .jumpscare.on{display:flex; animation:scareflash .12s steps(2) infinite}
@@ -5546,7 +5546,7 @@ const LIVING = (function(){
     });
     photoEl = document.createElement('div'); photoEl.className = 'living-photo'; photoEl.innerHTML = '<img alt="" src="' + PHOTO_A + '"><span>is this me?</span>'; wrap.appendChild(photoEl);
     tipEl = document.createElement('div'); tipEl.className = 'living-tip';
-    tipEl.innerHTML = '<div class="tip-body"><div class="tip-line1">You are haunted by both your past and your present</div><div class="tip-heads"><img class="tip-head" alt="" src="' + TIP_HEAD + '"><video class="tip-film" src="bleood_cam_tip.mp4" muted loop playsinline autoplay preload="auto"></video><img class="tip-head him" alt="" src="' + DOLL_FACE + '"></div><div class="tip-line2">Flash them when your runic meter is full. REMEMBER her. FORGET him.</div><div class="tip-line3">' + (TOUCH ? 'You can only see them through the camera. The round button raises it; tap FORGET or REMEMBER on the frame to choose the flash. It needs a moment to recharge after each one.' : 'You can only see them through the camera. C raises it. 1 and 2 (or the scroll wheel) choose FORGET or REMEMBER. It needs a moment to recharge after each flash.') + '</div><div class="tip-go">' + (TOUCH ? 'tap to continue' : 'press any key') + '</div></div>';
+    tipEl.innerHTML = '<div class="tip-body"><div class="tip-line1">You are haunted by both your past and your present</div><div class="tip-heads"><img class="tip-head" alt="" src="' + TIP_HEAD + '"><video class="tip-film" src="bleood_cam_tip.mp4" muted loop playsinline autoplay preload="auto"></video><img class="tip-head him" alt="" src="' + DOLL_FACE + '"></div><div class="tip-line2">Flash them when your runic meter is full. REMEMBER her. FORGET him.</div><div class="tip-line3">' + (TOUCH ? 'You can only see them through the camera. The round button raises it. It needs a moment to recharge after each flash.' : 'You can only see them through the camera. C raises it. It needs a moment to recharge after each flash.') + '</div><div class="tip-go">' + (TOUCH ? 'tap to continue' : 'press any key') + '</div></div>';
     wrap.appendChild(tipEl);
     tipEl.addEventListener('touchend', e=>{ e.preventDefault(); e.stopPropagation(); closeTip(); });
     redEl = document.createElement('div'); redEl.className = 'living-red'; wrap.appendChild(redEl);
