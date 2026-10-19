@@ -2337,13 +2337,14 @@ const LIVING = (function(){
   // a camera move the player does not control: out to a point, a hold there, and back to where they stood
   let dolly = null, flashEl = null; const edgeEls = [];
   // in the big room: for each head you cannot see, a chevron on the edge of the view in its direction
-  let EV = null;
+  let EV = null, EVm = null;
   function edgeMarkers(){
-    if(!EV) EV = new THREE.Vector3();
+    if(!EV){ EV = new THREE.Vector3(); EVm = new THREE.Matrix4(); }
+    camera.updateMatrixWorld(); EVm.copy(camera.matrixWorld).invert();      // (the camera's own inverse is not kept up to date while it hangs in the scene)
     const A = level && level.arena, on = !!(A && A.state === 'fighting'), W = wrap.clientWidth, H = wrap.clientHeight;
     let k = 0;
     if(on){ for(const Hh of hauntAlive()){ if(Hh.dying || Hh.scare || k >= edgeEls.length) continue;
-      EV.set(Hh.px, Hh.py, Hh.pz).applyMatrix4(camera.matrixWorldInverse);      // camera space: x right, y up, -z ahead
+      EV.set(Hh.px, Hh.py, Hh.pz).applyMatrix4(EVm);      // camera space: x right, y up, -z ahead
       const ahead = -EV.z, phi = Math.atan2(EV.x, ahead);                          // 0 straight ahead, ±π straight behind
       const seen = ahead > 0 && Math.abs(EV.x / ahead) < Math.tan(camera.fov * Math.PI / 360 * camera.aspect) * .9 && Math.abs(EV.y / ahead) < Math.tan(camera.fov * Math.PI / 360) * .9;
       if(seen) continue;
@@ -4151,7 +4152,7 @@ const LIVING = (function(){
   // ---------- the doll's head in the bedroom (the camera, after Fatal Frame): it drifts in from a corner and comes for you. a ring comes up in the
   // middle of the view; keep its face inside the ring and the runes light, faster the closer it is. when they are all lit, a press takes the
   // picture and it is gone. a picture taken early only knocks it back. if it reaches you, it has you ----------
-  const HAUNT = {FIRST:[8, 14], AGAIN:[10, 20], CHARGE:2.6, SPEED:.34, START:1.1, SNAPS:3, REACH:.7, GRACE:2200};
+  const HAUNT = {FIRST:[8, 14], AGAIN:[10, 20], CHARGE:2.6, SPEED:.46, START:1.1, SNAPS:3, REACH:.8, GRACE:1600};
   let hauntTurn = 0;      // whose turn: his, hers, his...
   // drawn once where you cannot see it, so the first real appearance costs nothing
   function warmUp(obj){ obj.visible = true; obj.position.set(camera.position.x, -40, camera.position.z); setTimeout(()=>{ obj.visible = false; }, 120); }
