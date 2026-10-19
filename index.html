@@ -2324,6 +2324,30 @@ const LIVING = (function(){
     return out;
   }
   // soft stains and water marks, drawn so the texture still tiles: noise is laid out with a wrapped border before it is scaled up
+  // what time does to wood: a wash of grime, dark where hands and feet went, pale where the finish wore through, scratches, damp blooms, a soot line
+  function distress(g, S){
+    const r = (a, b) => a + Math.random() * (b - a);
+    g.save();
+    for(let i = 0; i < 7; i++){ const x = r(0, S), y = r(0, S), rad = r(S * .12, S * .4), gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, 'rgba(8,5,3,' + r(.25, .5) + ')'); gr.addColorStop(1, 'rgba(8,5,3,0)'); g.fillStyle = gr; g.fillRect(0, 0, S, S); }
+    for(let i = 0; i < 3; i++){ const x = r(0, S), y = r(0, S), rad = r(S * .1, S * .3), gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, 'rgba(190,170,140,' + r(.08, .16) + ')'); gr.addColorStop(1, 'rgba(190,170,140,0)'); g.fillStyle = gr; g.fillRect(0, 0, S, S); }
+    for(let i = 0; i < 2; i++){ const x = r(0, S), y = r(0, S), rad = r(S * .08, S * .22), gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, 'rgba(60,70,50,' + r(.14, .26) + ')'); gr.addColorStop(.7, 'rgba(40,50,35,' + r(.06, .12) + ')'); gr.addColorStop(1, 'rgba(40,50,35,0)'); g.fillStyle = gr; g.fillRect(0, 0, S, S); }      // mildew
+    g.lineWidth = 1;
+    for(let i = 0; i < 14; i++){ const x = r(0, S), y = r(0, S), L = r(S * .08, S * .5), a = r(-.5, .5) + (Math.random() < .5 ? 0 : Math.PI / 2); g.strokeStyle = Math.random() < .6 ? 'rgba(0,0,0,' + r(.25, .55) + ')' : 'rgba(210,190,160,' + r(.12, .28) + ')'; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * L, y + Math.sin(a) * L); g.stroke(); }
+    const soot = g.createLinearGradient(0, S * .78, 0, S); soot.addColorStop(0, 'rgba(0,0,0,0)'); soot.addColorStop(1, 'rgba(0,0,0,.55)'); g.fillStyle = soot; g.fillRect(0, 0, S, S);
+    for(let i = 0; i < S * S / 24; i++){ g.fillStyle = Math.random() < .7 ? 'rgba(0,0,0,' + r(.15, .4) + ')' : 'rgba(200,185,160,' + r(.08, .2) + ')'; g.fillRect(r(0, S) | 0, r(0, S) | 0, 1, 1); }      // dust and pits
+    g.restore();
+  }
+  // a cobweb in a top corner: threads radiating from the corner with sagging rings between them, on a see-through square
+  let webTex = null;
+  function cobweb(g, x, y, z, ry, size){
+    if(!webTex){ const c = document.createElement('canvas'); c.width = c.height = 128; const q = c.getContext('2d'); q.strokeStyle = 'rgba(215,210,200,.55)'; q.lineWidth = 1;
+      for(let i = 0; i <= 8; i++){ const a = i / 8 * Math.PI / 2; q.beginPath(); q.moveTo(0, 0); q.lineTo(Math.cos(a) * 128, Math.sin(a) * 128); q.stroke(); }
+      for(let rr = 14; rr < 128; rr += 12 + Math.random() * 8){ q.beginPath(); for(let i = 0; i <= 8; i++){ const a = i / 8 * Math.PI / 2, sag = rr * (i % 8 === 0 ? 1 : .92); q[i ? 'lineTo' : 'moveTo'](Math.cos(a) * sag, Math.sin(a) * sag); } q.stroke(); }
+      const fade = q.createRadialGradient(0, 0, 40, 0, 0, 128); fade.addColorStop(0, 'rgba(0,0,0,0)'); fade.addColorStop(1, 'rgba(0,0,0,1)'); q.globalCompositeOperation = 'destination-out'; q.fillStyle = fade; q.fillRect(0, 0, 128, 128);
+      webTex = new THREE.CanvasTexture(c); }
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(size, size), new THREE.MeshBasicMaterial({map:webTex, transparent:true, opacity:.5, depthWrite:false, side:THREE.DoubleSide}));
+    m.position.set(x, y, z); m.rotation.order = 'YXZ'; m.rotation.y = ry; m.renderOrder = 4; g.add(m); return m;
+  }
   function weather(g, S, kind){
     const acc = new Float32Array(S * S);
     [[4, .5], [8, .3], [16, .2]].forEach(([n, amp])=>{
@@ -2361,9 +2385,9 @@ const LIVING = (function(){
     const c = document.createElement('canvas'); c.width = c.height = size || 64;
     const g = c.getContext('2d'); const S = c.width;
     const base = {wall:'#5a544b', floor:'#2a2521', ceil:'#3a3630', bed:'#4a4640', sheet:'#8f8a80', pillow:'#a39d92',
-                  wood:'#1f1812', bark:'#221d18', sheet:'#6e685e', pillow:'#7f776c', hall:'#33302b', hallfloor:'#191715', door:'#3b2d21', doorback:'#3b2d21', panel:'#3a2a1d', ritual:'#151311', black:'#010101', paper:'#d9d3c4', dresser:'#3a2a1d', mirror:'#0a0a0c'}[kind] || '#333';
+                  wood:'#1f1812', bark:'#221d18', sheet:'#6e685e', pillow:'#7f776c', hall:'#33302b', hallfloor:'#191715', door:'#3b2d21', doorback:'#3b2d21', panel:'#3a2a1d', ritual:'#151311', black:'#010101', paper:'#d9d3c4', dresser:'#3a2a1d', shade:'#5a1212', cloth:'#2a1a16', mirror:'#0a0a0c'}[kind] || '#333';
     g.fillStyle = base; g.fillRect(0,0,S,S);
-    if(!['wall','hall','ceil','dresser','door','doorback','panel','damask','carpet','stain','tatami','shoji','plank','black','boards'].includes(kind)) for(let i = 0; i < S*S/4; i++){
+    if(!['wall','hall','ceil','dresser','door','doorback','panel','damask','carpet','stain','tatami','shoji','plank','black','boards','shade','cloth'].includes(kind)) for(let i = 0; i < S*S/4; i++){
       const v = (Math.random() * 40 - 20) | 0;
       g.fillStyle = 'rgba(' + (128+v) + ',' + (124+v) + ',' + (116+v) + ',.16)';
       g.fillRect((Math.random()*S)|0, (Math.random()*S)|0, 2, 2);
@@ -2524,6 +2548,7 @@ const LIVING = (function(){
       // (no knob painted on: every door has a real one now)
     }
     if(['wall','hall','ceil','floor','hallfloor','boards'].includes(kind)) weather(g, S, kind === 'boards' ? 'floor' : kind);
+    if(['dresser','wood','door','doorback','panel','shade','cloth'].includes(kind)) distress(g, S);      // the furniture and doors: years of grime, scratches and damp
     if(kind === 'paper'){ g.strokeStyle = 'rgba(40,40,40,.55)'; g.lineWidth = 1; for(let y = 14; y < S-6; y += 9){ g.beginPath(); g.moveTo(8,y); g.lineTo(S-8-((Math.random()*20)|0),y); g.stroke(); } }
     const T = new THREE.CanvasTexture(c);
     T.magFilter = THREE.NearestFilter; T.minFilter = THREE.NearestFilter;
@@ -2599,6 +2624,13 @@ const LIVING = (function(){
       strip(h, x - sx * CW/2, h/2, z - sz * .015, sz < 0 ? 0 : Math.PI, (sz < 0 ? -sx : sx) * Math.PI/2, CW);
       // on the wall that runs along z (x fixed)
       strip(h, x - sx * .015, h/2, z - sz * CW/2, sx < 0 ? Math.PI/2 : -Math.PI/2, (sx < 0 ? sz : -sz) * Math.PI/2, CW);
+    });
+    // cobwebs in one or two of the top corners, their anchor at the corner (the texture's own corner), hanging down the wall that runs along x
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].filter(()=> Math.random() < .5).slice(0, 2).forEach(([sx, sz])=>{
+      if((sz < 0 && open.back) || (sz > 0 && open.front)) return;
+      const sz2 = .5 + Math.random() * .5, x = cx + sx * (w/2 - sz2/2 - .01), z = cz + sz * (d/2 - .03);
+      const m = cobweb(g, x, h - sz2/2 - .01, z, sz < 0 ? 0 : Math.PI, sz2);
+      m.rotation.z = sx * sz < 0 ? 0 : Math.PI / 2; if(sx < 0 && sz < 0) m.rotation.z = -Math.PI / 2; if(sx > 0 && sz > 0) m.rotation.z = -Math.PI / 2;      // (the web's corner into the room's corner)
     });
     // and the ceiling itself, dimmed to almost nothing except right over a light
     const lid = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshBasicMaterial({color:0x000000, transparent:true, opacity:.93, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-1}));
@@ -3664,7 +3696,7 @@ const LIVING = (function(){
     });
     // side tables with lamps along the right wall, doors along the left
     const tables = [], tzs = d > 10 ? [-4, 0, 4] : [-2.5, 1.5];
-    const cabM = mat('dresser', 1, 1), shadeM = FF ? new THREE.MeshLambertMaterial({color:0xe6d3a4, emissive:0x6a4a1a}) : new THREE.MeshLambertMaterial({color:0x5a1212, side:THREE.DoubleSide, emissive:0x2a0505});
+    const cabM = mat('dresser', 1, 1), shadeM = FF ? new THREE.MeshLambertMaterial({color:0xe6d3a4, emissive:0x6a4a1a}) : (()=>{ const m = mat('shade', 1, 1, {side:THREE.DoubleSide, emissive:0x2a0505}); m.map.magFilter = THREE.LinearFilter; return m; })();      // the shades: old cloth, stained and scorched
     // each hall is furnished its own way: the chase has the dressers with red-shaded lamps; the key hall has round pedestal tables with
     // glass oil lamps; the plain hall has nothing on the floor, only iron sconces on the wall
     const glassM = new THREE.MeshPhongMaterial({color:0xd8d2c0, transparent:true, opacity:.35, specular:0xffffff, shininess:90, side:THREE.DoubleSide});
@@ -3735,7 +3767,7 @@ const LIVING = (function(){
     }else{
       // a high-backed armchair in dark cloth, facing the wrong way
       const ch = new THREE.Group(); ch.position.set(chairX, 0, chairZ); ch.rotation.y = Math.PI + .4; g.add(ch);
-      const cloth = new THREE.MeshLambertMaterial({color:0x2a1a16}), cp = (a, b2, c2, x, y, z)=>{ const q = new THREE.Mesh(new THREE.BoxGeometry(a, b2, c2), cloth); q.position.set(x, y, z); ch.add(q); };
+      const cloth = mat('cloth', 1, 1), cp = (a, b2, c2, x, y, z)=>{ const q = new THREE.Mesh(new THREE.BoxGeometry(a, b2, c2), cloth); q.position.set(x, y, z); ch.add(q); };
       cp(.6, .42, .6, 0, .21, 0); cp(.6, .9, .14, 0, .87, -.23); cp(.12, .3, .6, -.24, .57, 0); cp(.12, .3, .6, .24, .57, 0);
       level.solids.push({minX:chairX - .35, maxX:chairX + .35, minZ:chairZ - .35, maxZ:chairZ + .35});
     }
