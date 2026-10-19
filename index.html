@@ -2580,14 +2580,14 @@ const LIVING = (function(){
   let coveTex = null;
   function coveMat(){
     if(!coveTex){ const c = document.createElement('canvas'); c.width = 4; c.height = 64; const cg = c.getContext('2d');
-      const gr = cg.createLinearGradient(0, 0, 0, 64); gr.addColorStop(0, 'rgba(0,0,0,.96)'); gr.addColorStop(.35, 'rgba(0,0,0,.6)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); cg.fillStyle = gr; cg.fillRect(0, 0, 4, 64);
+      const gr = cg.createLinearGradient(0, 0, 0, 64); gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(.3, 'rgba(0,0,0,.8)'); gr.addColorStop(.6, 'rgba(0,0,0,.35)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); cg.fillStyle = gr; cg.fillRect(0, 0, 4, 64);
       coveTex = new THREE.CanvasTexture(c); coveTex.wrapS = THREE.RepeatWrapping; }
     return new THREE.MeshBasicMaterial({map:coveTex, transparent:true, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-1, fog:false});
   }
   // the dark that gathers at the top of the walls and down every corner of a room w by d by h, centred on (cx, cz)
   function cove(g, w, d, h, cx, cz){
     cx = cx || 0; cz = cz || 0;
-    const CH = Math.min(1.5, h * .5), CW = .9, m = coveMat();
+    const CH = Math.min(1.9, h * .6), CW = .9, m = coveMat();
     const strip = (len, x, y, z, ry, rz, height, width)=>{ const q = new THREE.Mesh(new THREE.PlaneGeometry(len, height), m); q.position.set(x, y, z); q.rotation.order = 'YXZ'; q.rotation.y = ry; q.rotation.z = rz || 0; q.renderOrder = 3; g.add(q); return q; };
     // along the top of each wall (the gradient runs top to bottom)
     strip(w, cx, h - CH/2, cz - d/2 + .015, 0, 0, CH); strip(w, cx, h - CH/2, cz + d/2 - .015, Math.PI, 0, CH);
@@ -2601,7 +2601,7 @@ const LIVING = (function(){
       strip(h, x - sx * .015, h/2, z - sz * CW/2, sx < 0 ? Math.PI/2 : -Math.PI/2, (sx < 0 ? sz : -sz) * Math.PI/2, CW);
     });
     // and the ceiling itself, dimmed to almost nothing except right over a light
-    const lid = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshBasicMaterial({color:0x000000, transparent:true, opacity:.55, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-1}));
+    const lid = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshBasicMaterial({color:0x000000, transparent:true, opacity:.93, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-1}));
     lid.rotation.x = Math.PI/2; lid.position.set(cx, h - .01, cz); lid.renderOrder = 3; g.add(lid);
   }
   function shell(g, w, d, h, kinds, openings){
@@ -4566,7 +4566,16 @@ const LIVING = (function(){
       }
     }
     P.spot.intensity = lit ? PL.TORCH * (Math.random() < .03 ? .5 : 1) : 0;
-    if(P.model && P.model.visible){ const m = P.model; m.position.y = P.baseY + Math.sin(now / 520) * .04; m.rotation.z = Math.sin(now / 700) * .05; m.rotation.x = Math.sin(now / 900) * .04; }
+    if(P.model && P.model.visible){
+      const m = P.model, t = now / 1000, S = PL.STOPS[P.step];
+      const sh = Math.random() < .015 ? .035 : 0;                                                                    // a shiver
+      m.position.set(P.RX0 - S.d + Math.sin(t * .9) * .06 + Math.sin(t * 2.3) * .02 + (Math.random() - .5) * sh,
+                     P.baseY + Math.sin(t * 1.3) * .07 + Math.sin(t * 3.1) * .025 + (Math.random() - .5) * sh,
+                     P.Z0 + S.z + Math.cos(t * .7) * .05 + (Math.random() - .5) * sh);
+      const want = Math.atan2(camera.position.x - m.position.x, camera.position.z - m.position.z);
+      let dd = want - m.rotation.y; dd = Math.atan2(Math.sin(dd), Math.cos(dd)); m.rotation.y += dd * .08 + Math.sin(t * .6) * .004;     // it turns to keep you in front of it
+      m.rotation.z = Math.sin(t * .8) * .12 + Math.sin(t * 2.7) * .03; m.rotation.x = Math.sin(t * 1.1 + 1) * .09 + (Math.random() - .5) * sh;
+    }
     plushShow(P, lit);
     if(lit) P.nextMove += dt * 1000;                              // it cannot move while it is in the light
     // the clock (real time, not the frame step, which is held short on a slow machine)
