@@ -582,6 +582,7 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .liv-load i{display:block; height:100%; width:0; background:rgba(232,227,214,.75); transition:width .2s}
 .use-btn{position:absolute; right:25%; bottom:8%; width:12%; aspect-ratio:1; border-radius:50%; border:1px solid rgba(233,232,228,.4); background:rgba(0,0,0,.4); display:none; z-index:7; touch-action:none;
   font-family:var(--crtface); font-size:clamp(.55rem,2.4vw,.8rem); letter-spacing:.2em; color:rgba(233,232,228,.7); align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent}
+.use-btn:active, .use-btn.pressed{border-color:#fff; color:#fff; background:rgba(240,200,104,.22)}
 .use-btn .f{display:none} .living.cam-up .use-btn .u{display:none} .living.cam-up .use-btn .f{display:inline}      /* with the camera up the button flashes */
 .living.touch .use-btn{display:flex} .use-btn.hot{border-color:#fff; color:#fff; box-shadow:0 0 12px rgba(240,200,104,.45)}
 .living.touch .cap-hint, .living.touch .living-hint{display:none}
@@ -1146,7 +1147,7 @@ body.mob-full .mob-exit:active{opacity:1; border-color:rgba(232,227,214,.9)}
 .tip-heads .tip-head.him{filter:contrast(1.15) brightness(1.1)}
 .tip-film{width:min(60cqw,560px); max-height:40cqh; aspect-ratio:13/10; object-fit:contain; background:#000; border:1px solid rgba(233,232,228,.18); box-shadow:0 0 30px rgba(0,0,0,.8)}
 .tip-heads .tip-head{width:clamp(56px,14cqh,130px)}
-.living.touch .tip-heads{flex-wrap:wrap} .living.touch .tip-film{width:92vw; order:-1}
+.living.touch .tip-heads{flex-wrap:wrap} .living.touch .tip-film{width:auto; height:min(44vh,400px); max-height:none; aspect-ratio:390/844; order:-1}      /* phones: their own upright clip */
 .tip-body .tip-line1{font-size:clamp(.95rem,3.8cqh,1.8rem)}
 .tip-line3{font-family:var(--crtface); letter-spacing:.06em; font-size:clamp(.7rem,2.4cqh,1.1rem); line-height:1.4; color:#a8a399; margin-top:clamp(4px,1.4cqh,16px); padding:0 6%}
 @keyframes tipjit{0%,86%,100%{transform:translate(0,0)} 87%{transform:translate(-4px,1px)} 88%{transform:translate(3px,-1px)} 89%{transform:translate(0,0)} 94%{transform:translate(2px,1px)} 95%{transform:translate(0,0)}}
@@ -3879,7 +3880,7 @@ const LIVING = (function(){
       const wt = new THREE.CanvasTexture(cv); wt.magFilter = THREE.LinearFilter; wt.minFilter = THREE.LinearFilter;
       const numMat = new THREE.MeshBasicMaterial({map:wt, transparent:true, depthWrite:false, color:0xb0b0b0, polygonOffset:true, polygonOffsetFactor:-2});
       const numbers = new THREE.Mesh(new THREE.PlaneGeometry(3.9, 3.9 * CH / CW), numMat);
-      numbers.position.set(-1.2, 1.55, d/2 - .014); numbers.rotation.y = Math.PI; g.add(numbers);
+      numbers.position.set(-1.2, 1.55, d/2 - .014); numbers.rotation.y = Math.PI;      // (the smears, crosses and flecks are no longer put on the wall: it is bare until the camera shows the numbers)
       const wtD = new THREE.CanvasTexture(cvD); wtD.magFilter = THREE.LinearFilter; wtD.minFilter = THREE.LinearFilter;
       const digits = new THREE.Mesh(new THREE.PlaneGeometry(3.9, 3.9 * CH / CW), new THREE.MeshBasicMaterial({map:wtD, transparent:true, depthWrite:false, color:0xc8c8c8, polygonOffset:true, polygonOffsetFactor:-3}));
       digits.position.set(-1.2, 1.55, d/2 - .016); digits.rotation.y = Math.PI; digits.visible = false; g.add(digits); level.camOnly.push(digits);
@@ -5928,7 +5929,7 @@ const LIVING = (function(){
     });
     photoEl = document.createElement('div'); photoEl.className = 'living-photo'; photoEl.innerHTML = '<img alt="" src="' + PHOTO_A + '"><span>is this me?</span>'; wrap.appendChild(photoEl);
     tipEl = document.createElement('div'); tipEl.className = 'living-tip';
-    tipEl.innerHTML = '<div class="tip-body"><div class="tip-line1">You are haunted by both your past and your present</div><div class="tip-heads"><video class="tip-film" src="bleood_cam_tip.mp4" muted loop playsinline autoplay preload="auto"></video></div><div class="tip-line2">Flash them when your runic meter is full. REMEMBER her. FORGET him.</div><div class="tip-line3">' + (TOUCH ? 'You can only see them through the camera. The round button raises it.' : 'You can only see them through the camera. C raises it.') + '</div><div class="tip-go">' + (TOUCH ? 'tap to continue' : 'press any key') + '</div></div>';
+    tipEl.innerHTML = '<div class="tip-body"><div class="tip-line1">You are haunted by both your past and your present</div><div class="tip-heads"><video class="tip-film" src="' + (TOUCH ? 'bleood_cam_tip_m.mp4' : 'bleood_cam_tip.mp4') + '" muted loop playsinline autoplay preload="auto"></video></div><div class="tip-line2">Flash them when your runic meter is full. REMEMBER her. FORGET him.</div><div class="tip-line3">' + (TOUCH ? 'You can only see them through the camera. The camera button raises it, FLASH takes the picture.' : 'You can only see them through the camera. C raises it.') + '</div><div class="tip-go">' + (TOUCH ? 'tap to continue' : 'press any key') + '</div></div>';
     wrap.appendChild(tipEl);
     tipEl.addEventListener('touchend', e=>{ e.preventDefault(); e.stopPropagation(); closeTip(); });
     redEl = document.createElement('div'); redEl.className = 'living-red'; wrap.appendChild(redEl);
@@ -6261,7 +6262,7 @@ const LIVING = (function(){
       prog(.18);
       await dollSource(k => prog(.18 + k * .52));
       const frames = TOUCH ? ['top', 'mid', 'bot'].flatMap(b => ['cam_p_' + b + '.webp', 'cam_p_' + b + '_flash.webp']).concat(['forget', 'remember', 'forget_flash', 'remember_flash'].map(k => 'cam_p_btn_' + k + '.webp')) : Object.values(CAM_FRAMES);
-      const files = [...new Set(Object.values(LSFX).filter(u => !/^data:/.test(u)).concat(['sfx_cut.mp3', PAINTING_FILE, DOLL_FACE, 'bleood_cam_tip.mp4'], frames))];
+      const files = [...new Set(Object.values(LSFX).filter(u => !/^data:/.test(u)).concat(['sfx_cut.mp3', PAINTING_FILE, DOLL_FACE, TOUCH ? 'bleood_cam_tip_m.mp4' : 'bleood_cam_tip.mp4'], frames))];
       let done = 0;
       await Promise.all(files.map(f => fetch(f).then(r => r.ok ? r.blob() : null).catch(()=> null).then(()=>{ done++; prog(.7 + .3 * done / files.length); })));
       prog(1);
