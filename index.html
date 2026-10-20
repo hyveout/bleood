@@ -1106,6 +1106,7 @@ body.mob-full .mob-exit:active{opacity:1; border-color:rgba(232,227,214,.9)}
 .cam-frame .cf-mode span{position:absolute; top:82%; height:7.5%; opacity:0; pointer-events:auto; cursor:pointer; touch-action:manipulation}      /* invisible hotspots over the FORGET / REMEMBER painted on the frame */
 .cam-frame .cf-mode span[data-m="forget"]{left:21%; width:26%} .cam-frame .cf-mode span[data-m="remember"]{left:52%; width:27%}
 .cam-frame .cf-mode small{display:none}
+.cam-frame:not(.on) .cf-mode span{pointer-events:none}      /* the camera down: the hidden buttons must not catch a finger (they were eating drags under the middle of the screen) */
 .living.touch .cam-frame{background:none}      /* phones: the frame full height in three bands; only the middle one is drawn taller */
 .cam-frame .cfp{position:absolute; inset:0; display:flex; flex-direction:column}
 .cam-frame .cfp b{display:block; flex:none; width:100%; background-size:100% 100%; background-repeat:no-repeat}
@@ -5890,7 +5891,7 @@ const LIVING = (function(){
     msgEl = document.createElement('div'); msgEl.className = 'living-msg'; wrap.appendChild(msgEl);
     camFrame = document.createElement('div'); camFrame.className = 'cam-frame'; camFrame.innerHTML = (TOUCH ? '<div class="cfp"><b></b><b></b><b></b></div>' : '') + '<span class="cf-tag"></span><span class="cf-count"></span><span class="cf-charge">recharging</span><div class="cf-mode"><span data-m="forget">forget</span><span data-m="remember">remember</span><small></small></div>'; wrap.appendChild(camFrame);
     camFrame.querySelector('.cf-mode small').textContent = TOUCH ? 'tap to switch' : '1 / 2 or scroll to switch';
-    camFrame.querySelectorAll('.cf-mode span').forEach(el => { const f = e => { e.preventDefault(); e.stopPropagation(); setCamMode(el.dataset.m); }; el.addEventListener('touchstart', f, {passive:false}); el.addEventListener('mousedown', f); });
+    camFrame.querySelectorAll('.cf-mode span').forEach(el => { const f = e => { if(!camUp) return; e.preventDefault(); e.stopPropagation(); setCamMode(el.dataset.m); }; el.addEventListener('touchstart', f, {passive:false}); el.addEventListener('mousedown', f); });
     setCamMode('forget'); Object.values(CAM_FRAMES).forEach(src => { const i = new Image(); if(!TOUCH) i.src = src; });
     window.addEventListener('resize', layoutCamFrame); setTimeout(layoutCamFrame, 50);
     wrap.addEventListener('wheel', e => { if(camUp && haveCamera()){ setCamMode(camMode === 'forget' ? 'remember' : 'forget'); e.preventDefault(); } }, {passive:false});
