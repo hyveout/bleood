@@ -5001,11 +5001,10 @@ const LIVING = (function(){
     level.startEnding = startEnding;
 
     let arrivedAt = 0, doorGone = false;
-    hauntSetup(); hauntArm(HAUNT.AGAIN);      // the heads keep coming while the candles are unlit; once the room is revealed they stop
+    // (no floating heads in the ritual room)
     level.tick = (now)=>{
       if(ending) stepEnding(now);
-      if(!level.revealed && !ending){ hauntStep(now, Math.min(.05, (now - (level._ht || now)) / 1000)); level._ht = now; }
-      else if(level.haunt) hauntAlive().forEach(H => hauntEnd(false, H));
+      if(level.haunt) hauntAlive().forEach(H => hauntEnd(false, H));
       // a couple of seconds after you come in, the door you came through stutters out and the wall is unbroken black
       if(!doorGone){
         if(!arrivedAt) arrivedAt = now;
