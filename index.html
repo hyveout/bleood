@@ -2279,7 +2279,7 @@ const LIVING = (function(){
   const CANDLE_LIFE = 50;            // seconds it can be held up before it dies, per room
   let candleLeft = CANDLE_LIFE;
   let level = null;                 // the current room: {group, bounds, solids, interactives, tick, onExit}
-  let notesRead = 0, hallPass = 0;
+  let notesRead = 0, hallPass = 0, curBuilder = null, curBump = 0;      // which room is up, and whether building it counts a hall pass
   let inv = {knife:false, key:false, cut:false}, artifacts = 0, done = {type:false, trace:false, chest:false};
   const WORDS = ['IDOL', 'WITNESS', 'MERCY', 'LEGION', 'FAITH'];   // what the typewriter asks for
   const SAFE_CODE = '7391';
@@ -3378,6 +3378,7 @@ const LIVING = (function(){
   // ================= ROOM 1: the bedroom =================
   // three artifacts: the typewriter, the sigil on the wall, the chest
   function buildBedroom(){
+    curBuilder = buildBedroom; curBump = 0;
     clearLevel();
     const g = level.group, w = 7, d = 7, h = 3;
     level.bounds = {minX:-w/2+.35, maxX:w/2-.35, minZ:-d/2+.35, maxZ:d/2-.35};
@@ -3836,6 +3837,7 @@ const LIVING = (function(){
 
   // ================= THE HALLWAY: three passes, each more wrong =================
   function buildHallway(){
+    curBuilder = buildHallway; curBump = 1;
     clearLevel();
     hallPass += 1;
     // the order (Oct 19): hall 1 is the chase, hall 2 has the key and the doll's corridor, then the dark room (its own builder), then a plain hall, then the ritual.
@@ -4363,6 +4365,7 @@ const LIVING = (function(){
   // a big, nearly black room. several of her stand in it, each throwing a red light across the floor that sweeps slowly round.
   // step into a light and she has you. the way out is a door somewhere along the walls; you have to find it in the dark
   function buildDarkRoom(){
+    curBuilder = buildDarkRoom; curBump = 1;
     clearLevel();
     hallPass += 1;
     const g = level.group, w = 18, d = 18, h = 3.4;
@@ -4471,6 +4474,7 @@ const LIVING = (function(){
 
   // ================= FINAL ROOM: the ritual =================
   function buildRitual(){
+    curBuilder = buildRitual; curBump = 0;
     clearLevel();
     const g = level.group, w = 8, d = 8, h = 3.4, rnd = (lo, hi) => lo + Math.random() * (hi - lo);
     level.ceilH = h;
@@ -6034,6 +6038,12 @@ const LIVING = (function(){
   }
   function restart(afterCatch){
     if(!built) return;
+    if(afterCatch && curBuilder && curBuilder !== buildBedroom){
+      // caught: back to the start of the room you died in, not the start of the game
+      hideNote(); closePanel(); switching = false; if(opening) endOpening();
+      fade = 1; fadeTo = 0; hallPass -= curBump; curBuilder();
+      return;
+    }
     if(!afterCatch) openNext = true;
     hideNote(); closePanel(); hallPass = 0; notesRead = 0; switching = false; if(opening) endOpening();
     fade = 1; fadeTo = 0;
