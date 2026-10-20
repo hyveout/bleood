@@ -4264,7 +4264,7 @@ const LIVING = (function(){
     const A = level.arena;
     if(killed && A && A.state === 'fighting'){
       H.kills++; A.killed++;
-      if(A.killed >= A.need){ A.state = 'cleared'; A.door.open = true; level.solids = level.solids.filter(x => x !== A.block); flash('it is quiet'); lsfx('artifact', .9); hauntArm(HAUNT.AGAIN); }
+      if(A.killed >= A.need){ A.state = 'cleared'; A.door.open = true; level.solids = level.solids.filter(x => x !== A.block); flash('a door unlocks'); lsfx('artifact', .9); hauntArm(HAUNT.AGAIN); }
       else { flash((A.need - A.killed) + ' more'); A.nextSpawn = performance.now() + 700 + Math.random() * 900; }
       return;
     }
