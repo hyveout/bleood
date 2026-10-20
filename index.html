@@ -1394,36 +1394,6 @@ body.mob-full .mob-exit:active{opacity:1; border-color:rgba(232,227,214,.9)}
   </filter>
   <!-- the living game's grade: old film. the room goes a dim sepia grey with the mids opened up; anything strongly coloured
        (blood, the closet clothes, the painted numbers) keeps most of its colour, so the safe code still reads -->
-  <filter id="livgrade" color-interpolation-filters="sRGB">
-    <!-- A: the grey. 30% of the colour left, a faint warm cast -->
-    <feColorMatrix in="SourceGraphic" type="matrix" result="A0" values="0.400 0.460 0.050 0 0
-                                          0.160 0.790 0.060 0 0
-                                          0.170 0.540 0.360 0 0
-                                          0     0     0     1 0"/>
-    <feComponentTransfer in="A0" result="A">
-      <feFuncR type="table" tableValues="0 .06 .26 .4 .48 .555 .6 .645 .69 .735 .78 .808 .836 .864 .892 .92 .936 .952 .968 .984 1"/>
-      <feFuncG type="table" tableValues="0 .06 .26 .4 .48 .555 .6 .645 .69 .735 .78 .808 .836 .864 .892 .92 .936 .952 .968 .984 1"/>
-      <feFuncB type="table" tableValues="0 .06 .26 .4 .48 .555 .6 .645 .69 .735 .78 .808 .836 .864 .892 .92 .936 .952 .968 .984 1"/>
-    </feComponentTransfer>
-    <!-- B: the same tone curve with 85% of the colour kept -->
-    <feColorMatrix in="SourceGraphic" type="matrix" result="B0" values="0.913 0.111 0.011 0 0
-                                          0.032 0.953 0.011 0 0
-                                          0.030 0.100 0.806 0 0
-                                          0     0     0     1 0"/>
-    <feComponentTransfer in="B0" result="B">
-      <feFuncR type="table" tableValues="0 .06 .26 .4 .48 .555 .6 .645 .69 .735 .78 .808 .836 .864 .892 .92 .936 .952 .968 .984 1"/>
-      <feFuncG type="table" tableValues="0 .06 .26 .4 .48 .555 .6 .645 .69 .735 .78 .808 .836 .864 .892 .92 .936 .952 .968 .984 1"/>
-      <feFuncB type="table" tableValues="0 .06 .26 .4 .48 .555 .6 .645 .69 .735 .78 .808 .836 .864 .892 .92 .936 .952 .968 .984 1"/>
-    </feComponentTransfer>
-    <!-- how coloured each pixel is: |r-g| + |g-b| + |b-r|, built from two clamped difference passes -->
-    <feColorMatrix in="SourceGraphic" type="matrix" result="d1" values="1 -1 0 0 0  0 1 -1 0 0  -1 0 1 0 0  0 0 0 1 0"/>
-    <feColorMatrix in="SourceGraphic" type="matrix" result="d2" values="-1 1 0 0 0  0 -1 1 0 0  1 0 -1 0 0  0 0 0 1 0"/>
-    <feComposite in="d1" in2="d2" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" result="dd"/>
-    <!-- plain surfaces stay grey; clearly coloured things show B -->
-    <feColorMatrix in="dd" type="matrix" result="mask" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  4 4 4 0 -0.4"/>
-    <feComposite in="B" in2="mask" operator="in" result="Bm"/>
-    <feComposite in="Bm" in2="A" operator="over"/>
-  </filter>
 </svg>
 <canvas id="grain" aria-hidden="true"></canvas>
 
