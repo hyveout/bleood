@@ -557,7 +557,8 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .living .stick i{position:absolute; left:50%; top:50%; width:42%; aspect-ratio:1; border-radius:50%;
   background:rgba(236,234,228,.35); transform:translate(-50%,-50%)}
 .living.touch .stick{display:block}
-.living .holdcandle{position:absolute; right:7%; bottom:10%; width:18%; aspect-ratio:1; border-radius:50%; display:none;
+.living .stick.look{left:auto; right:3%}
+.living .holdcandle{position:absolute; right:7%; bottom:33%; width:18%; aspect-ratio:1; border-radius:50%; display:none;
   border:1px solid rgba(236,234,228,.4); background:rgba(0,0,0,.3); z-index:6; -webkit-tap-highlight-color:transparent}
 .living .holdcandle span{position:absolute; left:50%; top:50%; width:22%; height:44%; transform:translate(-50%,-50%);
   background:linear-gradient(#fff2c8 0 22%, #e8e2d4 22% 100%); border-radius:40% 40% 8% 8%/30% 30% 4% 4%; opacity:.6}
@@ -577,9 +578,9 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .liv-load span{font-family:var(--crtface); font-size:clamp(.6rem,1.4vw,.8rem); letter-spacing:.4em; text-transform:uppercase; color:rgba(232,227,214,.6)}
 .liv-load div{width:min(46%,260px); height:3px; background:rgba(232,227,214,.12)}
 .liv-load i{display:block; height:100%; width:0; background:rgba(232,227,214,.75); transition:width .2s}
-.use-btn{position:absolute; right:25%; bottom:8%; width:12%; aspect-ratio:1; border-radius:50%; border:1px solid rgba(233,232,228,.4); background:rgba(0,0,0,.4); display:none; z-index:7; touch-action:none;
+.use-btn{position:absolute; right:7%; bottom:33%; width:12%; aspect-ratio:1; border-radius:50%; border:1px solid rgba(233,232,228,.4); background:rgba(0,0,0,.4); display:none; z-index:7; touch-action:none;
   font-family:var(--crtface); font-size:clamp(.55rem,2.4vw,.8rem); letter-spacing:.2em; color:rgba(233,232,228,.7); align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent}
-.living.touch .use-btn{display:flex} .use-btn.hot{border-color:#fff; color:#fff; box-shadow:0 0 12px rgba(240,200,104,.45)}
+.living.touch .use-btn{display:flex} .living.touch.plush-on .use-btn{display:none} .use-btn.hot{border-color:#fff; color:#fff; box-shadow:0 0 12px rgba(240,200,104,.45)}
 .living.touch .cap-hint, .living.touch .living-hint{display:none}
 .liv-deck{display:none}
 @media (orientation:portrait) and (min-width:99999px){      /* (the upright control deck: switched off) */
@@ -2282,7 +2283,7 @@ const LIVING = (function(){
   const LIVING_GRAIN = '';      // the page's film grain while you play: the site's own, the same as the other two games
   let renderer, scene, camera, ray, raf = null, running = false, built = false, post = null;
   let yaw = 0, pitch = 0, last = 0, fade = 1, fadeTo = 0;
-  const keys = {}; let stickVec = {x:0, y:0}; let candleUp = false;
+  const keys = {}; let stickVec = {x:0, y:0}, lookVec = {x:0, y:0}; let candleUp = false;
   const CANDLE_LIFE = 50;            // seconds it can be held up before it dies, per room
   let candleLeft = CANDLE_LIFE;
   let level = null;                 // the current room: {group, bounds, solids, interactives, tick, onExit}
@@ -4203,7 +4204,7 @@ const LIVING = (function(){
           }
         }else{
           // she comes, fast: up to speed in half a second, a little quicker than you can walk
-          const sp = Math.min(1, (now - level.chase) / 500) * 3.0 * dtS;
+          const sp = Math.min(1, (now - level.chase) / 500) * (TOUCH ? 2.55 : 3.0) * dtS;      // (phones: a little slower, there is less screen to see her coming)
           if(dist > 1.2){ gp.x = Math.max(-.9, Math.min(.9, gp.x + dx / dist * sp)); gp.z += dz / dist * sp; }
           else jumpscare(level.watch);                                                           // she has you
           level.demon.group.rotation.y = Math.atan2(dx, dz);                                     // always facing you
@@ -5917,8 +5918,9 @@ const LIVING = (function(){
         const dn = e=>{ e.preventDefault(); e.stopPropagation(); plushHold(true); }, up = e=>{ e.preventDefault(); e.stopPropagation(); plushHold(false); };
         lb.addEventListener('touchstart', dn, {passive:false}); lb.addEventListener('touchend', up, {passive:false}); lb.addEventListener('touchcancel', up, {passive:false}); }
       const s = document.createElement('div'); s.className = 'stick'; s.innerHTML = '<i></i>'; wrap.appendChild(s);
+      const s2 = document.createElement('div'); s2.className = 'stick look'; s2.innerHTML = '<i></i>'; wrap.appendChild(s2);      // the right one turns the view
       hint.textContent = '';
-      setupTouch(s);      // (the upright control deck, setupDeck, is not used: the overlay controls are)
+      setupTouch(s, s2);      // (the upright control deck, setupDeck, is not used: the overlay controls are)
     }else{
       hint.textContent = '';
       setupMouse();
@@ -5994,13 +5996,14 @@ const LIVING = (function(){
     });
     addEventListener('keyup', e=>{ keys[e.code] = false; if(e.code === 'Space') plushHold(false); });
   }
-  function setupTouch(stick){
+  function setupTouch(stick, lstick){
     let lookId = null, lx = 0, ly = 0, lx0 = 0, ly0 = 0, moveId = null, mx0 = 0, my0 = 0;
-    const knob = stick.querySelector('i');
+    const knob = stick.querySelector('i'), lknob = lstick.querySelector('i');
+    const lookOff = ()=>{ lookVec = {x:0, y:0}; lknob.style.transform = 'translate(-50%,-50%)'; };
     // a finger whose lift never reached us (its element went away, a panel opened under it) would keep its slot for good, and every later
     // drag would be ignored: before each touch, any slot whose finger is no longer on the glass is let go
     const alive = (e, id) => { for(const t of e.touches) if(t.identifier === id) return true; return false; };
-    const prune = e => { if(lookId !== null && !alive(e, lookId)) lookId = null; if(moveId !== null && !alive(e, moveId)){ moveId = null; stickVec = {x:0, y:0}; knob.style.transform = 'translate(-50%,-50%)'; } };
+    const prune = e => { if(lookId !== null && !alive(e, lookId)){ lookId = null; lookOff(); } if(moveId !== null && !alive(e, moveId)){ moveId = null; stickVec = {x:0, y:0}; knob.style.transform = 'translate(-50%,-50%)'; } };
     wrap.addEventListener('touchstart', e=>{
       if(opening){ skipOpening(); return; }
       prune(e);
@@ -6017,12 +6020,14 @@ const LIVING = (function(){
       }
       e.preventDefault();
     }, {passive:false});
-    addEventListener('touchend', e=>{ if(!e.touches.length){ lookId = null; if(moveId !== null){ moveId = null; stickVec = {x:0, y:0}; knob.style.transform = 'translate(-50%,-50%)'; } } }, {passive:true});      // every finger off: nothing held
+    addEventListener('touchend', e=>{ if(!e.touches.length){ lookId = null; lookOff(); if(moveId !== null){ moveId = null; stickVec = {x:0, y:0}; knob.style.transform = 'translate(-50%,-50%)'; } } }, {passive:true});      // every finger off: nothing held
     wrap.addEventListener('touchmove', e=>{
       for(const tch of e.changedTouches){
         if(tch.identifier === lookId){
-          yaw -= (tch.clientX - lx) * 0.006; pitch -= (tch.clientY - ly) * 0.006;
-          pitch = Math.max(-1.35, Math.min(1.35, pitch)); lx = tch.clientX; ly = tch.clientY;
+          // a stick, not a drag: how far the thumb sits from where it landed sets how fast the view turns (a small dead zone in the middle)
+          const dx = (tch.clientX - lx0) / 55, dy = (tch.clientY - ly0) / 55, len = Math.hypot(dx, dy) || 1, k = Math.min(1, Math.max(0, (len - .12) / .88));
+          lookVec = {x: dx / len * k, y: dy / len * k}; lx = tch.clientX; ly = tch.clientY;
+          lknob.style.transform = 'translate(calc(-50% + ' + (lookVec.x * 30) + 'px), calc(-50% + ' + (lookVec.y * 30) + 'px))';
         }else if(tch.identifier === moveId){
           const dx = (tch.clientX - mx0) / 45, dy = (tch.clientY - my0) / 45;
           const len = Math.hypot(dx, dy) || 1, k = Math.min(1, len);
@@ -6035,7 +6040,7 @@ const LIVING = (function(){
     const end = e=>{
       for(const tch of e.changedTouches){
         if(tch.identifier === lookId){
-          lookId = null;
+          lookId = null; lookOff();
           if(Math.hypot(tch.clientX - lx0, tch.clientY - ly0) < 12) wantInteract = true;   // a tap, not a drag
         }
         if(tch.identifier === moveId){ moveId = null; stickVec = {x:0, y:0}; knob.style.transform = 'translate(-50%,-50%)'; }
@@ -6113,6 +6118,7 @@ const LIVING = (function(){
     const reading = !!opening || !!dolly || noteOverlay.classList.contains('on') || panel.classList.contains('on') || tipOpen || !!(level && level.intro) || !!(level && level.ending && level.ending.locked) || !!(level && level.memory) || !!(level && level.plush && level.plush.lock);
     if(reading) movingNow = false;
 
+    if(level && !reading && (lookVec.x || lookVec.y)){ yaw -= lookVec.x * 2.3 * dt; pitch = Math.max(-1.35, Math.min(1.35, pitch - lookVec.y * 1.5 * dt)); }      // the phone look stick
     if(level && !reading){
       let fwd = 0, side = 0;
       if(keys.KeyW || keys.ArrowUp) fwd += 1;
@@ -6228,7 +6234,11 @@ const LIVING = (function(){
   }
   async function start(){
     if(running) return;
-    const slow = setTimeout(()=> loadBar(.04, 'loading'), 250);
+    // the bar is up from the first moment: the engine and the doll if they are not here yet, then the room is built, the doll parsed
+    // and the shaders compiled in separate steps with a painted frame between them (one long freeze after PLAY otherwise)
+    const paint = ()=> new Promise(r => requestAnimationFrame(()=> requestAnimationFrame(r)));
+    loadBar(.03, 'loading'); crt.classList.add('in-living'); await paint();
+    const slow = 0;
     if(!window.THREE){ loadBar(.05, 'loading');
       await loadScript(['https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js']).catch(()=>{});
       if(!window.THREE){ hint.textContent = 'could not load the 3d engine'; wrap.classList.add('on'); return; }
@@ -6237,12 +6247,18 @@ const LIVING = (function(){
       await loadScript(['https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js', 'https://cdn.jsdelivr.net/npm/three@0.128.1/examples/js/loaders/GLTFLoader.js']).catch(()=>{});
     }
     if(!dollBytes){ await dollSource(k => { if(loadEl && loadEl.classList.contains('on')) loadBar(.28 + k * .64); }); }
-    clearTimeout(slow); if(loadEl && loadEl.classList.contains('on')){ loadBar(1); setTimeout(()=> loadBar(null), 250); }
+    loadBar(.3, 'loading'); await paint();
+    if(THREE.GLTFLoader){ await dollTemplate().catch(()=> null); }      // the doll parsed first, so the room finds it ready
+    loadBar(.55); await paint();
     if(!built) build();
     if(freshNext){ freshNext = false; hallPass = 0; notesRead = 0; openNext = true; buildBedroom(); }      // you came out of the ending: start again from the bed
     wrap.classList.add('on');
     crt.classList.add('in-living'); { const gr = document.getElementById('grain'); if(gr) gr.style.opacity = TOUCH ? '0' : LIVING_GRAIN; }      // light scanlines, almost no grain
     resize();
+    loadBar(.75); await paint();
+    try{ renderer.compile(scene, camera); if(grade) renderer.compile(grade.pscene, grade.pcam); }catch(e){}      // the shaders, built now rather than on the first frame
+    loadBar(.95); await paint();
+    loadBar(1); setTimeout(()=> loadBar(null), 200);
     running = true; last = performance.now(); fade = 1; fadeTo = 0;
     plushAudio();
     raf = requestAnimationFrame(loop);
