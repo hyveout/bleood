@@ -4141,7 +4141,7 @@ const LIVING = (function(){
       }
       if(level.backDoor){ const bd = level.backDoor; bd.pivot.rotation.y += ((bd.ry + (bd.open ? -Math.PI/2 : 0)) - bd.pivot.rotation.y) * .12; }
       if(level.exitDoor){ const dd = level.exitDoor; dd.pivot.rotation.y += ((dd.ry + (dd.open ? -Math.PI/2 : 0)) - dd.pivot.rotation.y) * 0.08; }
-      if(level.haunt && !(level.plush && level.plush.active)) hauntStep(now, dtS);
+      if(level.haunt) hauntStep(now, dtS);      // (it idles while the corridor game is on, and sees it end)
       if(level.hall1){
         const H1 = level.hall1;
         H1.drawer.position.x += ((w/2 - .3 - (H1.drawerOpen ? .3 : 0)) - H1.drawer.position.x) * .12;
@@ -4310,18 +4310,18 @@ const LIVING = (function(){
     const main = level.haunt; if(!main) return;
     const busy = level.intro || tipOpen || opening || dolly || level.memory || noteOverlay.classList.contains('on') || panel.classList.contains('on') || (level.watch && level.watch.scaring) || (level.plush && level.plush.active);
     const A = level.arena;
-    if(!main.on && !(A && A.state === 'fighting')){ if(now > main.next){ if(busy || !haveCamera()) main.next = now + 4000 + Math.random() * 4000; else hauntStart(now, main); } }
-    // the big room sends them in together: up to three at once, until the count is met
-    if(A && A.state === 'fighting' && !busy && haveCamera()){
-      const alive = hauntAlive().length, left = A.need - A.killed - alive;
-      if(left > 0 && alive < 3 && now > (A.nextSpawn || 0)){ const free = (level.haunts || []).find(H => !H.on && H.him && H.her); if(free && hauntStart(now, free)) A.nextSpawn = now + 900 + Math.random() * 1200; else A.nextSpawn = now + 1500; }
-    }
-    if(busy){ main.wasBusy = true; return; }
+    if(busy){ main.wasBusy = true; if(now > main.next) main.next = now + 3000; return; }
     if(main.wasBusy){      // out of a minigame, a cutscene or a note: whatever is out stands off and waits, and nothing new comes for a while
       main.wasBusy = false;
       for(const H of hauntAlive()){ if(H.dying || H.scare) continue; H.grace = now + 3000; const dx = H.px - camera.position.x, dz = H.pz - camera.position.z, d = Math.max(.01, Math.hypot(dx, dz));
         if(d < 1.8){ const b = level.bounds; H.px = Math.max(b.minX + .4, Math.min(b.maxX - .4, camera.position.x + dx / d * 1.8)); H.pz = Math.max(b.minZ + .4, Math.min(b.maxZ - .4, camera.position.z + dz / d * 1.8)); } }
-      main.next = Math.max(main.next, now + 6000); if(A) A.nextSpawn = Math.max(A.nextSpawn || 0, now + 2500);
+      main.next = Math.max(main.next, now + 7000); if(A) A.nextSpawn = Math.max(A.nextSpawn || 0, now + 2500);
+    }
+    if(!main.on && !(A && A.state === 'fighting')){ if(now > main.next){ if(!haveCamera()) main.next = now + 4000 + Math.random() * 4000; else hauntStart(now, main); } }
+    // the big room sends them in together: up to three at once, until the count is met
+    if(A && A.state === 'fighting' && haveCamera()){
+      const alive = hauntAlive().length, left = A.need - A.killed - alive;
+      if(left > 0 && alive < 3 && now > (A.nextSpawn || 0)){ const free = (level.haunts || []).find(H => !H.on && H.him && H.her); if(free && hauntStart(now, free)) A.nextSpawn = now + 900 + Math.random() * 1200; else A.nextSpawn = now + 1500; }
     }
     const cam = camera.position, charging = now < camReady;
     if(!HV) HV = new THREE.Vector3();
