@@ -4244,7 +4244,7 @@ const LIVING = (function(){
   // ---------- the doll's head in the bedroom (the camera, after Fatal Frame): it drifts in from a corner and comes for you. a ring comes up in the
   // middle of the view; keep its face inside the ring and the runes light, faster the closer it is. when they are all lit, a press takes the
   // picture and it is gone. a picture taken early only knocks it back. if it reaches you, it has you ----------
-  const HAUNT = {FIRST:[5, 9], AGAIN:[5, 10], CHARGE:2.6, SPEED:.46, START:1.1, SNAPS:3, REACH:.8, GRACE:1600};
+  const HAUNT = {FIRST:[8, 14], AGAIN:[10, 20], CHARGE:2.6, SPEED:.46, START:1.1, SNAPS:3, REACH:.8, GRACE:1600};
   let hauntTurn = 0;      // whose turn: his, hers, his...
   // drawn once where you cannot see it, so the first real appearance costs nothing
   function warmUp(obj){ obj.visible = true; obj.position.set(camera.position.x, -40, camera.position.z); setTimeout(()=>{ obj.visible = false; }, 120); }
