@@ -4314,7 +4314,13 @@ const LIVING = (function(){
       const alive = hauntAlive().length, left = A.need - A.killed - alive;
       if(left > 0 && alive < 3 && now > (A.nextSpawn || 0)){ const free = (level.haunts || []).find(H => !H.on && H.him && H.her); if(free && hauntStart(now, free)) A.nextSpawn = now + 900 + Math.random() * 1200; else A.nextSpawn = now + 1500; }
     }
-    if(busy) return;
+    if(busy){ main.wasBusy = true; return; }
+    if(main.wasBusy){      // out of a minigame, a cutscene or a note: whatever is out stands off and waits, and nothing new comes for a while
+      main.wasBusy = false;
+      for(const H of hauntAlive()){ if(H.dying || H.scare) continue; H.grace = now + 3000; const dx = H.px - camera.position.x, dz = H.pz - camera.position.z, d = Math.max(.01, Math.hypot(dx, dz));
+        if(d < 1.8){ const b = level.bounds; H.px = Math.max(b.minX + .4, Math.min(b.maxX - .4, camera.position.x + dx / d * 1.8)); H.pz = Math.max(b.minZ + .4, Math.min(b.maxZ - .4, camera.position.z + dz / d * 1.8)); } }
+      main.next = Math.max(main.next, now + 6000); if(A) A.nextSpawn = Math.max(A.nextSpawn || 0, now + 2500);
+    }
     const cam = camera.position, charging = now < camReady;
     if(!HV) HV = new THREE.Vector3();
     const r = capEl.getBoundingClientRect(), W2 = wrap.clientWidth, H2 = wrap.clientHeight;
@@ -5019,6 +5025,7 @@ const LIVING = (function(){
     yaw = Math.PI / 2; pitch = 0; fade = .85; fadeTo = 0;          // you are facing down it, as the lights go
     P.nextMove = now + 1e9; P.push = false;      // (set once the opening is over: it sits in its chair a good while before the first move)
     P.intro = {t0:now};                          // the light comes on; it is on its chair; it comes at your face; it goes back; the light dies
+    if(level.haunts) hauntAlive().forEach(H => { H.dying = 0; H.scare = 0; hauntEnd(false, H); });      // nothing follows you into the corridor
     const H1 = level.hall1; H1.door.open = false; H1.door.pivot.rotation.y = H1.door.ry;      // it shuts behind you
     P.fog = scene.fog; scene.fog = new THREE.Fog(FOGC, 7, 17);      // the torch reaches the chair
     level.solids.push(H1.block);
