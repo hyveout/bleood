@@ -1191,6 +1191,8 @@ body.mob-full .mob-exit:active{opacity:1; border-color:rgba(232,227,214,.9)}
 .game-panel .pull-gauge i.hot{background:#e0232a; box-shadow:0 0 12px rgba(224,35,42,.9)}
 .game-panel .pull-hit{position:absolute; inset:0; bottom:auto; aspect-ratio:3/2; background:#a00a0a; opacity:0; pointer-events:none}
 .game-panel .lock canvas{width:100%; display:block; box-shadow:0 18px 30px rgba(0,0,0,.85); touch-action:none; image-rendering:pixelated}
+.game-panel .lock-back.hot{background:#8a1a1a; color:#fff}
+.living:not(.touch) .game-panel .lock-back::after{content:' \00b7  right click'; opacity:.6}      /* desktop: the mouse is locked to the view, so say the other way out */
 .game-panel .lock-back{position:absolute; right:0; bottom:-44px; height:32px; padding:0 18px; background:#1c1d1e; border:1px solid #000; color:#bdb8ad;
   font-family:var(--crtface); font-size:.9rem; letter-spacing:.2em; text-transform:uppercase; cursor:pointer}
 .game-panel .safe-cur{position:absolute; width:8px; height:8px; margin:-4px 0 0 -4px; border-radius:50%; background:#fff; box-shadow:0 0 6px #000; pointer-events:none}
@@ -5499,6 +5501,14 @@ const LIVING = (function(){
                       '<input class="tw-input" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false"><button type="button" class="lock-back tw-back">back</button></div>';
     panel.querySelector('.tw-back').addEventListener('click', e=>{ e.stopPropagation(); closePanel(); });
     panel.querySelector('.tw-back').addEventListener('pointerdown', e=>{ e.stopPropagation(); });
+    // the mouse is locked to the view while you play (always so in full screen), so a pointer is steered over the page, as in the safe:
+    // move it onto BACK and click
+    { const box = panel.querySelector('.tw'), cur = document.createElement('b'); cur.className = 'safe-cur'; box.appendChild(cur);
+      let cx = .5, cy = .5, hot = null;
+      const place = ()=>{ cur.style.left = (cx * 100) + '%'; cur.style.top = (cy * 100) + '%'; const r = box.getBoundingClientRect(), el = document.elementFromPoint(r.left + cx * r.width, r.top + cy * r.height);
+        const k = el && el.closest ? el.closest('.tw-back') : null; if(k !== hot){ if(hot) hot.classList.remove('hot'); hot = k; if(hot) hot.classList.add('hot'); } };
+      penMove = (dx, dy)=>{ const r = box.getBoundingClientRect(); cx = Math.max(-.1, Math.min(1.1, cx + dx / r.width)); cy = Math.max(0, Math.min(1.4, cy + dy / r.height)); place(); };
+      penDown = ()=>{ if(hot) closePanel(); }; penUp = null; setTimeout(place, 30); }
     renderTypewriter();
     if(TOUCH){
       // phones: the system keyboard can't be opened from here (and it zooms the page), so the keys are laid out under the page
@@ -5906,7 +5916,7 @@ const LIVING = (function(){
     penDown = ()=>{ if(!hot) return; if(hot.classList.contains('safe-back')) closePanel(); else take(); };
     penUp = null; setTimeout(place, 30);
   }
-  function closePanel(){ KNIFE_CUT.stop();
+  function closePanel(){ KNIFE_CUT.stop(); penMove = penDown = penUp = null;
     if(level && level.haunts){ const nw = performance.now(), cam = camera.position; for(const H of hauntAlive()){ if(H.dying || H.scare) continue; H.grace = nw + 2500;      // out of a challenge: a moment's grace, and they stand off
       const dx = H.px - cam.x, dz = H.pz - cam.z, d = Math.max(.01, Math.hypot(dx, dz)); if(d < 1.6){ const b = level.bounds; H.px = Math.max(b.minX + .4, Math.min(b.maxX - .4, cam.x + dx / d * 1.6)); H.pz = Math.max(b.minZ + .4, Math.min(b.maxZ - .4, cam.z + dz / d * 1.6)); } } } if(pullCleanup){ const f = pullCleanup; pullCleanup = null; try{ f(); }catch(e){} } panel.classList.remove('on'); panel.innerHTML = ''; panel.dataset.game = ''; penMove = penDown = penUp = null; tracing = false; }
 
@@ -5941,7 +5951,7 @@ const LIVING = (function(){
     flashEl = document.createElement('div'); flashEl.className = 'living-flash'; wrap.appendChild(flashEl);
     for(let i = 0; i < 3; i++){ const e = document.createElement('i'); e.className = 'cam-edge'; wrap.appendChild(e); edgeEls.push(e); }
     panel = document.createElement('div'); panel.className = 'game-panel'; wrap.appendChild(panel);
-    panel.addEventListener('mousedown', e=>e.stopPropagation()); panel.addEventListener('click', e=>e.stopPropagation());
+    panel.addEventListener('mousedown', e=>{ e.stopPropagation(); if(e.button === 2 && !TOUCH) closePanel(); }); panel.addEventListener('contextmenu', e=>e.preventDefault()); panel.addEventListener('click', e=>e.stopPropagation());
     msgEl = document.createElement('div'); msgEl.className = 'living-msg'; wrap.appendChild(msgEl);
     camFrame = document.createElement('div'); camFrame.className = 'cam-frame'; camFrame.innerHTML = (TOUCH ? '<div class="cfp"><b></b><b></b><b></b></div>' : '') + '<span class="cf-tag"></span><span class="cf-count"></span><span class="cf-charge">recharging</span><div class="cf-mode"><span data-m="forget">forget</span><span data-m="remember">remember</span><small></small></div>'; wrap.appendChild(camFrame);
     camFrame.querySelector('.cf-mode small').textContent = TOUCH ? 'tap to switch' : '1 / 2 or scroll to switch';
@@ -6032,7 +6042,7 @@ const LIVING = (function(){
       yaw -= e.movementX * 0.0022; pitch -= e.movementY * 0.0022;
       pitch = Math.max(-1.35, Math.min(1.35, pitch));
     });
-    document.addEventListener('mousedown', e=>{ if(panel.classList.contains('on') && e.button === 0 && penDown) penDown(); });
+    document.addEventListener('mousedown', e=>{ if(!panel.classList.contains('on')) return; if(e.button === 2){ closePanel(); return; } if(e.button === 0 && penDown) penDown(); });      // (right click leaves any challenge)
     document.addEventListener('mouseup', e=>{ if(e.button === 0 && penUp) penUp(); });
     document.addEventListener('mouseup', ()=> plushHold(false));
     addEventListener('keydown', e=>{
