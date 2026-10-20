@@ -533,7 +533,7 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .living canvas{width:100%; height:100%; display:block; image-rendering:pixelated; image-rendering:crisp-edges}
 .livcv{position:absolute; inset:0}
 .living.vig .livcv{-webkit-filter:none; filter:none}   /* the whole grade now lives in #livgrade */
-.living.vig canvas{filter:url(#livgrade)}
+/* (the grade is drawn on the GPU now: see makeGrade) */
 /* a heavy vignette: the middle of the view is all there is, and it breathes */
 .living.vig::after{content:""; position:absolute; inset:-2%; pointer-events:none; z-index:2;
   background:radial-gradient(ellipse 90% 86% at 50% 50%, rgba(0,0,0,.14) 0%, rgba(0,0,0,.22) 22%, rgba(0,0,0,.52) 44%, rgba(0,0,0,.82) 64%, rgba(0,0,0,.95) 82%, rgba(0,0,0,.98) 100%);
@@ -2347,12 +2347,34 @@ const LIVING = (function(){
   let capEl = null, capHint = null, camFrame = null, camBtn = null, camUp = false, hasCamera = false, raiseHinted = false;
   // a camera move the player does not control: out to a point, a hold there, and back to where they stood
   let dolly = null, flashEl = null; const edgeEls = [];
+  // lights that ride on things which appear and vanish (the heads, the corridor's doll) live in the room instead, and follow their owner.
+  // a light inside a hidden group drops out of the light count, and every change of that count makes the GPU rebuild every shader in
+  // the room: a hitch each time the camera went up or the torch went on. here the count never changes; a hidden owner's light is just dark
+  function poolLight(L, owner, dyn){
+    if(!L || !level) return; L.userData.owner = owner; L.userData.off = L.position.clone(); L.userData.base = L.intensity; L.userData.dyn = !!dyn;
+    if(L.parent) L.parent.remove(L); level.group.add(L); level.pooled.push(L);
+  }
+  const PV = {v:null};
+  function shownInScene(o){ while(o){ if(!o.visible) return false; if(o === scene) return true; o = o.parent; } return false; }
+  function syncPooled(){
+    if(!PV.v) PV.v = new THREE.Vector3();
+    for(const L of level.pooled){
+      const o = L.userData.owner;
+      if(!shownInScene(o)){ L.intensity = 0; continue; }
+      o.updateWorldMatrix(true, false); PV.v.copy(L.userData.off); o.localToWorld(PV.v); level.group.worldToLocal(PV.v); L.position.copy(PV.v);
+      if(!L.userData.dyn) L.intensity = L.userData.base;
+    }
+    for(const L of level.camLights) L.intensity = camUp ? L.userData.base : 0;
+  }
   // in the big room: for each head you cannot see, a chevron on the edge of the view in its direction
   let EV = null, EVm = null;
   function edgeMarkers(){
     if(!EV){ EV = new THREE.Vector3(); EVm = new THREE.Matrix4(); }
     camera.updateMatrixWorld(); EVm.copy(camera.matrixWorld).invert();      // (the camera's own inverse is not kept up to date while it hangs in the scene)
-    const A = level && level.arena, on = !!(A && A.state === 'fighting'), W = wrap.clientWidth, H = wrap.clientHeight;
+    const A = level && level.arena, on = !!(A && A.state === 'fighting');
+    if(!on){ for(const e of edgeEls) if(e.classList.contains('on')) e.classList.remove('on'); return; }
+    if(!wrapW){ wrapW = wrap.clientWidth; wrapH = wrap.clientHeight; }
+    const W = wrapW, H = wrapH;
     let k = 0;
     if(on){ for(const Hh of hauntAlive()){ if(Hh.dying || Hh.scare || k >= edgeEls.length) continue;
       EV.set(Hh.px, Hh.py, Hh.pz).applyMatrix4(EVm);      // camera space: x right, y up, -z ahead
@@ -2725,6 +2747,38 @@ const LIVING = (function(){
   function mat(kind, rx, ry, opts){ const T = tex(kind, ['door','doorback','panel','damask','carpet','tatami','shoji','plank','boards','plaster'].includes(kind) ? 128 : 64); T.repeat.set(rx || 1, ry || 1); return new THREE.MeshLambertMaterial(Object.assign({map:T}, opts || {})); }
   function imgTex(src, cb){ new THREE.TextureLoader().load(src, tx=>{ tx.magFilter = THREE.NearestFilter; tx.minFilter = THREE.NearestFilter; cb(tx); }); }
 
+  // ---------- the colour grade, on the GPU ----------
+  // this used to be an SVG filter (#livgrade) laid over the canvas: ten filter steps run by the browser on every frame, which phones do
+  // on the CPU. here the same sums run in one pass: the picture greyed to 30% colour with a warm cast, the same tone curve, and anything
+  // clearly coloured (red shades, blood, the clothes) kept at 85%
+  function makeGrade(){
+    const rt = new THREE.WebGLRenderTarget(320, 240, {minFilter:THREE.NearestFilter, magFilter:THREE.NearestFilter, depthBuffer:true});
+    const T = [0, .06, .26, .4, .48, .555, .6, .645, .69, .735, .78, .808, .836, .864, .892, .92, .936, .952, .968, .984, 1], N = T.length;
+    const curve = new Uint8Array(N * 4); T.forEach((v, i)=>{ const b = Math.round(v * 255); curve.set([b, b, b, 255], i * 4); });
+    const ct = new THREE.DataTexture(curve, N, 1, THREE.RGBAFormat); ct.minFilter = ct.magFilter = THREE.LinearFilter; ct.needsUpdate = true;
+    const pscene = new THREE.Scene(), pcam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    const pmat = new THREE.ShaderMaterial({
+      uniforms:{tDiffuse:{value:rt.texture}, tCurve:{value:ct}},
+      vertexShader:'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+      fragmentShader:[
+        'precision mediump float;',
+        'uniform sampler2D tDiffuse; uniform sampler2D tCurve; varying vec2 vUv;',
+        'float tone(float v){ return texture2D(tCurve, vec2(clamp(v, 0.0, 1.0) * ' + ((N - 1) / N).toFixed(6) + ' + ' + (.5 / N).toFixed(6) + ', 0.5)).r; }',
+        'vec3 toneV(vec3 c){ return vec3(tone(c.r), tone(c.g), tone(c.b)); }',
+        'void main(){',
+        '  vec3 c = texture2D(tDiffuse, vUv).rgb;',
+        '  vec3 a = clamp(mat3(0.400, 0.160, 0.170,  0.460, 0.790, 0.540,  0.050, 0.060, 0.360) * c, 0.0, 1.0);',
+        '  vec3 b = clamp(mat3(0.913, 0.032, 0.030,  0.111, 0.953, 0.100,  0.011, 0.011, 0.806) * c, 0.0, 1.0);',
+        '  float d = abs(c.r - c.g) + abs(c.g - c.b) + abs(c.b - c.r);',
+        '  float m = clamp(4.0 * d - 0.4, 0.0, 1.0);',
+        '  gl_FragColor = vec4(mix(toneV(a), toneV(b), m), 1.0);',
+        '}'].join('\n'),
+      depthTest:false, depthWrite:false
+    });
+    pscene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), pmat));
+    return {rt, pscene, pcam, pmat};
+  }
+  let grade = null;
   // ---------- the dither pass: everything becomes hard black and white ----------
   function makePost(){
     const rt = new THREE.WebGLRenderTarget(320, 240, {minFilter:THREE.NearestFilter, magFilter:THREE.NearestFilter});
@@ -2930,7 +2984,7 @@ const LIVING = (function(){
     { const gr = document.getElementById('grain'); if(gr) gr.style.opacity = LIVING_GRAIN; }
     if(scene && scene.background && scene.background.setHex) scene.background.setHex(0x000000);
     if(level && level.group){ scene.remove(level.group); }
-    level = {group:new THREE.Group(), bounds:null, solids:[], interactives:[], lights:[], tick:null, doors:[], camOnly:[], camHide:[]};      // camOnly: seen only through the camera; camHide: gone when it is up
+    level = {group:new THREE.Group(), bounds:null, solids:[], interactives:[], lights:[], tick:null, doors:[], camOnly:[], camHide:[], pooled:[], camLights:[]};      // camOnly: seen only through the camera; camHide: gone when it is up
     redLevel = 0;
 
     scene.add(level.group);
@@ -3008,7 +3062,8 @@ const LIVING = (function(){
           const group = new THREE.Group(); group.add(model);
           // her own light: a warm key from the front so she has form, and a red rim from behind that flares when she surges
           const key = new THREE.PointLight(0xffd6b0, 1.0, 7, 1.5); key.position.set(0, targetH * .75, targetH * .8); group.add(key);
-          const rim = new THREE.PointLight(0xff2418, .8, 6, 1.5); rim.position.set(0, targetH * .5, -targetH * .9); group.add(rim);
+          let rim = {intensity:0};      // (phones: no rim light, only a stand-in so the code that drives it has something to set)
+          if(!TOUCH){ rim = new THREE.PointLight(0xff2418, .8, 6, 1.5); rim.position.set(0, targetH * .5, -targetH * .9); group.add(rim); }
           resolve({group, model, sc, base:model.position.clone(), bones, arms, rim, seed:Math.random() * 6, burst:0});
         }, () => resolve(null));
       });
@@ -4018,7 +4073,7 @@ const LIVING = (function(){
       [pkShaft, pkBow, pkBit, pkHit].forEach(m => m.userData = {kind:'hallkey', prompt:'take', camOnly:true}); level.interactives.push(pkShaft, pkBow, pkBit, pkHit);
       level.hall1.keyHit = pkHit;
       level.hall1.key = pk; level.hall1.keyParts = [pkShaft, pkBow, pkBit];
-      { const pl = new THREE.PointLight(0xffe6c0, .9, 2.4, 1.6); pl.position.set(w/2 - .5, 2.0, tz); pl.visible = false; g.add(pl); level.camOnly.push(pl); }      // through the camera the picture is lit, as if by its own light
+      { const pl = new THREE.PointLight(0xffe6c0, .9, 2.4, 1.6); pl.position.set(w/2 - .5, 2.0, tz); pl.userData.base = .9; pl.intensity = 0; g.add(pl); level.camLights.push(pl); }      // through the camera the picture is lit, as if by its own light
       level.hall1.painting = {pic, key:pk};
 
       // ---- the side door: locked until you have the key; it swings in, into the room
@@ -4194,10 +4249,12 @@ const LIVING = (function(){
     const H = {on:false, next:performance.now() + 1e9, model:null, him:null, her:null, charge:0, kills:0, snaps:0};
     const lv = level;
     loadDollHead().then(m=>{ if(!m || level !== lv) return; const car = new THREE.Group(); car.rotation.order = 'YXZ'; m.position.y = -HEAD_CY * HEAD_S; car.add(m); car.visible = false; level.group.add(car); H.him = car; H.himMats = m.userData.mats;
-      const gl = new THREE.PointLight(0xfff0e0, 1.2, 3, 1.4); gl.position.set(0, .25, .45); car.add(gl); warmUp(car); });      // a little light of its own, so it reads in the dim room
+      if(!TOUCH){ const gl = new THREE.PointLight(0xfff0e0, 1.2, 3, 1.4); gl.position.set(0, .25, .45); car.add(gl); poolLight(gl, car); }      // a little light of its own, so it reads in the dim room (phones: its own glow is enough)
+      warmUp(car); });
     // hers: the same head as the opening, eyes burning, kept dark till it is her turn
     const hd = buildHead(); const car2 = new THREE.Group(); car2.rotation.order = 'YXZ'; hd.group.scale.setScalar(2.4); hd.group.traverse(o=>{ if(o.isMesh && o.material && o.material.isMeshLambertMaterial) o.material.color.setHex(0x8a8480); }); car2.add(hd.group); car2.visible = false; level.group.add(car2);
-    const gl2 = new THREE.PointLight(0xfff0e0, .8, 2.6, 1.4); gl2.position.set(0, .25, .45); car2.add(gl2);
+    if(!TOUCH){ const gl2 = new THREE.PointLight(0xfff0e0, .8, 2.6, 1.4); gl2.position.set(0, .25, .45); car2.add(gl2); poolLight(gl2, car2); poolLight(hd.glow, car2, true); }
+    else { if(hd.glow.parent) hd.glow.parent.remove(hd.glow); hd.group.traverse(o => { if(o.isMesh && o.material && o.material.emissive) o.material.emissive.setRGB(.16, .15, .14); }); }      // phones: no lights of its own, a faint glow of its own instead
     H.her = car2; H.herHead = hd; warmUp(car2);
     return H;
   }
@@ -4231,7 +4288,7 @@ const LIVING = (function(){
     }
     if(best < 1.0){ H.next = now + 2500 + Math.random() * 2500; return false; }      // nowhere to stand: wait for you to move on
     H.on = true; H.t0 = now; H.grace = now + HAUNT.GRACE; H.charge = 0; H.snaps = 0; H.px = px; H.pz = pz; H.py = 1.75; H.seed = Math.random() * 7; H.toldFull = false;
-    H.model.position.set(H.px, H.py, H.pz); H.model.visible = true; if(H.mats) H.mats.forEach(mt => mt.emissiveIntensity = .5);
+    H.model.position.set(H.px, H.py, H.pz); H.model.visible = true; if(H.mats) H.mats.forEach(mt => mt.emissiveIntensity = TOUCH ? .75 : .5);
     if(H.who === 'her'){ H.herHead.eyes.forEach(e => e.visible = true); H.herHead.glow.intensity = 1.8; }
     const inFight = level.arena && level.arena.state === 'fighting';      // (in the big room you are past instructions)
     if(camUp && !inFight){ capHint.textContent = ringHint(H); capHint.classList.add('on'); }
@@ -4316,7 +4373,7 @@ const LIVING = (function(){
     }
     return true;
   }
-  let HV = null;
+  let HV = null, ringW = 0, wrapW = 0, wrapH = 0, capIs = null, lastLit = -1;      // (measured once, again after a resize: no layout reads every frame)
   function hauntStep(now, dt){
     const main = level.haunt; if(!main) return;
     const busy = level.intro || tipOpen || opening || dolly || level.memory || noteOverlay.classList.contains('on') || panel.classList.contains('on') || (level.watch && level.watch.scaring) || (level.plush && level.plush.active);
@@ -4336,7 +4393,9 @@ const LIVING = (function(){
     }
     const cam = camera.position, charging = now < camReady;
     if(!HV) HV = new THREE.Vector3();
-    const r = capEl.getBoundingClientRect(), W2 = wrap.clientWidth, H2 = wrap.clientHeight;
+    if(!ringW) ringW = capEl.getBoundingClientRect().width;
+    if(!wrapW){ wrapW = wrap.clientWidth; wrapH = wrap.clientHeight; }
+    const r = {width:ringW}, W2 = wrapW, H2 = wrapH;
     // first: where each one is, and whether it is in the ring
     for(const H of hauntAlive()){
       if(H.dying){ hauntDieStep(H, now, dt); continue; }
@@ -4366,7 +4425,9 @@ const LIVING = (function(){
       H.charge = Math.max(0, Math.min(1, H.charge + gain * dt));
     }
     capEl.classList.toggle('cold', charging); camFrame.querySelector('.cf-charge').classList.toggle('on', charging && camUp);
-    const ch = T ? T.charge : 0, lit = Math.floor(ch * 7 + 1e-6); capEl.querySelectorAll('i').forEach((el, i)=> el.classList.toggle('lit', i < lit)); capEl.classList.toggle('full', ch >= 1);
+    const ch = T ? T.charge : 0, lit = Math.floor(ch * 7 + 1e-6);
+    if(lit !== lastLit){ lastLit = lit; (capIs || (capIs = [...capEl.querySelectorAll('i')])).forEach((el, i)=> el.classList.toggle('lit', i < lit)); }
+    capEl.classList.toggle('full', ch >= 1);
     if(A && A.state === 'fighting') capHint.classList.remove('on');
     else if(T && camUp && capHint.textContent !== ringHint(T)){ capHint.textContent = ringHint(T); capHint.classList.add('on'); }
   }
@@ -4940,24 +5001,48 @@ const LIVING = (function(){
     if(!buf){ const M = window.__dollModel; if(!M) return null; const t = atob(M.b64); const u = new Uint8Array(t.length); for(let i = 0; i < t.length; i++) u[i] = t.charCodeAt(i); buf = u.buffer; tex = M.tex; }
     return dollBytes = {buf, tex};
   }
-  function loadDollHead(){
-    return (async ()=>{
+  // the doll's head, for the floating heads and the corridor. the model is parsed ONCE: only the head's meshes are kept, as plain meshes
+  // (the head never moves its bones), with only their colour pictures (no normal or roughness maps, which the dither would hide anyway).
+  // each head then is a few meshes sharing that geometry and those pictures, instead of a whole fresh copy of the doll
+  let dollTpl = null;
+  function dollTemplate(){
+    if(dollTpl) return dollTpl;
+    return dollTpl = (async ()=>{
       if(!THREE.GLTFLoader) return null;
       const src = await dollSource(); if(!src) return null;
-      const buf = src.buf.slice(0), tex = src.tex;
-      const gltf = await new Promise(res => new THREE.GLTFLoader().parse(buf, '', res, ()=> res(null)));
+      const gltf = await new Promise(res => new THREE.GLTFLoader().parse(src.buf.slice(0), '', res, ()=> res(null)));
       if(!gltf) return null;
-      const m = gltf.scene, tl = new THREE.TextureLoader(), mats = [];
-      m.traverse(o=>{ if(!o.isMesh) return; o.frustumCulled = false;
-        // only the head: anything whose vertices sit below the neck is the body
-        const b = o.geometry.boundingBox || (o.geometry.computeBoundingBox(), o.geometry.boundingBox); if(b.max.y < 75 || b.min.y < 60) o.visible = false;
-        (Array.isArray(o.material) ? o.material : [o.material]).forEach(mt=>{
-          if(tex){ const url = tex[mt.name]; if(url){ const tx = tl.load(url, ()=>{ mt.emissiveMap = tx; mt.needsUpdate = true; }); tx.flipY = false; tx.encoding = THREE.sRGBEncoding; mt.map = tx; } }
-          if('metalness' in mt){ mt.metalness = 0; mt.roughness = .85; }
-          if('emissive' in mt){ mt.emissive.setHex(0xffffff); mt.emissiveMap = mt.map || null; mt.emissiveIntensity = 0; mats.push(mt); }      // in the torch it also glows a little from within, so its face reads
-          mt.needsUpdate = true; }); });
-      m.scale.setScalar(HEAD_S); m.userData.mats = mats; return m;
+      const root = gltf.scene, tl = new THREE.TextureLoader(), texCache = {}, parts = [];
+      root.updateMatrixWorld(true);
+      const rootInv = new THREE.Matrix4().copy(root.matrixWorld).invert();
+      root.traverse(o=>{
+        if(!o.isMesh) return;
+        const bb = o.geometry.boundingBox || (o.geometry.computeBoundingBox(), o.geometry.boundingBox);
+        if(bb.max.y < 75 || bb.min.y < 60) return;      // the body: left out altogether
+        const geo = new THREE.BufferGeometry();
+        ['position', 'normal', 'uv'].forEach(k => { if(o.geometry.attributes[k]) geo.setAttribute(k, o.geometry.attributes[k]); });
+        if(o.geometry.index) geo.setIndex(o.geometry.index);
+        geo.computeBoundingSphere();
+        // a skinned mesh in its bind pose draws its geometry as it stands; a plain mesh needs the node's own placement under the root
+        const mtx = o.isSkinnedMesh ? new THREE.Matrix4() : new THREE.Matrix4().multiplyMatrices(rootInv, o.matrixWorld);
+        (Array.isArray(o.material) ? o.material : [o.material]).slice(0, 1).forEach(mt=>{
+          let map = mt.map || null;
+          if(src.tex && src.tex[mt.name]){ const url = src.tex[mt.name]; map = texCache[url] || (texCache[url] = tl.load(url)); map.flipY = false; map.encoding = THREE.sRGBEncoding; }
+          const m2 = new THREE.MeshStandardMaterial({map, emissive:0xffffff, emissiveMap:map, emissiveIntensity:0, metalness:0, roughness:.85,
+            side:mt.side, transparent:mt.transparent, alphaTest:mt.alphaTest, opacity:mt.opacity, depthWrite:mt.depthWrite});
+          parts.push({geo, mat:m2, mtx});
+        });
+      });
+      return {parts};
     })();
+  }
+  function loadDollHead(){
+    return dollTemplate().then(T=>{
+      if(!T) return null;
+      const m = new THREE.Group(), mats = [];
+      T.parts.forEach(p=>{ const mt = p.mat.clone(); mats.push(mt); const ms = new THREE.Mesh(p.geo, mt); ms.matrixAutoUpdate = false; ms.matrix.copy(p.mtx); ms.frustumCulled = false; m.add(ms); });
+      m.scale.setScalar(HEAD_S); m.userData.mats = mats; return m;
+    });
   }
   let noiseBuf = null;
   const LIVING_SOUND = false;      // off until the recorded sounds arrive (the synthesised stand-ins are silenced here)
@@ -5017,7 +5102,7 @@ const LIVING = (function(){
       // the head sits inside a carrier at its own centre, so it can be placed and turned about its middle
       const car = new THREE.Group(); car.rotation.order = 'YXZ'; m.position.y = -HEAD_CY * HEAD_S; car.add(m); g.add(car);
       P.model = car; P.mats = m.userData.mats;
-      P.glow = new THREE.PointLight(0xfff0e0, 0, 3.4, 1.3); P.glow.position.set(0, .2, .35); car.add(P.glow);      // a little above and in front of its face, so it has form in the torch
+      P.glow = new THREE.PointLight(0xfff0e0, 0, 3.4, 1.3); P.glow.position.set(0, .2, .35); car.add(P.glow); poolLight(P.glow, car, true);      // a little above and in front of its face, so it has form in the torch
       car.visible = false; plushPlace(P, P.step); warmUp(car); setTimeout(()=>{ if(level.plush === P) plushPlace(P, P.step); }, 150); });
     return P;
   }
@@ -5746,8 +5831,9 @@ const LIVING = (function(){
 
   // ---------- setup ----------
   function build(){
-    renderer = new THREE.WebGLRenderer({canvas:cvs, antialias:false});
+    renderer = new THREE.WebGLRenderer({canvas:cvs, antialias:false, powerPreference:'high-performance'});
     renderer.setPixelRatio(1);
+    grade = makeGrade();
     scene = new THREE.Scene(); scene.background = new THREE.Color(0x000000);
     camera = new THREE.PerspectiveCamera(70, 1, 0.05, 60);
     scene.add(camera);
@@ -5820,11 +5906,13 @@ const LIVING = (function(){
     if(!renderer) return;
     const w = crt.clientWidth, h = crt.clientHeight;
     // wide screens keep the chunky low-res look; a phone is already small, so drawing it at 45% just turns it to mush
-    const k = w < 560 ? 1 : (TOUCH ? .7 : .45);
+    const k = w < 560 ? (TOUCH ? .8 : 1) : (TOUCH ? .62 : .45);      // (phones a notch lower: the dither hides it, and it is a third fewer pixels to light)
     const rw = Math.max(160, Math.round(w * k)), rh = Math.max(120, Math.round(h * k));
     renderer.setSize(rw, rh, false);
     if(post){ post.rt.setSize(rw, rh); post.pmat.uniforms.res.value.set(rw, rh); }
+    if(grade) grade.rt.setSize(rw, rh);
     camera.aspect = w / h; camera.updateProjectionMatrix();
+    ringW = 0; wrapW = 0; wrapH = 0;      // (measured again on the next frame that needs them)
   }
   function setupMouse(){
     wrap.addEventListener('mousedown', e=>{
@@ -6011,10 +6099,14 @@ const LIVING = (function(){
     redEl.style.opacity = redLevel.toFixed(3);
 
 
+    if(level && level.pooled) syncPooled();
     if(post){
       post.pmat.uniforms.time.value = now / 1000;
       renderer.setRenderTarget(post.rt); renderer.render(scene, camera);
       renderer.setRenderTarget(null); renderer.render(post.pscene, post.pcam);
+    }else if(grade){
+      renderer.setRenderTarget(grade.rt); renderer.render(scene, camera);
+      renderer.setRenderTarget(null); renderer.render(grade.pscene, grade.pcam);
     }else{
       renderer.render(scene, camera);
     }
