@@ -579,6 +579,7 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .liv-load i{display:block; height:100%; width:0; background:rgba(232,227,214,.75); transition:width .2s}
 .use-btn{position:absolute; right:25%; bottom:8%; width:12%; aspect-ratio:1; border-radius:50%; border:1px solid rgba(233,232,228,.4); background:rgba(0,0,0,.4); display:none; z-index:7; touch-action:none;
   font-family:var(--crtface); font-size:clamp(.55rem,2.4vw,.8rem); letter-spacing:.2em; color:rgba(233,232,228,.7); align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent}
+.use-btn .f{display:none} .living.cam-up .use-btn .u{display:none} .living.cam-up .use-btn .f{display:inline}      /* with the camera up the button flashes */
 .living.touch .use-btn{display:flex} .use-btn.hot{border-color:#fff; color:#fff; box-shadow:0 0 12px rgba(240,200,104,.45)}
 .living.touch .cap-hint, .living.touch .living-hint{display:none}
 .liv-deck{display:none}
@@ -1105,7 +1106,16 @@ body.mob-full .mob-exit:active{opacity:1; border-color:rgba(232,227,214,.9)}
 .cam-frame .cf-mode span{position:absolute; top:82%; height:7.5%; opacity:0; pointer-events:auto; cursor:pointer; touch-action:manipulation}      /* invisible hotspots over the FORGET / REMEMBER painted on the frame */
 .cam-frame .cf-mode span[data-m="forget"]{left:21%; width:26%} .cam-frame .cf-mode span[data-m="remember"]{left:52%; width:27%}
 .cam-frame .cf-mode small{display:none}
-.living.touch .cam-frame{background:none; box-sizing:border-box; border-style:solid; border-color:transparent; border-image:var(--cfp) 150 0 180 0 fill stretch}      /* phones: the frame full height (border widths and hotspots set in script) */
+.living.touch .cam-frame{background:none}      /* phones: the frame full height in three bands; only the middle one is drawn taller */
+.cam-frame .cfp{position:absolute; inset:0; display:flex; flex-direction:column}
+.cam-frame .cfp b{display:block; flex:none; width:100%; background-size:100% 100%; background-repeat:no-repeat}
+.cam-frame .cfp b:nth-child(1){aspect-ratio:1200/150; background-image:var(--cpt)}
+.cam-frame .cfp b:nth-child(2){flex:1 1 auto; background-image:var(--cpm)}
+.cam-frame .cfp b:nth-child(3){aspect-ratio:1200/180; background-image:var(--cpb)}
+/* the two buttons right under the ring */
+.living.touch .cam-frame .cf-mode{inset:auto; left:50%; top:calc(50% + min(21vmin,150px) + 18px); width:min(76vw,340px); aspect-ratio:690/76; transform:translateX(-50%); background:var(--cpk) center/100% 100% no-repeat}
+.living.touch .cam-frame .cf-mode span{top:-30%; height:160%}
+.living.touch .cam-frame .cf-mode span[data-m="forget"]{left:0; width:49%} .living.touch .cam-frame .cf-mode span[data-m="remember"]{left:51%; width:49%}
 .cap-hint{position:absolute; left:0; right:0; top:calc(50% + min(21vmin,150px) + 14px); text-align:center; font-family:var(--crtface); font-size:clamp(.62rem,1.3vw,.82rem); letter-spacing:.26em; text-transform:uppercase; color:rgba(230,224,210,.55); pointer-events:none; opacity:0; transition:opacity .5s; z-index:6}
 .cap-hint.on{opacity:1}
 .cap-hint{display:none !important}
@@ -2412,14 +2422,16 @@ const LIVING = (function(){
   const RECHARGE = 3200;
   const CAM_FRAMES = {forget:'cam_forget.webp', remember:'cam_remember.webp', forget_flash:'cam_forget_flash.webp', remember_flash:'cam_remember_flash.webp'};
   let camFlashing = false, camFlashT = 0;
-  function camFramePic(){ if(!camFrame) return; const f = CAM_FRAMES[camMode + (camFlashing ? '_flash' : '')]; camFrame.style.setProperty('--cf', 'url(' + f + ')'); camFrame.style.setProperty('--cfa', 'url(' + f.replace('.webp', '_a.webp') + ')'); camFrame.style.setProperty('--cfp', 'url(' + f.replace('.webp', '_p.webp') + ')'); }      // (_p: phones, the switch hint painted out, drawn full height)      // (_a: the same frame with its black made see-through, for phones, so no blend is needed)
+  function camFramePic(){ if(!camFrame) return; const f = CAM_FRAMES[camMode + (camFlashing ? '_flash' : '')]; camFrame.style.setProperty('--cf', 'url(' + f + ')'); camFrame.style.setProperty('--cfa', 'url(' + f.replace('.webp', '_a.webp') + ')'); if(TOUCH){ const fl = camFlashing ? '_flash' : '', st = camFrame.style;      // phones: the frame in three bands (no buttons on it), and the two buttons on their own under the ring
+      st.setProperty('--cpt', 'url(cam_p_top' + fl + '.webp)'); st.setProperty('--cpm', 'url(cam_p_mid' + fl + '.webp)'); st.setProperty('--cpb', 'url(cam_p_bot' + fl + '.webp)');
+      st.setProperty('--cpk', 'url(cam_p_btn_' + camMode + fl + '.webp)'); } }      // (_a: the same frame with its black made see-through, for phones, so no blend is needed)
   function camFlashPic(){ camFlashing = true; camFramePic(); clearTimeout(camFlashT); camFlashT = setTimeout(()=>{ camFlashing = false; camFramePic(); }, 380); }
   function setCamMode(m){ camMode = m; if(camFrame) camFrame.querySelectorAll('.cf-mode span').forEach(el => el.classList.toggle('on', el.dataset.m === m)); camFramePic(); }
   // phones: the frame is drawn as a 4:3 band across the width, centred; the two hotspots follow it
   // phones: the frame fills the screen top to bottom. its top band (the lens) and bottom band (the two buttons) keep their shape at full width,
   // only the sides between them are drawn taller (a border-image cut 150 / 180 px from the 1200 x 900 picture); the hotspots follow the bottom band
-  function layoutCamFrame(){ if(!camFrame || !TOUCH) return; const W = wrap.clientWidth, H = wrap.clientHeight, u = W / 1200;
-    camFrame.style.borderWidth = (150 * u) + 'px 0 ' + (180 * u) + 'px 0';
+  function layoutCamFrame(){ return;      // (phones: all CSS now, see .cfp)
+    const W = wrap.clientWidth, H = wrap.clientHeight, u = W / 1200;
     const bandTop = H - 180 * u;
     camFrame.querySelectorAll('.cf-mode span').forEach(el => { const hh = Math.max(74 * u, 46); el.style.top = (bandTop - 150 * u + 51 * u - hh / 2) + 'px';      /* (measured inside the top border; a finger-sized target round the painted button) */ el.style.height = hh + 'px'; }); }
   function rightMode(H){ return (H.who === 'her') === (camMode === 'remember'); }
@@ -2427,7 +2439,7 @@ const LIVING = (function(){
   function haveCamera(){ return hasCamera && level && !level.needCamera; }
   function setCamUp(on){
     if(!haveCamera()) on = false;
-    camUp = !!on; camFrame.classList.toggle('on', camUp); capEl.classList.toggle('on', camUp); if(camBtn) camBtn.classList.toggle('on', camUp);
+    camUp = !!on; camFrame.classList.toggle('on', camUp); wrap.classList.toggle('cam-up', camUp); capEl.classList.toggle('on', camUp); if(camBtn) camBtn.classList.toggle('on', camUp);
     if(!camUp){ capHint.classList.remove('on'); }
     else if(level && level.haunt && hauntTarget()){ capHint.textContent = ringHint(hauntTarget()); capHint.classList.add('on'); }
     else { capHint.textContent = ''; }
@@ -5876,10 +5888,10 @@ const LIVING = (function(){
     panel = document.createElement('div'); panel.className = 'game-panel'; wrap.appendChild(panel);
     panel.addEventListener('mousedown', e=>e.stopPropagation()); panel.addEventListener('click', e=>e.stopPropagation());
     msgEl = document.createElement('div'); msgEl.className = 'living-msg'; wrap.appendChild(msgEl);
-    camFrame = document.createElement('div'); camFrame.className = 'cam-frame'; camFrame.innerHTML = '<span class="cf-tag"></span><span class="cf-count"></span><span class="cf-charge">recharging</span><div class="cf-mode"><span data-m="forget">forget</span><span data-m="remember">remember</span><small></small></div>'; wrap.appendChild(camFrame);
+    camFrame = document.createElement('div'); camFrame.className = 'cam-frame'; camFrame.innerHTML = (TOUCH ? '<div class="cfp"><b></b><b></b><b></b></div>' : '') + '<span class="cf-tag"></span><span class="cf-count"></span><span class="cf-charge">recharging</span><div class="cf-mode"><span data-m="forget">forget</span><span data-m="remember">remember</span><small></small></div>'; wrap.appendChild(camFrame);
     camFrame.querySelector('.cf-mode small').textContent = TOUCH ? 'tap to switch' : '1 / 2 or scroll to switch';
     camFrame.querySelectorAll('.cf-mode span').forEach(el => { const f = e => { e.preventDefault(); e.stopPropagation(); setCamMode(el.dataset.m); }; el.addEventListener('touchstart', f, {passive:false}); el.addEventListener('mousedown', f); });
-    setCamMode('forget'); Object.values(CAM_FRAMES).forEach(src => { const i = new Image(); i.src = TOUCH ? src.replace('.webp', '_p.webp') : src; });
+    setCamMode('forget'); Object.values(CAM_FRAMES).forEach(src => { const i = new Image(); if(!TOUCH) i.src = src; });
     window.addEventListener('resize', layoutCamFrame); setTimeout(layoutCamFrame, 50);
     wrap.addEventListener('wheel', e => { if(camUp && haveCamera()){ setCamMode(camMode === 'forget' ? 'remember' : 'forget'); e.preventDefault(); } }, {passive:false});
     capEl = document.createElement('div'); capEl.className = 'cap-ring'; capEl.innerHTML = [0,1,2,3,4,5,6].map(i => '<i style="--a:' + (i * 360 / 7).toFixed(2) + 'deg"></i>').join('') + '<b></b>'; wrap.appendChild(capEl);
@@ -5913,7 +5925,7 @@ const LIVING = (function(){
     wrap.classList.add('vig');
     if(TOUCH){
       wrap.classList.add('touch');
-      { useBtn = document.createElement('div'); useBtn.className = 'use-btn'; useBtn.textContent = 'use'; wrap.appendChild(useBtn);
+      { useBtn = document.createElement('div'); useBtn.className = 'use-btn'; useBtn.innerHTML = '<span class="u">use</span><span class="f">flash</span>'; wrap.appendChild(useBtn);
         useBtn.addEventListener('touchstart', e=>{ e.preventDefault(); e.stopPropagation(); if(noteOverlay.classList.contains('on')){ if(!noteOverlay.classList.contains('photo')) hideNote(); return; } wantInteract = true; }, {passive:false}); }
       { camBtn = document.createElement('div'); camBtn.className = 'cam-btn'; camBtn.innerHTML = '<span></span>'; wrap.appendChild(camBtn);
         camBtn.addEventListener('touchstart', e=>{ e.preventDefault(); e.stopPropagation(); if(haveCamera() && !(level.plush && level.plush.active)) setCamUp(!camUp); }, {passive:false}); }
@@ -6042,7 +6054,7 @@ const LIVING = (function(){
       for(const tch of e.changedTouches){
         if(tch.identifier === lookId){
           lookId = null; lookOff();
-          if(Math.hypot(tch.clientX - lx0, tch.clientY - ly0) < 12) wantInteract = true;   // a tap, not a drag
+          if(Math.hypot(tch.clientX - lx0, tch.clientY - ly0) < 12 && !camUp) wantInteract = true;   // a tap, not a drag (with the camera up a tap does nothing: the flash is the button, so walking and looking never set it off)
         }
         if(tch.identifier === moveId){ moveId = null; stickVec = {x:0, y:0}; knob.style.transform = 'translate(-50%,-50%)'; }
       }
@@ -6226,7 +6238,7 @@ const LIVING = (function(){
       if(window.THREE && !THREE.GLTFLoader) await loadScript(['https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js', 'https://cdn.jsdelivr.net/npm/three@0.128.1/examples/js/loaders/GLTFLoader.js']).catch(()=>{});
       prog(.18);
       await dollSource(k => prog(.18 + k * .52));
-      const frames = Object.values(CAM_FRAMES).map(f => TOUCH ? f.replace('.webp', '_p.webp') : f);
+      const frames = TOUCH ? ['top', 'mid', 'bot'].flatMap(b => ['cam_p_' + b + '.webp', 'cam_p_' + b + '_flash.webp']).concat(['forget', 'remember', 'forget_flash', 'remember_flash'].map(k => 'cam_p_btn_' + k + '.webp')) : Object.values(CAM_FRAMES);
       const files = [...new Set(Object.values(LSFX).filter(u => !/^data:/.test(u)).concat(['sfx_cut.mp3', PAINTING_FILE, DOLL_FACE, 'bleood_cam_tip.mp4'], frames))];
       let done = 0;
       await Promise.all(files.map(f => fetch(f).then(r => r.ok ? r.blob() : null).catch(()=> null).then(()=>{ done++; prog(.7 + .3 * done / files.length); })));
