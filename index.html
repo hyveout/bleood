@@ -757,8 +757,9 @@ body.mob-full .attn .mob-mask.on{border-color:#f0c868; box-shadow:inset 0 0 0 2p
 .ug-keys.few.below button, .ug-keys.few.below button.del{width:calc((100% - 5 * 5px) / 6); aspect-ratio:1; font-size:20px}
 .ug-keys.few.below button.wide{padding:10px 0; font-size:14px}
 .ug-keys.qwerty{flex-direction:column; align-items:center; gap:6px}      /* the typewriter on phones: a real keyboard's three rows, staggered */
-.ug-keys.qwerty .krow{display:flex; justify-content:center; gap:5px; width:100%}
-.ug-keys.qwerty .krow button{width:calc((100% - 9 * 5px) / 10); max-width:44px; aspect-ratio:.9; font-size:16px}
+.ug-keys.qwerty{gap:14px; padding:12px 8px}
+.ug-keys.qwerty .krow{display:flex; justify-content:center; gap:14px; width:100%}
+.ug-keys.qwerty .krow button{width:calc((100% - 5 * 14px) / 6); max-width:58px; aspect-ratio:1; font-size:20px}      /* the typewriter on phones: few keys, so big ones with room between */
 .ug-pop.ug-up{justify-content:flex-start; padding-top:clamp(86px,13vw,100px)}   /* clear of the inventory and the mask box */
 /* phones: no boxes at all. the letters float in the dark like a spirit board, and the word comes up on a single faint line */
 @media (hover: none), (pointer: coarse){
@@ -5975,16 +5976,24 @@ const LIVING = (function(){
   function setupTouch(stick){
     let lookId = null, lx = 0, ly = 0, lx0 = 0, ly0 = 0, moveId = null, mx0 = 0, my0 = 0;
     const knob = stick.querySelector('i');
+    // a finger whose lift never reached us (its element went away, a panel opened under it) would keep its slot for good, and every later
+    // drag would be ignored: before each touch, any slot whose finger is no longer on the glass is let go
+    const alive = (e, id) => { for(const t of e.touches) if(t.identifier === id) return true; return false; };
+    const prune = e => { if(lookId !== null && !alive(e, lookId)) lookId = null; if(moveId !== null && !alive(e, moveId)){ moveId = null; stickVec = {x:0, y:0}; knob.style.transform = 'translate(-50%,-50%)'; } };
     wrap.addEventListener('touchstart', e=>{
       if(opening){ skipOpening(); return; }
+      prune(e);
       if(noteOverlay.classList.contains('on') || panel.classList.contains('on') || tipOpen || (level && level.asking)) return;
+      const r = wrap.getBoundingClientRect();
       for(const tch of e.changedTouches){
-        const r = wrap.getBoundingClientRect();
-        if(tch.clientX - r.left < r.width / 2 && moveId === null){ moveId = tch.identifier; mx0 = tch.clientX; my0 = tch.clientY; }
+        // only the lower left, round the stick, walks; anywhere else drags the view
+        const inStick = tch.clientX - r.left < r.width * .42 && tch.clientY - r.top > r.height * .38;
+        if(inStick && moveId === null){ moveId = tch.identifier; mx0 = tch.clientX; my0 = tch.clientY; }
         else if(lookId === null){ lookId = tch.identifier; lx = lx0 = tch.clientX; ly = ly0 = tch.clientY; }
       }
       e.preventDefault();
     }, {passive:false});
+    addEventListener('touchend', e=>{ if(!e.touches.length){ lookId = null; if(moveId !== null){ moveId = null; stickVec = {x:0, y:0}; knob.style.transform = 'translate(-50%,-50%)'; } } }, {passive:true});      // every finger off: nothing held
     wrap.addEventListener('touchmove', e=>{
       for(const tch of e.changedTouches){
         if(tch.identifier === lookId){
