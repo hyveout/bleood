@@ -2303,7 +2303,7 @@ const LIVING = (function(){
   let level = null;                 // the current room: {group, bounds, solids, interactives, tick, onExit}
   let notesRead = 0, hallPass = 0, curBuilder = null, curBump = 0;      // which room is up, and whether building it counts a hall pass
   let inv = {knife:false, key:false, cut:false}, artifacts = 0, done = {type:false, trace:false, chest:false};
-  const WORDS = ['IDOL', 'WITNESS', 'MERCY', 'LEGION', 'FAITH'];   // what the typewriter asks for
+  const WORDS = ['LEGION', 'KILLYOURIDOLS', 'LNF', 'RITUAL', 'OBSESSION'];   // what the typewriter asks for: the words the camera finds on the bedroom walls
   const SAFE_CODE = '7391';
   // the credits, shown one card at a time in the white room at the end. top line small, main line large (either may be left out).
   // add more cards to the end of this list
@@ -3886,23 +3886,29 @@ const LIVING = (function(){
       digits.position.set(-1.2, 1.55, d/2 - .016); digits.rotation.y = Math.PI; digits.visible = false; g.add(digits); level.camOnly.push(digits);
       level.numMat = numMat;
       // and round the room, words painted in old blood that only the camera finds
+      // (in the Haunteod hand, small; painted again once the font has come in, so the first frames never show a stand-in)
       const word = (txt, wdt, x, y, z, ry)=>{
-        const H2 = 220, cw = Math.round(H2 * .62 * txt.length) + 160, cv = document.createElement('canvas'); cv.width = cw; cv.height = H2 + 150; const q = cv.getContext('2d');
-        q.textAlign = 'center'; q.textBaseline = 'middle'; q.font = '900 ' + H2 + 'px Georgia, "Times New Roman", serif';
-        const cx = cw / 2, cy = 30 + H2 / 2;
-        q.fillStyle = 'rgba(40,0,0,.5)'; q.fillText(txt, cx + 4, cy + 6);      // a darker bleed under it
-        for(let i = 0; i < 7; i++){ q.fillStyle = 'rgba(' + (120 + rnd(0, 30) | 0) + ',12,10,' + rnd(.2, .35).toFixed(2) + ')'; q.fillText(txt, cx + rnd(-5, 5), cy + rnd(-4, 4)); }      // brushed on in rough passes
-        q.strokeStyle = 'rgba(110,10,8,.7)'; q.lineCap = 'round';
-        for(let i = 0; i < txt.length * 2; i++){ const x0 = 80 + rnd(0, cw - 160), len = rnd(25, 120); q.lineWidth = rnd(4, 10); q.beginPath(); q.moveTo(x0, cy + H2 * .32); q.lineTo(x0 + rnd(-3, 3), cy + H2 * .32 + len); q.stroke(); }      // runs
+        const H2 = 200, FONT = H2 + 'px "Haunteod", "Courier Prime", monospace', cv = document.createElement('canvas'), q = cv.getContext('2d');
+        q.font = FONT; const cw = Math.ceil(q.measureText(txt).width) + 120; cv.width = cw; cv.height = Math.round(H2 * 1.7) + 140;      // (drawn 1.7x taller: the hand is very flat, and on a wall at this size it needs the height to read)
         const tx = new THREE.CanvasTexture(cv); tx.minFilter = THREE.LinearFilter;
+        const paint = ()=>{
+          q.clearRect(0, 0, cv.width, cv.height); q.font = FONT; q.textAlign = 'center'; q.textBaseline = 'middle'; q.lineJoin = 'round';
+          q.save(); q.translate(cv.width / 2, 20 + H2 * .85); q.scale(1, 1.7); const cx = 0, cy = 0;
+          q.strokeStyle = 'rgba(40,0,0,.55)'; q.lineWidth = 16; q.strokeText(txt, cx + 3, cy + 4);      // a darker bleed under it
+          for(let i = 0; i < 5; i++){ const c = 'rgba(' + (125 + rnd(0, 30) | 0) + ',12,10,' + rnd(.35, .55).toFixed(2) + ')'; q.strokeStyle = c; q.fillStyle = c; q.lineWidth = rnd(7, 11); const ox = rnd(-3, 3), oy = rnd(-3, 3); q.strokeText(txt, cx + ox, cy + oy); q.fillText(txt, cx + ox, cy + oy); }      // brushed on in rough passes
+          q.restore(); const cyR = 20 + H2 * .85; q.strokeStyle = 'rgba(110,10,8,.7)'; q.lineCap = 'round';
+          for(let i = 0; i < txt.length; i++){ const x0 = 60 + rnd(0, cv.width - 120), len = rnd(18, 80); q.lineWidth = rnd(3, 7); q.beginPath(); q.moveTo(x0, cyR + H2 * .4); q.lineTo(x0 + rnd(-2, 2), cyR + H2 * .4 + len); q.stroke(); }      // runs
+          tx.needsUpdate = true;
+        };
+        paint(); if(document.fonts && document.fonts.load) document.fonts.load(FONT).then(paint, ()=>{});
         const m = new THREE.Mesh(new THREE.PlaneGeometry(wdt, wdt * cv.height / cw), new THREE.MeshBasicMaterial({map:tx, transparent:true, depthWrite:false, color:0xb4b4b4, polygonOffset:true, polygonOffsetFactor:-3}));
         m.position.set(x, y, z); m.rotation.y = ry; m.visible = false; m.userData.word = true; g.add(m); level.camOnly.push(m);
       };
-      word('LEGION', 1.7, -2.05, 1.72, -d/2 + .016, 0);                   // over the bed
-      word('RITUAL', 1.3, -.15, 1.55, -d/2 + .016, 0);                    // between the bed and the wardrobe
-      word('KILLYOURIDOLS', 3.0, -w/2 + .016, 2.3, .4, Math.PI / 2);       // high along the left wall, over what hangs there
-      word('OBSESSION', 2.6, w/2 - .016, 1.62, -.4, -Math.PI / 2);         // the right wall
-      word('LNF', .8, 2.75, 1.62, d/2 - .016, Math.PI);                    // by the door
+      word('LEGION', 1.3, -2.05, 1.72, -d/2 + .016, 0);                   // over the bed
+      word('RITUAL', 1.1, -.15, 1.55, -d/2 + .016, 0);                    // between the bed and the wardrobe
+      word('KILLYOURIDOLS', 2.4, -w/2 + .016, 2.05, .4, Math.PI / 2);       // high along the left wall, over what hangs there
+      word('OBSESSION', 1.8, w/2 - .016, 1.62, -.4, -Math.PI / 2);         // the right wall
+      word('LNF', .7, 2.75, 1.62, d/2 - .016, Math.PI);                    // by the door
     }
     level.exitZ = d/2 - .2;
 
@@ -5957,7 +5963,7 @@ const LIVING = (function(){
     });
     photoEl = document.createElement('div'); photoEl.className = 'living-photo'; photoEl.innerHTML = '<img alt="" src="' + PHOTO_A + '"><span>is this me?</span>'; wrap.appendChild(photoEl);
     tipEl = document.createElement('div'); tipEl.className = 'living-tip';
-    tipEl.innerHTML = '<div class="tip-body"><div class="tip-line1">You are haunted by both your past and your present</div><div class="tip-heads"><video class="tip-film" src="' + (TOUCH ? 'bleood_cam_tip_m.mp4' : 'bleood_cam_tip.mp4') + '" muted loop playsinline autoplay preload="auto"></video></div><div class="tip-line2">Flash them when your runic meter is full. REMEMBER him. FORGET her.</div><div class="tip-line3">' + (TOUCH ? 'You can only see them through the camera. The camera button raises it, FLASH takes the picture.' : 'You can only see them through the camera. C raises it.') + '</div><div class="tip-go">' + (TOUCH ? 'tap to continue' : 'press any key') + '</div></div>';
+    tipEl.innerHTML = '<div class="tip-body"><div class="tip-line1">You are haunted by both your past and your present</div><div class="tip-heads"><video class="tip-film" src="' + (TOUCH ? 'bleood_cam_tip_m.mp4' : 'bleood_cam_tip.mp4') + '" muted loop playsinline autoplay preload="auto"></video></div><div class="tip-line2">Flash them when your runic meter is full. REMEMBER him. FORGET her.</div><div class="tip-line3">' + (TOUCH ? 'You can only see them through the camera.' : 'You can only see them through the camera. C raises it.') + '</div><div class="tip-go">' + (TOUCH ? 'tap to continue' : 'press any key') + '</div></div>';
     wrap.appendChild(tipEl);
     tipEl.addEventListener('touchend', e=>{ e.preventDefault(); e.stopPropagation(); closeTip(); });
     redEl = document.createElement('div'); redEl.className = 'living-red'; wrap.appendChild(redEl);
