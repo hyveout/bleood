@@ -4054,7 +4054,7 @@ const LIVING = (function(){
       [[-.2, -.2], [.2, -.2], [-.2, .2], [.2, .2]].forEach(([ox, oz])=> box(g, .045, .45, .045, railM, cx + ox, .225, SIDE_Z + oz, false));
       box(g, .05, .55, .46, chM, cx - .21, .75, SIDE_Z, false);
       // ---- the big room: the same boards and walls, a chalk ring in the middle of the floor, one bulb over it
-      const ad = door(g, -w/2 + .03, ARENA_Z, Math.PI/2, 'arena'); ad.leaf.userData = {kind:'arenadoor', prompt:'open'}; level.interactives.push(ad.leaf);
+      const ad = door(g, -w/2 + .03, ARENA_Z, Math.PI/2, 'arena'); ad.leaf.userData = {kind:'arenadoor', prompt:''}; level.interactives.push(ad.leaf);
       // (lit like the hall, not dimmed like the corridor)
       const ap = (m, pw, ph, x, y, z, ry, rx)=>{ const q = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), m); q.position.set(x, y, z); q.rotation.set(rx || 0, ry || 0, 0); g.add(q); return q; };
       const aw = (pw, ph, x, y, z, ry)=> ap(wallPiece('wall', pw, ph, h, x, y, z, ry), pw, ph, x, y, z, ry);
