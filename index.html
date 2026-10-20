@@ -6007,10 +6007,13 @@ const LIVING = (function(){
       if(noteOverlay.classList.contains('on') || panel.classList.contains('on') || tipOpen || (level && level.asking)) return;
       const r = wrap.getBoundingClientRect();
       for(const tch of e.changedTouches){
-        // only the lower left, round the stick, walks; anywhere else drags the view
-        const inStick = !(deck && getComputedStyle(deck).display !== 'none') && tch.clientX - r.left < r.width * .42 && tch.clientY - r.top > r.height * .38;
-        if(inStick && moveId === null){ moveId = tch.identifier; mx0 = tch.clientX; my0 = tch.clientY; }
-        else if(lookId === null){ lookId = tch.identifier; lx = lx0 = tch.clientX; ly = ly0 = tch.clientY; }
+        // the left half walks, the right half drags the view. a second finger always takes whichever job is still free, wherever it
+        // lands: with one thumb already looking, the other thumb is the stick even if it came down a little right of centre (before,
+        // a finger on the wrong side of the line was simply dropped, and the two-thumb grip only worked when both landed in their boxes)
+        const left = tch.clientX - r.left < r.width * .5;
+        const asStick = moveId === null && (left || lookId !== null), asLook = lookId === null && (!left || moveId !== null);
+        if(asStick && (left || !asLook)){ moveId = tch.identifier; mx0 = tch.clientX; my0 = tch.clientY; }
+        else if(asLook){ lookId = tch.identifier; lx = lx0 = tch.clientX; ly = ly0 = tch.clientY; }
       }
       e.preventDefault();
     }, {passive:false});
