@@ -5026,7 +5026,7 @@ const LIVING = (function(){
   function plushHold(on){ const P = level && level.plush; if(P && P.lock) P.held = on; }
   function plushStart(P, now){
     P.active = true; P.lock = true; P.dark = true; P.lastNow = now; P.startAt = now; setCamUp(false);
-    yaw = Math.PI / 2; pitch = 0; fade = .85; fadeTo = 0;          // you are facing down it, as the lights go
+    yaw = Math.PI / 2; pitch = 0; fade = 1; fadeTo = 0;          // you are facing down it, as the lights go (from black)
     P.nextMove = now + 1e9; P.push = false;      // (set once the opening is over: it sits in its chair a good while before the first move)
     P.intro = {t0:now};                          // the light comes on; it is on its chair; it comes at your face; it goes back; the light dies
     if(level.haunts) hauntAlive().forEach(H => { H.dying = 0; H.scare = 0; hauntEnd(false, H); });      // nothing follows you into the corridor
@@ -5068,9 +5068,10 @@ const LIVING = (function(){
     const H1 = level.hall1;
     if(!P.active){
       // walk in through the open door and it begins
-      if(!P.done && H1.door.open && camera.position.x < P.RX0 - .3 && Math.abs(camera.position.z - P.Z0) < .9 && P.model) plushStart(P, now);
+      if(!P.done && H1.door.open && camera.position.x < P.RX0 - .3 && Math.abs(camera.position.z - P.Z0) < .9 && P.model){ P.active = true; P.lock = true; P.enter = now; fadeTo = 1; setCamUp(false); }      // in: the dark closes first
       return;
     }
+    if(P.enter){ if(fade > .97 || now - P.enter > 1100){ P.enter = 0; plushStart(P, now); } return; }      // black, then the game comes up out of it
     if(P.scareAt){      // it comes at you out of the dark, fast, and shakes there
       const m = P.model; if(m && m.parent === camera){ const e = 1 - Math.pow(1 - Math.min(1, (now - P.scareAt) / 240), 3); m.position.set((Math.random() - .5) * .05, -.12 + (Math.random() - .5) * .04, -1.8 + 1.1 * e); m.rotation.z = (Math.random() - .5) * .08; }
       return;
