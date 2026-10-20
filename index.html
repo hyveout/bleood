@@ -1212,6 +1212,11 @@ body.mob-full .mob-exit:active{opacity:1; border-color:rgba(232,227,214,.9)}
 .note-overlay .notepaper img{display:none; position:absolute; inset:8%; width:84%; height:84%; object-fit:cover; filter:grayscale(1) contrast(1.15)}
 .note-overlay.photo .notepaper{background:#111; aspect-ratio:1; width:min(40%,240px); padding:0}
 .note-overlay.photo .notepaper img{display:block}
+.note-overlay .notepaper img.note-draw{display:none}
+.note-overlay.drawing .notepaper{background:none; width:auto; height:min(86%,760px); aspect-ratio:3/4; padding:0; box-shadow:0 20px 40px rgba(0,0,0,.85)}
+.note-overlay.drawing .notepaper p{display:none}
+.note-overlay.drawing .notepaper img.note-draw{display:block; position:static; width:100%; height:100%; object-fit:contain; filter:brightness(.88) contrast(1.05)}      /* the drawing, whole, a touch dimmed for the room */
+.living.touch .note-overlay.drawing .notepaper{height:auto; width:min(92vw,560px)}
 .screen{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
   justify-content:center; gap:clamp(10px,2.2vw,22px); padding:clamp(18px,5vw,46px); text-align:center;
   font-family:var(--crtface); color:#eceae4; z-index:2;
@@ -2303,6 +2308,7 @@ const LIVING = (function(){
   const CANDLE_LIFE = 50;            // seconds it can be held up before it dies, per room
   let candleLeft = CANDLE_LIFE;
   let level = null;                 // the current room: {group, bounds, solids, interactives, tick, onExit}
+  const NOTE_DRAWINGS = ['greed', 'wrath', 'pride', 'gluttony', 'lust', 'envy', 'sloth'];      // the seven pages on the bedroom floor (the artist's drawings)
   let notesRead = 0, hallPass = 0, curBuilder = null, curBump = 0;      // which room is up, and whether building it counts a hall pass
   let inv = {knife:false, key:false, cut:false}, artifacts = 0, done = {type:false, trace:false, chest:false};
   const WORDS = ['LEGION', 'KILLYOURIDOLS', 'LNF', 'RITUAL', 'OBSESSION'];   // what the typewriter asks for: the words the camera finds on the bedroom walls
@@ -3695,10 +3701,13 @@ const LIVING = (function(){
     }
     // one note beside each of the seven bodies, just outside where it lies; every one can be picked up and read
     [[-0.08, 0.09], [-0.35, 0.59], [2.02, -1.23], [-2.16, 0.11], [-0.3, 1.9], [1.58, 0.8], [0.65, -0.65]].forEach(([x, z], i)=>{
-      const pp = new THREE.Mesh(new THREE.PlaneGeometry(.22, .3), mat('paper', 1, 1, {side:THREE.DoubleSide}));
+      // each page is one of the seven drawings, one sin to each of him: a small copy on the floor, the whole page when you pick it up
+      const sin = NOTE_DRAWINGS[i], pm = new THREE.MeshLambertMaterial({color:0xd6d0c2, side:THREE.DoubleSide});
+      new THREE.TextureLoader().load('note_' + sin + '_s.webp', tx => { pm.map = tx; pm.needsUpdate = true; });
+      const pp = new THREE.Mesh(new THREE.PlaneGeometry(.225, .3), pm);
       pp.rotation.x = -Math.PI/2; pp.rotation.z = Math.random() * 6;
       pp.position.set(x, .012 + i * .0006, z); g.add(pp);
-      pp.userData = {kind:'readnote', text:''}; level.interactives.push(pp);      // (blank for now: the notes will be pictures)
+      pp.userData = {kind:'readnote', text:'', pic:'note_' + sin + '.webp'}; level.interactives.push(pp);
     });
 
     // the dressing table against the right wall: typewriter on top, the key in its drawer
@@ -5475,7 +5484,7 @@ const LIVING = (function(){
       return;
     }
     if(u.kind === 'ritualcandle'){ if(level.lightCandle) level.lightCandle(u.c); return; }
-    if(u.kind === 'readnote'){ showNote(u.text); return; }
+    if(u.kind === 'readnote'){ showNote(u.text, false, u.pic); return; }
     if(u.kind === 'note'){ showNote(NOTES[u.index]); return; }
     if(u.kind === 'photo'){ if(level.startEnding) level.startEnding(); else showNote(null, true); return; }
   }
@@ -5920,11 +5929,12 @@ const LIVING = (function(){
     if(level && level.haunts){ const nw = performance.now(), cam = camera.position; for(const H of hauntAlive()){ if(H.dying || H.scare) continue; H.grace = nw + 2500;      // out of a challenge: a moment's grace, and they stand off
       const dx = H.px - cam.x, dz = H.pz - cam.z, d = Math.max(.01, Math.hypot(dx, dz)); if(d < 1.6){ const b = level.bounds; H.px = Math.max(b.minX + .4, Math.min(b.maxX - .4, cam.x + dx / d * 1.6)); H.pz = Math.max(b.minZ + .4, Math.min(b.maxZ - .4, cam.z + dz / d * 1.6)); } } } if(pullCleanup){ const f = pullCleanup; pullCleanup = null; try{ f(); }catch(e){} } panel.classList.remove('on'); panel.innerHTML = ''; panel.dataset.game = ''; penMove = penDown = penUp = null; tracing = false; }
 
-  function showNote(text, ending){
+  function showNote(text, ending, pic){
     if(!ending) lsfx('page', 1);
     noteOverlay.classList.add('on');
     noteOverlay.querySelector('p').textContent = ending ? '' : text;
     noteOverlay.classList.toggle('photo', !!ending);
+    const dr = noteOverlay.querySelector('.note-draw'); noteOverlay.classList.toggle('drawing', !!pic && !ending); if(pic && !ending) dr.src = pic;
     if(ending){
       // she has it. the loop closes: back to the bedroom.
       setTimeout(()=>{ hideNote(); hallPass = 0; go(buildBedroom); }, 3200);
@@ -5982,7 +5992,7 @@ const LIVING = (function(){
     scareEl = document.createElement('div'); scareEl.className = 'jumpscare'; scareEl.innerHTML = '<img src="' + TARGET_IMG + '" alt="">'; wrap.appendChild(scareEl);
 
     noteOverlay = document.createElement('div'); noteOverlay.className = 'note-overlay';
-    noteOverlay.innerHTML = '<div class="notepaper"><p></p><img src="' + PHOTO_A + '" alt=""></div>';
+    noteOverlay.innerHTML = '<div class="notepaper"><p></p><img src="' + PHOTO_A + '" alt=""><img class="note-draw" alt=""></div>';
     noteOverlay.addEventListener('click', e=>{ e.stopPropagation(); if(!noteOverlay.classList.contains('photo')) hideNote(); });
     wrap.appendChild(noteOverlay);
 
@@ -6308,7 +6318,7 @@ const LIVING = (function(){
       prog(.18);
       await dollSource(k => prog(.18 + k * .52));
       const frames = TOUCH ? ['top', 'mid', 'bot'].flatMap(b => ['cam_p_' + b + '.webp', 'cam_p_' + b + '_flash.webp']).concat(['forget', 'remember', 'forget_flash', 'remember_flash'].map(k => 'cam_p_btn_' + k + '.webp')) : Object.values(CAM_FRAMES);
-      const files = [...new Set(Object.values(LSFX).filter(u => !/^data:/.test(u)).concat(['sfx_cut.mp3', PAINTING_FILE, DOLL_FACE, TOUCH ? 'bleood_cam_tip_m.mp4' : 'bleood_cam_tip.mp4'], frames))];
+      const files = [...new Set(Object.values(LSFX).filter(u => !/^data:/.test(u)).concat(['sfx_cut.mp3', PAINTING_FILE, DOLL_FACE, TOUCH ? 'bleood_cam_tip_m.mp4' : 'bleood_cam_tip.mp4'], frames, NOTE_DRAWINGS.flatMap(k => ['note_' + k + '.webp', 'note_' + k + '_s.webp'])))];
       let done = 0;
       await Promise.all(files.map(f => fetch(f).then(r => r.ok ? r.blob() : null).catch(()=> null).then(()=>{ done++; prog(.7 + .3 * done / files.length); })));
       prog(1);
