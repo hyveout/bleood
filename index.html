@@ -580,6 +580,23 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
   font-family:var(--crtface); font-size:clamp(.55rem,2.4vw,.8rem); letter-spacing:.2em; color:rgba(233,232,228,.7); align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent}
 .living.touch .use-btn{display:flex} .use-btn.hot{border-color:#fff; color:#fff; box-shadow:0 0 12px rgba(240,200,104,.45)}
 .living.touch .cap-hint, .living.touch .living-hint{display:none}
+.liv-deck{display:none}
+@media (orientation:portrait){
+  body.mob-full .living.touch{bottom:auto; top:calc(env(safe-area-inset-top) + 58px); height:calc(100cqw * .75)}
+  body.mob-full .crt.in-living .liv-deck{display:flex}
+  body.mob-full .living.touch .stick, body.mob-full .living.touch .use-btn, body.mob-full .living.touch .cam-btn, body.mob-full .living.touch .holdcandle{display:none !important}
+  body.mob-full .living.touch .game-panel, body.mob-full .living.touch .note-overlay, body.mob-full .living.touch .living-tip, body.mob-full .living.touch .living-open{position:fixed; inset:0}
+}
+.liv-deck{position:absolute; left:0; right:0; bottom:0; top:calc(env(safe-area-inset-top) + 58px + 100cqw * .75); z-index:2; flex-direction:column; gap:14px; padding:16px 16px calc(env(safe-area-inset-bottom) + 16px); box-sizing:border-box; background:#050505; touch-action:none; -webkit-user-select:none; user-select:none}      /* (z-index 2: under the view, whose panels and notes cover the whole screen) */
+.liv-deck .dk-pads{flex:1; display:flex; gap:14px; min-height:0}
+.liv-deck .dk-pad{flex:1; position:relative; border:1px solid rgba(232,227,214,.18); border-radius:14px; background:rgba(255,255,255,.025)}
+.liv-deck .dk-pad b{position:absolute; left:0; right:0; bottom:8px; text-align:center; font-family:var(--crtface); font-size:.6rem; letter-spacing:.3em; text-transform:uppercase; color:rgba(232,227,214,.35); font-weight:normal; pointer-events:none}
+.liv-deck .dk-stick i{position:absolute; left:50%; top:50%; width:34%; aspect-ratio:1; border-radius:50%; background:rgba(232,227,214,.3); transform:translate(-50%,-50%); pointer-events:none}
+.liv-deck .dk-row{display:flex; gap:10px}
+.liv-deck .dk-row button{flex:1; height:56px; border:1px solid rgba(232,227,214,.3); border-radius:10px; background:rgba(255,255,255,.04); color:rgba(232,227,214,.8); font-family:var(--crtface); font-size:.72rem; letter-spacing:.18em; text-transform:uppercase; padding:0; touch-action:none; -webkit-tap-highlight-color:transparent}
+.liv-deck .dk-row button:disabled{opacity:.25}
+.liv-deck .dk-row button.hot, .liv-deck .dk-row button.on{border-color:#f0c868; color:#f0c868; box-shadow:0 0 10px rgba(240,200,104,.35)}
+.liv-deck .dk-mode{line-height:1.3} .liv-deck .dk-mode em{display:block; font-style:normal; font-size:.55rem; opacity:.5}
 .living:has(.game-panel.on) .use-btn{display:none}
 .living.touch.vig::after{animation:none}
 .living.touch .living-red{mix-blend-mode:normal; background:radial-gradient(ellipse at center, rgba(90,0,0,0) 0%, rgba(70,0,0,.45) 60%, rgba(10,0,0,.9) 100%)}
@@ -5898,6 +5915,7 @@ const LIVING = (function(){
       const s = document.createElement('div'); s.className = 'stick'; s.innerHTML = '<i></i>'; wrap.appendChild(s);
       hint.textContent = '';
       setupTouch(s);
+      setupDeck();
     }else{
       hint.textContent = '';
       setupMouse();
@@ -5907,7 +5925,7 @@ const LIVING = (function(){
   }
   function resize(){
     if(!renderer) return;
-    const w = crt.clientWidth, h = crt.clientHeight;
+    const w = wrap.clientWidth || crt.clientWidth, h = wrap.clientHeight || crt.clientHeight;      // (upright phones: the view is the 4:3 box above the controls)
     // wide screens keep the chunky low-res look; a phone is already small, so drawing it at 45% just turns it to mush
     const k = w < 560 ? (TOUCH ? .72 : 1) : (TOUCH ? .52 : .45);      // (phones a notch lower: the dither hides it, and it is a third fewer pixels to light)
     const rw = Math.max(160, Math.round(w * k)), rh = Math.max(120, Math.round(h * k));
@@ -5987,7 +6005,7 @@ const LIVING = (function(){
       const r = wrap.getBoundingClientRect();
       for(const tch of e.changedTouches){
         // only the lower left, round the stick, walks; anywhere else drags the view
-        const inStick = tch.clientX - r.left < r.width * .42 && tch.clientY - r.top > r.height * .38;
+        const inStick = !(deck && getComputedStyle(deck).display !== 'none') && tch.clientX - r.left < r.width * .42 && tch.clientY - r.top > r.height * .38;
         if(inStick && moveId === null){ moveId = tch.identifier; mx0 = tch.clientX; my0 = tch.clientY; }
         else if(lookId === null){ lookId = tch.identifier; lx = lx0 = tch.clientX; ly = ly0 = tch.clientY; }
       }
@@ -6021,6 +6039,47 @@ const LIVING = (function(){
     noteOverlay.addEventListener('touchend', e=>{ e.stopPropagation(); if(!noteOverlay.classList.contains('photo')) hideNote(); });
   }
 
+  // upright phones: a deck of controls under the view. a stick, a pad to look with, and four buttons
+  let deck = null, deckMode = null, deckShoot = null, deckCam = null, deckUse = null, deckHasCam = null;
+  function setupDeck(){
+    deck = document.createElement('div'); deck.className = 'liv-deck';
+    deck.innerHTML = '<div class="dk-pads"><div class="dk-pad dk-stick"><i></i><b>move</b></div><div class="dk-pad dk-look"><b>look</b></div></div>' +
+      '<div class="dk-row"><button type="button" class="dk-use">use</button><button type="button" class="dk-cam">camera</button><button type="button" class="dk-mode"></button><button type="button" class="dk-shoot">flash</button></div>';
+    crt.appendChild(deck);
+    const stick = deck.querySelector('.dk-stick'), knob = stick.querySelector('i'), look = deck.querySelector('.dk-look');
+    deckUse = deck.querySelector('.dk-use'); deckCam = deck.querySelector('.dk-cam'); deckMode = deck.querySelector('.dk-mode'); deckShoot = deck.querySelector('.dk-shoot');
+    let sid = null, sx = 0, sy = 0, lid = null, lx = 0, ly = 0;
+    const free = ()=> !(noteOverlay.classList.contains('on') || panel.classList.contains('on') || tipOpen || opening || (level && level.asking));
+    stick.addEventListener('touchstart', e=>{ e.preventDefault(); const t = e.changedTouches[0]; if(sid === null){ sid = t.identifier; sx = t.clientX; sy = t.clientY; } }, {passive:false});
+    look.addEventListener('touchstart', e=>{ e.preventDefault(); const t = e.changedTouches[0]; if(lid === null){ lid = t.identifier; lx = t.clientX; ly = t.clientY; } }, {passive:false});
+    deck.addEventListener('touchmove', e=>{ e.preventDefault();
+      for(const t of e.changedTouches){
+        if(t.identifier === sid){ const r = stick.getBoundingClientRect(), R = Math.min(r.width, r.height) * .32, dx = (t.clientX - sx) / R, dy = (t.clientY - sy) / R, len = Math.hypot(dx, dy) || 1, k = Math.min(1, len);
+          stickVec = free() ? {x:dx / len * k, y:dy / len * k} : {x:0, y:0}; knob.style.transform = 'translate(calc(-50% + ' + (stickVec.x * R) + 'px), calc(-50% + ' + (stickVec.y * R) + 'px))'; }
+        else if(t.identifier === lid){ if(free()){ yaw -= (t.clientX - lx) * .008; pitch = Math.max(-1.35, Math.min(1.35, pitch - (t.clientY - ly) * .008)); } lx = t.clientX; ly = t.clientY; }
+      } }, {passive:false});
+    const end = e=>{ for(const t of e.changedTouches){ if(t.identifier === sid){ sid = null; stickVec = {x:0, y:0}; knob.style.transform = 'translate(-50%,-50%)'; } if(t.identifier === lid) lid = null; }
+      if(!e.touches.length){ sid = lid = null; stickVec = {x:0, y:0}; knob.style.transform = 'translate(-50%,-50%)'; } };
+    deck.addEventListener('touchend', end); deck.addEventListener('touchcancel', end);
+    const tap = (el, fn)=> el.addEventListener('touchstart', e=>{ e.preventDefault(); e.stopPropagation(); if(!el.disabled) fn(); }, {passive:false});
+    tap(deckUse, ()=>{ if(noteOverlay.classList.contains('on')){ if(!noteOverlay.classList.contains('photo')) hideNote(); return; } if(opening){ skipOpening(); return; } if(tipOpen){ closeTip(); return; } wantInteract = true; });
+    tap(deckCam, ()=>{ if(haveCamera() && !(level.plush && level.plush.active)) setCamUp(!camUp); });
+    tap(deckMode, ()=>{ if(haveCamera()) setCamMode(camMode === 'forget' ? 'remember' : 'forget'); });
+    // the last button: the flash. in the corridor it is the torch instead, held down
+    deckShoot.addEventListener('touchstart', e=>{ e.preventDefault(); e.stopPropagation(); if(level && level.plush && level.plush.active){ plushHold(true); return; } if(camUp) hauntSnap(); }, {passive:false});
+    const up = e=>{ e.preventDefault(); plushHold(false); }; deckShoot.addEventListener('touchend', up, {passive:false}); deckShoot.addEventListener('touchcancel', up, {passive:false});
+    deckSync();
+  }
+  // the buttons keep up with the game: what they say, and which can be pressed
+  function deckSync(){
+    if(!deck) return;
+    const has = haveCamera(), corr = !!(level && level.plush && level.plush.active), key = has + '|' + corr + '|' + camUp + '|' + camMode;
+    if(key === deckHasCam) return; deckHasCam = key;
+    deckCam.disabled = !has || corr; deckMode.disabled = !has || corr; deckShoot.disabled = !corr && !(has && camUp);
+    deckCam.classList.toggle('on', camUp);
+    deckMode.innerHTML = (camMode === 'forget' ? 'forget' : 'remember') + '<em>tap to switch</em>';
+    deckShoot.textContent = corr ? 'light' : 'flash';
+  }
   function tryMove(nx, nz){
     const p = camera.position, b = level.bounds, zMax = level.blockZMax ? level.blockZMax() : b.maxZ, zMin = level.blockZMin ? level.blockZMin() : b.minZ;
     const inside = s => p.x > s.minX-.3 && p.x < s.maxX+.3 && p.z > s.minZ-.3 && p.z < s.maxZ+.3;
@@ -6079,6 +6138,7 @@ const LIVING = (function(){
 
     if(level && level.tick && !switching) level.tick(now);
     if(level) edgeMarkers();
+    deckSync();
     if(level && level.demon && !reduce) animateDemon(level.demon, now);
     if(level && level.watch && !switching && !level.intro && !tipOpen) watchStep(level.watch, now);
 
@@ -6092,7 +6152,7 @@ const LIVING = (function(){
       if(hover) glowOff(hover);
       hover = target;
       if(hover) glowOn(hover);
-      reticle.classList.toggle('hot', !!hover); if(useBtn) useBtn.classList.toggle('hot', !!hover);
+      reticle.classList.toggle('hot', !!hover); if(useBtn) useBtn.classList.toggle('hot', !!hover); if(deckUse) deckUse.classList.toggle('hot', !!hover);
       const pr = hover && hover.userData && hover.userData.prompt; promptEl.textContent = pr || ''; promptEl.classList.toggle('on', !!pr);
     }
     if(wantInteract){
