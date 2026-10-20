@@ -1105,7 +1105,7 @@ body.mob-full .mob-exit:active{opacity:1; border-color:rgba(232,227,214,.9)}
 .cam-frame .cf-mode span{position:absolute; top:82%; height:7.5%; opacity:0; pointer-events:auto; cursor:pointer; touch-action:manipulation}      /* invisible hotspots over the FORGET / REMEMBER painted on the frame */
 .cam-frame .cf-mode span[data-m="forget"]{left:21%; width:26%} .cam-frame .cf-mode span[data-m="remember"]{left:52%; width:27%}
 .cam-frame .cf-mode small{display:none}
-.living.touch .cam-frame{background-size:100% auto}      /* phones: the frame keeps its shape across the width; the hotspots are laid over it in script */
+.living.touch .cam-frame{background:none; box-sizing:border-box; border-style:solid; border-color:transparent; border-image:var(--cfp) 150 0 180 0 fill stretch}      /* phones: the frame full height (border widths and hotspots set in script) */
 .cap-hint{position:absolute; left:0; right:0; top:calc(50% + min(21vmin,150px) + 14px); text-align:center; font-family:var(--crtface); font-size:clamp(.62rem,1.3vw,.82rem); letter-spacing:.26em; text-transform:uppercase; color:rgba(230,224,210,.55); pointer-events:none; opacity:0; transition:opacity .5s; z-index:6}
 .cap-hint.on{opacity:1}
 .cap-hint{display:none !important}
@@ -2412,12 +2412,16 @@ const LIVING = (function(){
   const RECHARGE = 3200;
   const CAM_FRAMES = {forget:'cam_forget.webp', remember:'cam_remember.webp', forget_flash:'cam_forget_flash.webp', remember_flash:'cam_remember_flash.webp'};
   let camFlashing = false, camFlashT = 0;
-  function camFramePic(){ if(!camFrame) return; const f = CAM_FRAMES[camMode + (camFlashing ? '_flash' : '')]; camFrame.style.setProperty('--cf', 'url(' + f + ')'); camFrame.style.setProperty('--cfa', 'url(' + f.replace('.webp', '_a.webp') + ')'); }      // (_a: the same frame with its black made see-through, for phones, so no blend is needed)
+  function camFramePic(){ if(!camFrame) return; const f = CAM_FRAMES[camMode + (camFlashing ? '_flash' : '')]; camFrame.style.setProperty('--cf', 'url(' + f + ')'); camFrame.style.setProperty('--cfa', 'url(' + f.replace('.webp', '_a.webp') + ')'); camFrame.style.setProperty('--cfp', 'url(' + f.replace('.webp', '_p.webp') + ')'); }      // (_p: phones, the switch hint painted out, drawn full height)      // (_a: the same frame with its black made see-through, for phones, so no blend is needed)
   function camFlashPic(){ camFlashing = true; camFramePic(); clearTimeout(camFlashT); camFlashT = setTimeout(()=>{ camFlashing = false; camFramePic(); }, 380); }
   function setCamMode(m){ camMode = m; if(camFrame) camFrame.querySelectorAll('.cf-mode span').forEach(el => el.classList.toggle('on', el.dataset.m === m)); camFramePic(); }
   // phones: the frame is drawn as a 4:3 band across the width, centred; the two hotspots follow it
-  function layoutCamFrame(){ if(!camFrame || !TOUCH) return; const W = wrap.clientWidth, H = wrap.clientHeight, bh = W * .75, top = (H - bh) / 2;
-    camFrame.querySelectorAll('.cf-mode span').forEach(el => { el.style.top = (top + bh * .82) + 'px'; el.style.height = (bh * .075) + 'px'; }); }
+  // phones: the frame fills the screen top to bottom. its top band (the lens) and bottom band (the two buttons) keep their shape at full width,
+  // only the sides between them are drawn taller (a border-image cut 150 / 180 px from the 1200 x 900 picture); the hotspots follow the bottom band
+  function layoutCamFrame(){ if(!camFrame || !TOUCH) return; const W = wrap.clientWidth, H = wrap.clientHeight, u = W / 1200;
+    camFrame.style.borderWidth = (150 * u) + 'px 0 ' + (180 * u) + 'px 0';
+    const bandTop = H - 180 * u;
+    camFrame.querySelectorAll('.cf-mode span').forEach(el => { const hh = Math.max(74 * u, 46); el.style.top = (bandTop - 150 * u + 51 * u - hh / 2) + 'px';      /* (measured inside the top border; a finger-sized target round the painted button) */ el.style.height = hh + 'px'; }); }
   function rightMode(H){ return (H.who === 'her') === (camMode === 'remember'); }
   function ringHint(H){ return (H.who === 'her' ? 'remember her. ' : 'forget him. ') + (TOUCH ? 'keep it in the ring. when the runes are lit, tap' : 'keep it in the ring. when the runes are lit, press E'); }
   function haveCamera(){ return hasCamera && level && !level.needCamera; }
@@ -5875,7 +5879,7 @@ const LIVING = (function(){
     camFrame = document.createElement('div'); camFrame.className = 'cam-frame'; camFrame.innerHTML = '<span class="cf-tag"></span><span class="cf-count"></span><span class="cf-charge">recharging</span><div class="cf-mode"><span data-m="forget">forget</span><span data-m="remember">remember</span><small></small></div>'; wrap.appendChild(camFrame);
     camFrame.querySelector('.cf-mode small').textContent = TOUCH ? 'tap to switch' : '1 / 2 or scroll to switch';
     camFrame.querySelectorAll('.cf-mode span').forEach(el => { const f = e => { e.preventDefault(); e.stopPropagation(); setCamMode(el.dataset.m); }; el.addEventListener('touchstart', f, {passive:false}); el.addEventListener('mousedown', f); });
-    setCamMode('forget'); Object.values(CAM_FRAMES).forEach(src => { const i = new Image(); i.src = TOUCH ? src.replace('.webp', '_a.webp') : src; });
+    setCamMode('forget'); Object.values(CAM_FRAMES).forEach(src => { const i = new Image(); i.src = TOUCH ? src.replace('.webp', '_p.webp') : src; });
     window.addEventListener('resize', layoutCamFrame); setTimeout(layoutCamFrame, 50);
     wrap.addEventListener('wheel', e => { if(camUp && haveCamera()){ setCamMode(camMode === 'forget' ? 'remember' : 'forget'); e.preventDefault(); } }, {passive:false});
     capEl = document.createElement('div'); capEl.className = 'cap-ring'; capEl.innerHTML = [0,1,2,3,4,5,6].map(i => '<i style="--a:' + (i * 360 / 7).toFixed(2) + 'deg"></i>').join('') + '<b></b>'; wrap.appendChild(capEl);
@@ -5937,6 +5941,7 @@ const LIVING = (function(){
     if(grade) grade.rt.setSize(rw, rh);
     camera.aspect = w / h; camera.updateProjectionMatrix();
     ringW = 0; wrapW = 0; wrapH = 0;      // (measured again on the next frame that needs them)
+    layoutCamFrame();
   }
   function setupMouse(){
     wrap.addEventListener('mousedown', e=>{
@@ -6221,7 +6226,7 @@ const LIVING = (function(){
       if(window.THREE && !THREE.GLTFLoader) await loadScript(['https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js', 'https://cdn.jsdelivr.net/npm/three@0.128.1/examples/js/loaders/GLTFLoader.js']).catch(()=>{});
       prog(.18);
       await dollSource(k => prog(.18 + k * .52));
-      const frames = Object.values(CAM_FRAMES).map(f => TOUCH ? f.replace('.webp', '_a.webp') : f);
+      const frames = Object.values(CAM_FRAMES).map(f => TOUCH ? f.replace('.webp', '_p.webp') : f);
       const files = [...new Set(Object.values(LSFX).filter(u => !/^data:/.test(u)).concat(['sfx_cut.mp3', PAINTING_FILE, DOLL_FACE, 'bleood_cam_tip.mp4'], frames))];
       let done = 0;
       await Promise.all(files.map(f => fetch(f).then(r => r.ok ? r.blob() : null).catch(()=> null).then(()=>{ done++; prog(.7 + .3 * done / files.length); })));
