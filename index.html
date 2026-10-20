@@ -3923,12 +3923,12 @@ const LIVING = (function(){
     // the lamps are the light: warm under red shades, fewer of them each time
     const lights = [];
     tables.forEach((tb, i)=>{
-      const on = p === 1 ? true : p === 2 ? (i !== 1) : (i === 0);
+      const on = p <= 2 ? (i !== 1) : (i === 0);      // the key hall is lit like the chase: the middle lamp out
       const L = new THREE.PointLight(FF ? 0xffb070 : 0xffc88c, on ? 1.4 : 0, 7, 1.5); L.position.set(tb.x - .05, tb.ly || 1.1, tb.z); g.add(L);
       if(!on){ if(tb.flame) tb.flame.visible = false; else if(!tb.glass) tb.shade.material = new THREE.MeshLambertMaterial({color:0x2a0a0a, side:THREE.DoubleSide}); }
       lights.push({L, on, z:tb.z, seed:Math.random()*10});
     });
-    const hallAmb = new THREE.AmbientLight(FF ? 0x3e5654 : 0x7a756e, [0.26, 0.2, TOUCH ? 0.22 : 0.14][p-1]); hallAmb.userData.base = hallAmb.intensity; g.add(hallAmb);      // (the last hall a touch brighter on phones)
+    const hallAmb = new THREE.AmbientLight(FF ? 0x3e5654 : 0x7a756e, [0.2, 0.2, TOUCH ? 0.22 : 0.14][p-1]); hallAmb.userData.base = hallAmb.intensity; g.add(hallAmb);      // (the last hall a touch brighter on phones)
     // bare bulbs down the middle of the ceiling, as in the bedroom, stuttering now and then; in the plain hall only one still works
     level.bulbs = [];
     const bzs = d > 10 ? [-4.5, 0, 4.5] : [-2, 2];
