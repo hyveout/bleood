@@ -1072,6 +1072,7 @@ body.mob-full .mob-exit:active{opacity:1; border-color:rgba(232,227,214,.9)}
 .living.touch .cam-frame{background-size:100% auto}      /* phones: the frame keeps its shape across the width; the hotspots are laid over it in script */
 .cap-hint{position:absolute; left:0; right:0; top:calc(50% + min(21vmin,150px) + 14px); text-align:center; font-family:var(--crtface); font-size:clamp(.62rem,1.3vw,.82rem); letter-spacing:.26em; text-transform:uppercase; color:rgba(230,224,210,.55); pointer-events:none; opacity:0; transition:opacity .5s; z-index:6}
 .cap-hint.on{opacity:1}
+.cap-hint{display:none !important}
 .living-tip{position:absolute; inset:0; z-index:8; display:none; align-items:center; justify-content:center; flex-direction:column; cursor:pointer;
   background:radial-gradient(ellipse at 50% 42%, rgba(0,0,0,.72) 0%, rgba(0,0,0,.93) 55%, #000 100%)}
 .living-tip.on{display:flex; animation:tipfade 1.1s ease-out both}
@@ -2718,9 +2719,7 @@ const LIVING = (function(){
   function imgTex(src, cb){ new THREE.TextureLoader().load(src, tx=>{ tx.magFilter = THREE.NearestFilter; tx.minFilter = THREE.NearestFilter; cb(tx); }); }
 
   // ---------- the colour grade, on the GPU ----------
-  // this used to be an SVG filter (#livgrade) laid over the canvas: ten filter steps run by the browser on every frame, which phones do
-  // on the CPU. here the same sums run in one pass: the picture greyed to 30% colour with a warm cast, the same tone curve, and anything
-  // clearly coloured (red shades, blood, the clothes) kept at 85%
+  // (was an SVG filter, run on the CPU on phones every frame) grey with a warm cast, a tone curve, clearly coloured things kept
   function makeGrade(){
     const rt = new THREE.WebGLRenderTarget(320, 240, {minFilter:THREE.NearestFilter, magFilter:THREE.NearestFilter, depthBuffer:true});
     const T = [0, .06, .26, .4, .48, .555, .6, .645, .69, .735, .78, .808, .836, .864, .892, .92, .936, .952, .968, .984, 1], N = T.length;
@@ -4209,7 +4208,7 @@ const LIVING = (function(){
   // ---------- the doll's head in the bedroom (the camera, after Fatal Frame): it drifts in from a corner and comes for you. a ring comes up in the
   // middle of the view; keep its face inside the ring and the runes light, faster the closer it is. when they are all lit, a press takes the
   // picture and it is gone. a picture taken early only knocks it back. if it reaches you, it has you ----------
-  const HAUNT = {FIRST:[8, 14], AGAIN:[10, 20], CHARGE:2.6, SPEED:.46, START:1.1, SNAPS:3, REACH:.8, GRACE:1600};
+  const HAUNT = {FIRST:[5, 9], AGAIN:[5, 10], CHARGE:2.6, SPEED:.46, START:1.1, SNAPS:3, REACH:.8, GRACE:1600};
   let hauntTurn = 0;      // whose turn: his, hers, his...
   // drawn once where you cannot see it, so the first real appearance costs nothing
   function warmUp(obj){ obj.visible = true; obj.position.set(camera.position.x, -40, camera.position.z); setTimeout(()=>{ obj.visible = false; }, 120); }
@@ -5384,7 +5383,7 @@ const LIVING = (function(){
   // ---------- the typewriter: copy the words ----------
   let twIndex = 0, twTyped = '';
   function openTypewriter(){
-    twIndex = 0; twTyped = '';
+    twIndex = 0; twTyped = ''; twKeysFor = -1;
     panel.classList.add('on'); panel.dataset.game = 'type';
     panel.innerHTML = '<div class="tw"><div class="tw-word"></div><div class="tw-line"><span class="tw-typed"></span><span class="tw-caret">_</span></div><div class="tw-count"></div>' +
                       '<input class="tw-input" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false"></div>';
@@ -5393,12 +5392,24 @@ const LIVING = (function(){
       // phones: the system keyboard can't be opened from here (and it zooms the page), so the keys are laid out under the page
       panel.querySelector('.tw-input').remove();
       const keys = document.createElement('div'); keys.className = 'ug-keys below tw-keys qwerty';
-      keys.innerHTML = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'].map(row => '<div class="krow">' + row.split('').map(c => '<button type="button" data-k="' + c + '">' + c + '</button>').join('') + '</div>').join('');
       panel.querySelector('.tw').appendChild(keys);
       keys.addEventListener('click', e => { const b = e.target.closest('button'); if(b && panel.dataset.game === 'type') typeChar(b.dataset.k); });
+      renderTypewriter();
     }
   }
+  // phones: the word's letters and five others, shuffled
+  let twKeysFor = -1;
+  function typewriterKeys(){
+    const keys = panel.querySelector('.tw-keys'); if(!keys || twKeysFor === twIndex) return; twKeysFor = twIndex;
+    const word = WORDS[twIndex].toUpperCase(), set = [...new Set(word.replace(/[^A-Z]/g, '').split(''))];
+    const pool = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').filter(c => !set.includes(c));
+    for(let i = 0; i < 5 && pool.length; i++) set.push(pool.splice((Math.random() * pool.length) | 0, 1)[0]);
+    for(let i = set.length - 1; i > 0; i--){ const j = (Math.random() * (i + 1)) | 0; [set[i], set[j]] = [set[j], set[i]]; }
+    const half = Math.ceil(set.length / 2);
+    keys.innerHTML = [set.slice(0, half), set.slice(half)].map(row => '<div class="krow">' + row.map(c => '<button type="button" data-k="' + c + '">' + c + '</button>').join('') + '</div>').join('');
+  }
   function renderTypewriter(){
+    if(TOUCH) typewriterKeys();
     panel.querySelector('.tw-word').textContent = WORDS[twIndex];
     panel.querySelector('.tw-typed').textContent = twTyped;
     panel.querySelector('.tw-count').textContent = (twIndex + 1) + ' / ' + WORDS.length;
@@ -5841,7 +5852,7 @@ const LIVING = (function(){
     });
     photoEl = document.createElement('div'); photoEl.className = 'living-photo'; photoEl.innerHTML = '<img alt="" src="' + PHOTO_A + '"><span>is this me?</span>'; wrap.appendChild(photoEl);
     tipEl = document.createElement('div'); tipEl.className = 'living-tip';
-    tipEl.innerHTML = '<div class="tip-body"><div class="tip-line1">You are haunted by both your past and your present</div><div class="tip-heads"><video class="tip-film" src="bleood_cam_tip.mp4" muted loop playsinline autoplay preload="auto"></video></div><div class="tip-line2">Flash them when your runic meter is full. REMEMBER her. FORGET him.</div><div class="tip-line3">' + (TOUCH ? 'You can only see them through the camera. The round button raises it. It needs a moment to recharge after each flash.' : 'You can only see them through the camera. C raises it. It needs a moment to recharge after each flash.') + '</div><div class="tip-go">' + (TOUCH ? 'tap to continue' : 'press any key') + '</div></div>';
+    tipEl.innerHTML = '<div class="tip-body"><div class="tip-line1">You are haunted by both your past and your present</div><div class="tip-heads"><video class="tip-film" src="bleood_cam_tip.mp4" muted loop playsinline autoplay preload="auto"></video></div><div class="tip-line2">Flash them when your runic meter is full. REMEMBER her. FORGET him.</div><div class="tip-line3">' + (TOUCH ? 'You can only see them through the camera. The round button raises it.' : 'You can only see them through the camera. C raises it.') + '</div><div class="tip-go">' + (TOUCH ? 'tap to continue' : 'press any key') + '</div></div>';
     wrap.appendChild(tipEl);
     tipEl.addEventListener('touchend', e=>{ e.preventDefault(); e.stopPropagation(); closeTip(); });
     redEl = document.createElement('div'); redEl.className = 'living-red'; wrap.appendChild(redEl);
@@ -6009,7 +6020,8 @@ const LIVING = (function(){
       if(len > 0){
         fwd /= Math.max(1, len); side /= Math.max(1, len);
         const sin = Math.sin(yaw), cos = Math.cos(yaw);
-        tryMove(camera.position.x + (-sin * fwd + cos * side) * SPEED * dt, camera.position.z + (-cos * fwd - sin * side) * SPEED * dt);
+        const sp = SPEED * (camUp ? .5 : 1);      // with the camera up you creep
+        tryMove(camera.position.x + (-sin * fwd + cos * side) * sp * dt, camera.position.z + (-cos * fwd - sin * side) * sp * dt);
         camera.position.y = EYE + Math.sin(now / 130) * 0.018;
       }else{
         camera.position.y += (EYE - camera.position.y) * 0.2;
