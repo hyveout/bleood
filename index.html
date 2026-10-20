@@ -1050,8 +1050,8 @@ body.mob-full .mob-exit:active{opacity:1; border-color:rgba(232,227,214,.9)}
 .game-panel{position:absolute; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.78); z-index:6; cursor:default}
 .game-panel.on{display:flex}
 .game-panel.jolt{animation:panic .12s steps(2) 2}
-.game-panel .tw{width:min(70%,420px); text-align:center; font-family:var(--crtface); color:#e6e2d8}
-.game-panel .tw-word{font-size:clamp(1.6rem,4vw,2.6rem); letter-spacing:.3em; text-shadow:-1.1px 0 rgba(255,0,70,.55), 1.1px 0 rgba(0,240,220,.45)}
+.game-panel .tw{position:relative; width:min(70%,420px); text-align:center; font-family:var(--crtface); color:#e6e2d8}
+.game-panel .tw-word{font-size:clamp(1.6rem,4vw,2.6rem); letter-spacing:.3em; white-space:nowrap; text-shadow:-1.1px 0 rgba(255,0,70,.55), 1.1px 0 rgba(0,240,220,.45)}
 .game-panel .tw-line{margin-top:6%; font-size:clamp(1.3rem,3vw,2rem); letter-spacing:.3em; min-height:1.4em; color:#fff}
 .game-panel .tw-caret{animation:blink 1s steps(1) infinite; opacity:.7}
 .game-panel .tw-count{margin-top:5%; font-size:clamp(.7rem,1.3vw,.9rem); letter-spacing:.24em; opacity:.6}
@@ -5494,10 +5494,12 @@ const LIVING = (function(){
   // ---------- the typewriter: copy the words ----------
   let twIndex = 0, twTyped = '';
   function openTypewriter(){
-    twIndex = 0; twTyped = ''; twKeysFor = -1;
+    twIndex = level.twIndex || 0; twTyped = ''; twKeysFor = -1;      // (leave and come back: the words already typed stay typed)
     panel.classList.add('on'); panel.dataset.game = 'type';
     panel.innerHTML = '<div class="tw"><div class="tw-word"></div><div class="tw-line"><span class="tw-typed"></span><span class="tw-caret">_</span></div><div class="tw-count"></div>' +
-                      '<input class="tw-input" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false"></div>';
+                      '<input class="tw-input" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false"><button type="button" class="lock-back tw-back">back</button></div>';
+    panel.querySelector('.tw-back').addEventListener('click', e=>{ e.stopPropagation(); closePanel(); });
+    panel.querySelector('.tw-back').addEventListener('pointerdown', e=>{ e.stopPropagation(); });
     renderTypewriter();
     if(TOUCH){
       // phones: the system keyboard can't be opened from here (and it zooms the page), so the keys are laid out under the page
@@ -5521,7 +5523,7 @@ const LIVING = (function(){
   }
   function renderTypewriter(){
     if(TOUCH) typewriterKeys();
-    panel.querySelector('.tw-word').textContent = WORDS[twIndex];
+    panel.querySelector('.tw-word').textContent = '_'.repeat(WORDS[twIndex].length);      // the word is not given: only how many letters. it is on the bedroom walls, through the camera
     panel.querySelector('.tw-typed').textContent = twTyped;
     panel.querySelector('.tw-count').textContent = (twIndex + 1) + ' / ' + WORDS.length;
   }
@@ -5530,7 +5532,7 @@ const LIVING = (function(){
     if(ch === want[twTyped.length]){ lsfx('tick', .9); twTyped += ch; }      // the hammer on the page
     else { lsfx('locked', .9); twTyped = ''; panel.classList.add('jolt'); setTimeout(()=>panel.classList.remove('jolt'), 200); }
     if(twTyped === want){
-      twIndex++; twTyped = '';
+      twIndex++; twTyped = ''; level.twIndex = twIndex;
       if(twIndex >= WORDS.length){ closePanel(); done.type = true; flash('challenge complete'); gained(); return; }
     }
     renderTypewriter();
