@@ -2644,7 +2644,7 @@ const LIVING = (function(){
       // something spilled and soaked into the wood long ago: an irregular soak, darker where it dried at the edge
       g.clearRect(0,0,S,S);
       const blobs = []; for(let i = 0; i < 7; i++){ const a = Math.random() * 6.3, dd = Math.random() * S * .18; blobs.push([S/2 + Math.cos(a) * dd, S/2 + Math.sin(a) * dd, S * (.1 + Math.random() * .14), S * (.07 + Math.random() * .1), Math.random() * 3]); }
-      const tone = Math.random() < .5 ? '38,20,10' : '52,14,10';           // old water and old blood
+      const tone = '46,5,8';           // old blood, the same dark red as the rest of it (the warm bulbs turned the brown one orange)
       g.filter = 'blur(4px)'; g.fillStyle = 'rgba(' + tone + ',.5)';
       blobs.forEach(([x, y, rx, ry, r]) => { g.beginPath(); g.ellipse(x, y, rx, ry, r, 0, Math.PI * 2); g.fill(); });
       g.filter = 'blur(1.5px)'; g.strokeStyle = 'rgba(' + tone + ',.45)'; g.lineWidth = 2;
@@ -3361,8 +3361,13 @@ const LIVING = (function(){
     // plain clothes: a t-shirt (short sleeves in one piece with the body) or a pair of trousers folded over the bar
     const body = c.shape === 'tee'
       ? [[-.05, 0], [-.15, -.03], [-.2, -.09], [-.17, -.19], [-.13, -.17], [-.13, -.62], [.13, -.62], [.13, -.17], [.17, -.19], [.2, -.09], [.15, -.03], [.05, 0], [0, -.035]]
-      : [[-.14, -.02], [.14, -.02], [.15, -.5], [.14, -.98], [.04, -.98], [.01, -.5], [-.01, -.5], [-.04, -.98], [-.14, -.98], [-.15, -.5]];
+      : [[-.15, -.02], [.15, -.02], [.155, -.3], [.14, -.98], [.045, -.98], [.03, -.36], [-.03, -.36], [-.045, -.98], [-.14, -.98], [-.155, -.3]];
     const torso = new THREE.Mesh(flat(body, .035), cloth); torso.position.z = -.017; grp.add(torso);
+    if(c.shape === 'pants'){      // a waistband and a seam down each leg, so they read as trousers and not a sack
+      const band = new THREE.Mesh(new THREE.BoxGeometry(.31, .035, .05), new THREE.MeshLambertMaterial({color:new THREE.Color(c.hex).multiplyScalar(.55)})); band.position.set(0, -.035, 0); grp.add(band);
+      const seamM = new THREE.MeshLambertMaterial({color:new THREE.Color(c.hex).multiplyScalar(.5)});
+      [-1, 1].forEach(sd=>{ const sm = new THREE.Mesh(new THREE.BoxGeometry(.006, .6, .004), seamM); sm.position.set(sd * .09, -.67, .022); grp.add(sm); });
+    }
     // the hanger: a wooden bar under the shoulders and a wire hook up to the rail
     const wood = new THREE.MeshLambertMaterial({color:0x3a2a1a}), wire = new THREE.MeshLambertMaterial({color:0x6a6a6a});
     const bar = new THREE.Mesh(new THREE.BoxGeometry(.34, .016, .016), wood); bar.position.set(0, -.03, 0); grp.add(bar);
