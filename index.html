@@ -1110,15 +1110,25 @@ body.mob-full .mob-exit:active{opacity:1; border-color:rgba(232,227,214,.9)}
 @keyframes scareflash{0%{background:#300}50%{background:#000}100%{background:#500}}
 @keyframes scareshake{0%{transform:translate(-8px,4px)}50%{transform:translate(9px,-6px)}100%{transform:translate(-4px,7px)}}
 @keyframes scarezoom{from{height:90%}to{height:190%}}
-.game-panel .safe{position:relative; width:min(46%,240px); padding:18px; background:#26282a; border:2px solid #111; box-shadow:0 18px 30px rgba(0,0,0,.85), inset 0 0 20px rgba(0,0,0,.6)}
+.game-panel .safe{position:relative; width:min(46%,240px); padding:18px; background:#26282a center/100% 100% no-repeat; border:2px solid #0a0908; box-shadow:0 18px 30px rgba(0,0,0,.85), inset 0 0 28px rgba(0,0,0,.8); overflow:hidden}
+.game-panel .safe::before{content:''; position:absolute; inset:0; z-index:3; pointer-events:none; mix-blend-mode:multiply;
+  background:radial-gradient(ellipse 38% 30% at 16% 82%, rgba(120,8,8,.8), rgba(120,8,8,0) 70%), radial-gradient(ellipse 30% 22% at 86% 10%, rgba(100,6,6,.75), rgba(100,6,6,0) 70%), radial-gradient(ellipse 24% 16% at 44% 40%, rgba(90,6,6,.5), rgba(90,6,6,0) 70%)}
+.game-panel .safe::after{content:''; position:absolute; inset:0; z-index:4; pointer-events:none; opacity:.3; mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .9 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>")}
+.game-panel .safe > *{position:relative; z-index:1}
 .game-panel .safe-disp{display:flex; gap:8px; justify-content:center; margin-bottom:14px}
-.game-panel .safe-disp span{width:34px; height:44px; background:#0c1a0f; border:1px solid #000; color:#7dff9a; font-family:var(--crtface);
-  font-size:1.6rem; display:flex; align-items:center; justify-content:center; text-shadow:0 0 8px rgba(125,255,154,.7)}
+.game-panel .safe-disp span{width:34px; height:44px; background:linear-gradient(160deg,#0a1a0d 0%,#061008 55%,#0b150c 100%); border:1px solid #000; color:#6fd98a; font-family:var(--crtface);
+  font-size:1.6rem; display:flex; align-items:center; justify-content:center; text-shadow:0 0 8px rgba(125,255,154,.55); box-shadow:inset 0 0 10px rgba(0,0,0,.9), inset 2px 3px 0 rgba(0,0,0,.6); animation:safeglow 2.7s steps(1) infinite}
+.game-panel .safe-disp span:nth-child(2){transform:translateY(1px)} .game-panel .safe-disp span:nth-child(3){box-shadow:inset 0 0 10px rgba(0,0,0,.9), inset -6px 0 8px rgba(0,0,0,.7)}
+@keyframes safeglow{0%,100%{opacity:1} 41%{opacity:.78} 43%{opacity:1} 77%{opacity:.86} 79%{opacity:1}}
 .game-panel .safe-keys{display:grid; grid-template-columns:repeat(3,1fr); gap:8px}
-.game-panel .safe-keys button{height:40px; background:#4a4c4e; border:1px solid #1a1a1a; color:#e6e2d8; font-family:var(--crtface); font-size:1.2rem;
-  box-shadow:inset 0 -3px 0 rgba(0,0,0,.4); cursor:pointer}
+.game-panel .safe-keys button{height:40px; background:linear-gradient(168deg,#5a5652 0%,#403c38 60%,#322e2a 100%); border:1px solid #0d0c0b; color:#d8d0bf; font-family:var(--crtface); font-size:1.2rem;
+  box-shadow:inset 0 -3px 0 rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.05), 0 2px 5px rgba(0,0,0,.7); text-shadow:0 0 3px rgba(0,0,0,.9); cursor:pointer}
+.game-panel .safe-keys button:nth-child(3n+1){transform:rotate(-.7deg)} .game-panel .safe-keys button:nth-child(3n+2){transform:rotate(.4deg) translateY(1px)} .game-panel .safe-keys button:nth-child(3n){transform:rotate(.9deg)}
+.game-panel .safe-keys button:nth-child(5), .game-panel .safe-keys button:nth-child(8){background:linear-gradient(168deg,#3a3734,#242220); color:#b0a894}
+.game-panel .safe-keys button:nth-child(2), .game-panel .safe-keys button:nth-child(12){background-image:radial-gradient(circle at 70% 30%, rgba(80,6,6,.6), rgba(80,6,6,0) 55%), linear-gradient(168deg,#4a4744,#2a2724)}
 .game-panel .safe-keys button.hot, .game-panel .safe-keys button:hover{background:#8a1a1a; color:#fff}
-.game-panel .safe-back{display:block; width:100%; margin-top:12px; height:34px; background:#1c1d1e; border:1px solid #000; color:#bdb8ad;
+.game-panel .safe-back{display:block; width:100%; margin-top:12px; height:34px; background:linear-gradient(180deg,#1e1d1c,#121110); border:1px solid #000; color:#a8a295; box-shadow:inset 0 0 8px rgba(0,0,0,.8); text-shadow:0 0 3px rgba(0,0,0,.9);
   font-family:var(--crtface); font-size:.95rem; letter-spacing:.2em; text-transform:uppercase; cursor:pointer}
 .game-panel .safe-back.hot, .game-panel .safe-back:hover{background:#8a1a1a; color:#fff}
 .game-panel .lock{position:relative; width:min(80%,520px)}
@@ -1132,7 +1142,7 @@ body.mob-full .mob-exit:active{opacity:1; border-color:rgba(232,227,214,.9)}
 .game-panel .lock-back{position:absolute; right:0; bottom:-44px; height:32px; padding:0 18px; background:#1c1d1e; border:1px solid #000; color:#bdb8ad;
   font-family:var(--crtface); font-size:.9rem; letter-spacing:.2em; text-transform:uppercase; cursor:pointer}
 .game-panel .safe-cur{position:absolute; width:8px; height:8px; margin:-4px 0 0 -4px; border-radius:50%; background:#fff; box-shadow:0 0 6px #000; pointer-events:none}
-.living.touch .game-panel .safe-back{display:block; width:100%; margin-top:12px; height:34px; background:#1c1d1e; border:1px solid #000; color:#bdb8ad;
+.living.touch .game-panel .safe-back{display:block; width:100%; margin-top:12px; height:34px; background:linear-gradient(180deg,#1e1d1c,#121110); border:1px solid #000; color:#a8a295; box-shadow:inset 0 0 8px rgba(0,0,0,.8); text-shadow:0 0 3px rgba(0,0,0,.9);
   font-family:var(--crtface); font-size:.95rem; letter-spacing:.2em; text-transform:uppercase; cursor:pointer}
 .game-panel .safe-back.hot, .game-panel .safe-back:hover{background:#8a1a1a; color:#fff}
 .game-panel .lock{position:relative; width:min(80%,520px)}
@@ -2435,6 +2445,20 @@ const LIVING = (function(){
   }
   // soft stains and water marks, drawn so the texture still tiles: noise is laid out with a wrapped border before it is scaled up
   // what time does to wood: a wash of grime, dark where hands and feet went, pale where the finish wore through, scratches, damp blooms, a soot line
+  // old steel for the safe: dark paint worn to rust, grime in the corners, blood that has run down it (shared by the safe and its keypad)
+  let grimeCanvas = null, grimeTexture = null;
+  function grimeSteel(){
+    if(grimeTexture) return grimeTexture;
+    const S = 512, c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d'), r = (a, b) => a + Math.random() * (b - a);
+    g.fillStyle = '#26282a'; g.fillRect(0, 0, S, S);
+    for(let i = 0; i < 9000; i++){ const v = 20 + (Math.random() * 40 | 0); g.fillStyle = 'rgba(' + v + ',' + (v - 2) + ',' + (v - 4) + ',' + r(.2, .6) + ')'; g.fillRect(r(0, S), r(0, S), r(1, 4), r(1, 4)); }
+    for(let i = 0; i < 26; i++){ const x = r(0, S), y = r(0, S), rad = r(10, 70), gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, 'rgba(120,62,24,' + r(.25, .6) + ')'); gr.addColorStop(1, 'rgba(120,62,24,0)'); g.fillStyle = gr; g.fillRect(x - rad, y - rad, rad * 2, rad * 2); }      // rust blooms
+    distress(g, S);
+    for(let i = 0; i < 7; i++){ const x = r(30, S - 30), y = r(0, S * .7), rad = r(14, 46), gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, 'rgba(70,6,8,' + r(.7, .95) + ')'); gr.addColorStop(.6, 'rgba(70,6,8,' + r(.35, .6) + ')'); gr.addColorStop(1, 'rgba(70,6,8,0)'); g.fillStyle = gr; g.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+      const n = 1 + (Math.random() * 3 | 0); for(let k = 0; k < n; k++){ const dx = x + r(-rad * .6, rad * .6), len = r(30, 160), w = r(2, 6); g.fillStyle = 'rgba(60,4,6,' + r(.6, .9) + ')'; g.fillRect(dx, y, w, len); g.beginPath(); g.arc(dx + w / 2, y + len, w * .8, 0, Math.PI * 2); g.fill(); } }      // blood, and where it ran
+    grimeCanvas = c; grimeTexture = new THREE.CanvasTexture(c); grimeTexture.wrapS = grimeTexture.wrapT = THREE.RepeatWrapping; grimeTexture.magFilter = THREE.NearestFilter; grimeTexture.encoding = THREE.sRGBEncoding;
+    return grimeTexture;
+  }
   function distress(g, S){
     const r = (a, b) => a + Math.random() * (b - a);
     g.save();
@@ -3333,23 +3357,12 @@ const LIVING = (function(){
   }
   function garment(c){
     const grp = new THREE.Group(), cloth = new THREE.MeshLambertMaterial({color:0xffffff, map:fabricTex(c.css), emissive:new THREE.Color(c.hex).multiplyScalar(.18), side:THREE.DoubleSide});
-    const len = {coat:1.0, jacket:.66, cardigan:.76, dress:.98}[c.shape], sleeve = {coat:.62, jacket:.58, cardigan:.6, dress:0}[c.shape];
-    const flat = (pts, depth)=>{ const s = new THREE.Shape(); pts.forEach(([x, y], k)=> k ? s.lineTo(x, y) : s.moveTo(x, y)); return new THREE.ExtrudeGeometry(s, {depth, bevelEnabled:true, bevelThickness:.008, bevelSize:.008, bevelSegments:1}); };
-    // the body: shoulders sloping from the neck, then down to a hem that flares a little (a lot, for the dress)
-    const half = c.shape === 'dress' ? .1 : .16, hem = c.shape === 'dress' ? .24 : c.shape === 'coat' ? .2 : .17, neck = c.shape === 'cardigan' ? -.16 : -.035;
-    const body = c.shape === 'dress'
-      ? [[-.045, 0], [-.07, -.01], [-.11, -.06], [-.1, -.2], [-.085, -.34], [-.1, -.45], [-hem, -len], [hem, -len], [.1, -.45], [.085, -.34], [.1, -.2], [.11, -.06], [.07, -.01], [.045, 0], [0, -.06]]
-      : [[-.05, 0], [-half, -.035], [-half - .01, -.12], [-half + .005, -.3], [-hem, -len], [hem, -len], [half - .005, -.3], [half + .01, -.12], [half, -.035], [.05, 0], [0, neck]];
+    const flat = (pts, depth)=>{ const sh = new THREE.Shape(); pts.forEach(([x, y], k)=> k ? sh.lineTo(x, y) : sh.moveTo(x, y)); return new THREE.ExtrudeGeometry(sh, {depth, bevelEnabled:true, bevelThickness:.008, bevelSize:.008, bevelSegments:1}); };
+    // plain clothes: a t-shirt (short sleeves in one piece with the body) or a pair of trousers folded over the bar
+    const body = c.shape === 'tee'
+      ? [[-.05, 0], [-.15, -.03], [-.2, -.09], [-.17, -.19], [-.13, -.17], [-.13, -.62], [.13, -.62], [.13, -.17], [.17, -.19], [.2, -.09], [.15, -.03], [.05, 0], [0, -.035]]
+      : [[-.14, -.02], [.14, -.02], [.15, -.5], [.14, -.98], [.04, -.98], [.01, -.5], [-.01, -.5], [-.04, -.98], [-.14, -.98], [-.15, -.5]];
     const torso = new THREE.Mesh(flat(body, .035), cloth); torso.position.z = -.017; grp.add(torso);
-    // sleeves hanging from the shoulders, a little forward and out
-    if(sleeve) [-1, 1].forEach(sd=>{
-      const sl = new THREE.Mesh(flat([[-.035, 0], [.035, 0], [.04, -sleeve], [-.04, -sleeve]], .03), cloth);
-      sl.position.set(sd * (half - .005), -.05, .012); sl.rotation.z = sd * .09; grp.add(sl);
-    });
-    // a darker collar for the coat and jacket; buttons down the front of the coat and cardigan
-    const dark = new THREE.MeshLambertMaterial({color:new THREE.Color(c.hex).multiplyScalar(.45)});
-    if(c.shape === 'coat' || c.shape === 'jacket') [-1, 1].forEach(sd=>{ const lap = new THREE.Mesh(flat([[0, -.02], [sd * .06, -.04], [sd * .01, -.2]], .006), dark); lap.position.z = .02; grp.add(lap); });
-    if(c.shape === 'coat' || c.shape === 'cardigan'){ const bm = new THREE.MeshLambertMaterial({color:0x1a1410}); for(let k = 0; k < 4; k++){ const b = new THREE.Mesh(new THREE.SphereGeometry(.009, 6, 4), bm); b.position.set(0, (c.shape === 'cardigan' ? -.2 : -.24) - k * .11, .025); grp.add(b); } }
     // the hanger: a wooden bar under the shoulders and a wire hook up to the rail
     const wood = new THREE.MeshLambertMaterial({color:0x3a2a1a}), wire = new THREE.MeshLambertMaterial({color:0x6a6a6a});
     const bar = new THREE.Mesh(new THREE.BoxGeometry(.34, .016, .016), wood); bar.position.set(0, -.03, 0); grp.add(bar);
@@ -3602,7 +3615,7 @@ const LIVING = (function(){
 
     // a small safe on the wardrobe floor, facing out into the room
     const safe = new THREE.Group(); safe.position.set(wx + .22, .07, wz + .03); safe.rotation.y = Math.PI/2; g.add(safe);
-    const safeM = new THREE.MeshPhongMaterial({color:0x2a2c2e, specular:0x666666, shininess:30});
+    const safeM = new THREE.MeshPhongMaterial({map:grimeSteel(), color:0xffffff, specular:0x3a3634, shininess:14});
     const sp = (w2, h2, d2, x, y, z)=>{ const p = new THREE.Mesh(new THREE.BoxGeometry(w2, h2, d2), safeM); p.position.set(x, y, z); safe.add(p); return p; };
     sp(.32, .02, .34, 0, .01, 0); sp(.32, .02, .34, 0, .29, 0); sp(.02, .3, .34, .15, .15, 0); sp(.32, .3, .02, 0, .15, -.16); sp(.32, .3, .02, 0, .15, .16);
     const sdPiv = new THREE.Group(); sdPiv.position.set(-.16, 0, -.17); safe.add(sdPiv);
@@ -5409,6 +5422,7 @@ const LIVING = (function(){
       '<div class="safe-keys">' + keys.map(k => k ? '<button type="button" data-k="' + k + '">' + (k === '<' ? '&larr;' : k) + '</button>' : '<i></i>').join('') + '</div>' +
       '<button type="button" class="safe-back" data-k="back">back</button><b class="safe-cur"></b></div>';
     const box = panel.querySelector('.safe'), cur = panel.querySelector('.safe-cur');
+    grimeSteel(); if(grimeCanvas) box.style.backgroundImage = 'url(' + grimeCanvas.toDataURL() + ')';
     let cx = .5, cy = .62, hot = null;
     const place = ()=>{
       cur.style.left = (cx * 100) + '%'; cur.style.top = (cy * 100) + '%';
@@ -5634,7 +5648,7 @@ const LIVING = (function(){
       if(strain > 1){
         prog = Math.max(0, prog - .55); moves.length = 0; strain = 0; rest = now + 450; redLevel = 1; KNIFE_CUT.stop();      // the whole screen goes red, not a box
         panel.classList.add('jolt'); setTimeout(()=>panel.classList.remove('jolt'), 200);
-        flash('it catches');
+        flash('move slowly');
       }else if(prog >= PULL){
         done = true; draw(); KNIFE_CUT.stop();
         setTimeout(()=>{
@@ -5687,7 +5701,9 @@ const LIVING = (function(){
     penDown = ()=>{ if(!hot) return; if(hot.classList.contains('safe-back')) closePanel(); else take(); };
     penUp = null; setTimeout(place, 30);
   }
-  function closePanel(){ KNIFE_CUT.stop(); if(pullCleanup){ const f = pullCleanup; pullCleanup = null; try{ f(); }catch(e){} } panel.classList.remove('on'); panel.innerHTML = ''; panel.dataset.game = ''; penMove = penDown = penUp = null; tracing = false; }
+  function closePanel(){ KNIFE_CUT.stop();
+    if(level && level.haunts){ const nw = performance.now(), cam = camera.position; for(const H of hauntAlive()){ if(H.dying || H.scare) continue; H.grace = nw + 2500;      // out of a challenge: a moment's grace, and they stand off
+      const dx = H.px - cam.x, dz = H.pz - cam.z, d = Math.max(.01, Math.hypot(dx, dz)); if(d < 1.6){ const b = level.bounds; H.px = Math.max(b.minX + .4, Math.min(b.maxX - .4, cam.x + dx / d * 1.6)); H.pz = Math.max(b.minZ + .4, Math.min(b.maxZ - .4, cam.z + dz / d * 1.6)); } } } if(pullCleanup){ const f = pullCleanup; pullCleanup = null; try{ f(); }catch(e){} } panel.classList.remove('on'); panel.innerHTML = ''; panel.dataset.game = ''; penMove = penDown = penUp = null; tracing = false; }
 
   function showNote(text, ending){
     if(!ending) lsfx('page', 1);
