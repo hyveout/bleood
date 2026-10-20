@@ -2422,7 +2422,7 @@ const LIVING = (function(){
     let dy = D.to.yaw - D.from.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); yaw = D.from.yaw + dy * k; pitch = D.from.pitch + (D.to.pitch - D.from.pitch) * k;
     if(D.fogTo && D.fog0 && scene.fog && phase === 2){ const q = 1 - k; scene.fog.near = D.fog0[0] + (D.fogTo[0] - D.fog0[0]) * q; scene.fog.far = D.fog0[1] + (D.fogTo[1] - D.fog0[1]) * q; }      // the dark comes back with you
   }
-  // the two flashes: FORGET is for him (the past), REMEMBER is for her (the present). the wrong one does nothing but bring them closer
+  // the two flashes: REMEMBER is for him (the past), FORGET is for her (the present). the wrong one does nothing but bring them closer
   let camMode = 'forget', camReady = 0;      // camReady: the flash is charging again until then
   const RECHARGE = 3200;
   const CAM_FRAMES = {forget:'cam_forget.webp', remember:'cam_remember.webp', forget_flash:'cam_forget_flash.webp', remember_flash:'cam_remember_flash.webp'};
@@ -2439,8 +2439,8 @@ const LIVING = (function(){
     const W = wrap.clientWidth, H = wrap.clientHeight, u = W / 1200;
     const bandTop = H - 180 * u;
     camFrame.querySelectorAll('.cf-mode span').forEach(el => { const hh = Math.max(74 * u, 46); el.style.top = (bandTop - 150 * u + 51 * u - hh / 2) + 'px';      /* (measured inside the top border; a finger-sized target round the painted button) */ el.style.height = hh + 'px'; }); }
-  function rightMode(H){ return (H.who === 'her') === (camMode === 'remember'); }
-  function ringHint(H){ return (H.who === 'her' ? 'remember her. ' : 'forget him. ') + (TOUCH ? 'keep it in the ring. when the runes are lit, tap' : 'keep it in the ring. when the runes are lit, press E'); }
+  function rightMode(H){ return (H.who === 'him') === (camMode === 'remember'); }
+  function ringHint(H){ return (H.who === 'her' ? 'forget her. ' : 'remember him. ') + (TOUCH ? 'keep it in the ring. when the runes are lit, tap' : 'keep it in the ring. when the runes are lit, press E'); }
   function haveCamera(){ return hasCamera && level && !level.needCamera; }
   function setCamUp(on){
     if(!haveCamera()) on = false;
@@ -3885,6 +3885,24 @@ const LIVING = (function(){
       const digits = new THREE.Mesh(new THREE.PlaneGeometry(3.9, 3.9 * CH / CW), new THREE.MeshBasicMaterial({map:wtD, transparent:true, depthWrite:false, color:0xc8c8c8, polygonOffset:true, polygonOffsetFactor:-3}));
       digits.position.set(-1.2, 1.55, d/2 - .016); digits.rotation.y = Math.PI; digits.visible = false; g.add(digits); level.camOnly.push(digits);
       level.numMat = numMat;
+      // and round the room, words painted in old blood that only the camera finds
+      const word = (txt, wdt, x, y, z, ry)=>{
+        const H2 = 220, cw = Math.round(H2 * .62 * txt.length) + 160, cv = document.createElement('canvas'); cv.width = cw; cv.height = H2 + 150; const q = cv.getContext('2d');
+        q.textAlign = 'center'; q.textBaseline = 'middle'; q.font = '900 ' + H2 + 'px Georgia, "Times New Roman", serif';
+        const cx = cw / 2, cy = 30 + H2 / 2;
+        q.fillStyle = 'rgba(40,0,0,.5)'; q.fillText(txt, cx + 4, cy + 6);      // a darker bleed under it
+        for(let i = 0; i < 7; i++){ q.fillStyle = 'rgba(' + (120 + rnd(0, 30) | 0) + ',12,10,' + rnd(.2, .35).toFixed(2) + ')'; q.fillText(txt, cx + rnd(-5, 5), cy + rnd(-4, 4)); }      // brushed on in rough passes
+        q.strokeStyle = 'rgba(110,10,8,.7)'; q.lineCap = 'round';
+        for(let i = 0; i < txt.length * 2; i++){ const x0 = 80 + rnd(0, cw - 160), len = rnd(25, 120); q.lineWidth = rnd(4, 10); q.beginPath(); q.moveTo(x0, cy + H2 * .32); q.lineTo(x0 + rnd(-3, 3), cy + H2 * .32 + len); q.stroke(); }      // runs
+        const tx = new THREE.CanvasTexture(cv); tx.minFilter = THREE.LinearFilter;
+        const m = new THREE.Mesh(new THREE.PlaneGeometry(wdt, wdt * cv.height / cw), new THREE.MeshBasicMaterial({map:tx, transparent:true, depthWrite:false, color:0xb4b4b4, polygonOffset:true, polygonOffsetFactor:-3}));
+        m.position.set(x, y, z); m.rotation.y = ry; m.visible = false; m.userData.word = true; g.add(m); level.camOnly.push(m);
+      };
+      word('LEGION', 1.7, -2.05, 1.72, -d/2 + .016, 0);                   // over the bed
+      word('RITUAL', 1.3, -.15, 1.55, -d/2 + .016, 0);                    // between the bed and the wardrobe
+      word('KILLYOURIDOLS', 3.0, -w/2 + .016, 2.3, .4, Math.PI / 2);       // high along the left wall, over what hangs there
+      word('OBSESSION', 2.6, w/2 - .016, 1.62, -.4, -Math.PI / 2);         // the right wall
+      word('LNF', .8, 2.75, 1.62, d/2 - .016, Math.PI);                    // by the door
     }
     level.exitZ = d/2 - .2;
 
@@ -4549,8 +4567,18 @@ const LIVING = (function(){
     setHUD('');
     const scareW = {eyes:[], eyeGlow:{intensity:0}, scaring:false}; level.scareW = scareW; const t0 = performance.now();
     hauntSetup(); hauntArm(HAUNT.AGAIN);      // the heads come here too, among the girls
+    let doorGlow = null;
+    if(TOUCH){      // phones: a very faint light in the doorway, coming up as you get close
+      const gm = new THREE.MeshBasicMaterial({color:0xcfc6b6, transparent:true, opacity:0, depthWrite:false, fog:false, blending:THREE.AdditiveBlending});
+      const gp = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 2.15), gm), spill = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 1.6), gm.clone());
+      if(onFront){ gp.position.set(out.x, 1.075, out.z + .08); gp.rotation.y = Math.PI; spill.position.set(out.x, .01, out.z - .75); }
+      else { gp.position.set(out.x - .08, 1.075, out.z); gp.rotation.y = Math.PI / 2; spill.position.set(out.x + .75, .01, out.z); }
+      spill.rotation.x = -Math.PI / 2; g.add(gp, spill); doorGlow = {gp, spill, x:out.x, z:out.z};
+    }
     level.tick = (now)=>{
       const t = now / 1000;
+      if(doorGlow){ const dd = Math.hypot(camera.position.x - doorGlow.x, camera.position.z - doorGlow.z), k = Math.max(0, Math.min(1, (9 - dd) / 7));
+        doorGlow.gp.material.opacity = .02 + k * .1; doorGlow.spill.material.opacity = k * .06; }
       if(scareW.scaring) return;
       hauntStep(now, Math.min(.05, (now - (level._ht || now)) / 1000)); level._ht = now;
       level.demons.forEach(G=>{
@@ -5929,7 +5957,7 @@ const LIVING = (function(){
     });
     photoEl = document.createElement('div'); photoEl.className = 'living-photo'; photoEl.innerHTML = '<img alt="" src="' + PHOTO_A + '"><span>is this me?</span>'; wrap.appendChild(photoEl);
     tipEl = document.createElement('div'); tipEl.className = 'living-tip';
-    tipEl.innerHTML = '<div class="tip-body"><div class="tip-line1">You are haunted by both your past and your present</div><div class="tip-heads"><video class="tip-film" src="' + (TOUCH ? 'bleood_cam_tip_m.mp4' : 'bleood_cam_tip.mp4') + '" muted loop playsinline autoplay preload="auto"></video></div><div class="tip-line2">Flash them when your runic meter is full. REMEMBER her. FORGET him.</div><div class="tip-line3">' + (TOUCH ? 'You can only see them through the camera. The camera button raises it, FLASH takes the picture.' : 'You can only see them through the camera. C raises it.') + '</div><div class="tip-go">' + (TOUCH ? 'tap to continue' : 'press any key') + '</div></div>';
+    tipEl.innerHTML = '<div class="tip-body"><div class="tip-line1">You are haunted by both your past and your present</div><div class="tip-heads"><video class="tip-film" src="' + (TOUCH ? 'bleood_cam_tip_m.mp4' : 'bleood_cam_tip.mp4') + '" muted loop playsinline autoplay preload="auto"></video></div><div class="tip-line2">Flash them when your runic meter is full. REMEMBER him. FORGET her.</div><div class="tip-line3">' + (TOUCH ? 'You can only see them through the camera. The camera button raises it, FLASH takes the picture.' : 'You can only see them through the camera. C raises it.') + '</div><div class="tip-go">' + (TOUCH ? 'tap to continue' : 'press any key') + '</div></div>';
     wrap.appendChild(tipEl);
     tipEl.addEventListener('touchend', e=>{ e.preventDefault(); e.stopPropagation(); closeTip(); });
     redEl = document.createElement('div'); redEl.className = 'living-red'; wrap.appendChild(redEl);
@@ -6221,7 +6249,8 @@ const LIVING = (function(){
     fade += (fadeTo - fade) * 0.12;
     fadeEl.style.opacity = fade.toFixed(3);
     // red flashes in the later hallways: sudden, then fading
-    if(level && level.redChance && !switching && Math.random() < level.redChance){ redLevel = .45 + Math.random() * .55; if(Math.random() < .4) camera.rotateZ((Math.random() - .5) * .2); }
+    if(level && level.redChance && !TOUCH && !switching && Math.random() < level.redChance){      // (phones: none of these jolts)
+     redLevel = .45 + Math.random() * .55; if(Math.random() < .4) camera.rotateZ((Math.random() - .5) * .2); }
     redLevel *= .9; if(redLevel < .01) redLevel = 0;
     redEl.style.opacity = redLevel.toFixed(3);
 
