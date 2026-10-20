@@ -775,16 +775,16 @@ body.mob-full .attn .mob-mask.on{border-color:#f0c868; box-shadow:inset 0 0 0 2p
 .ug-keys.few.below button, .ug-keys.few.below button.del{width:calc((100% - 5 * 5px) / 6); aspect-ratio:1; font-size:20px}
 .ug-keys.few.below button.wide{padding:10px 0; font-size:14px}
 .ug-keys.qwerty{flex-direction:column; align-items:center; gap:6px}      /* the typewriter on phones: a real keyboard's three rows, staggered */
-.ug-keys.qwerty{gap:14px; padding:12px 8px}
-.ug-keys.qwerty .krow{display:flex; justify-content:center; gap:14px; width:100%}
-.ug-keys.qwerty .krow button{width:calc((100% - 5 * 14px) / 6); max-width:58px; aspect-ratio:1; font-size:20px}      /* the typewriter on phones: few keys, so big ones with room between */
+.ug-keys.qwerty{gap:16px; padding:14px 6px}
+.ug-keys.qwerty .krow{display:flex; justify-content:center; gap:16px; width:100%}
+.ug-keys.qwerty .krow button{width:calc((100% - 4 * 16px) / 5); max-width:72px; min-height:52px; aspect-ratio:1; font-size:28px; touch-action:manipulation}      /* the typewriter on phones: few keys, so big ones with room between, pressed as the finger lands */      /* the typewriter on phones: few keys, so big ones with room between */
 .ug-pop.ug-up{justify-content:flex-start; padding-top:clamp(86px,13vw,100px)}   /* clear of the inventory and the mask box */
 /* phones: no boxes at all. the letters float in the dark like a spirit board, and the word comes up on a single faint line */
 @media (hover: none), (pointer: coarse){
   .living-hud{left:0; right:0; top:4%; text-align:center}      /* phones: the count sits in the middle at the top, clear of the exit button */
   .ug-keys, .ug-keys.below{background:radial-gradient(ellipse 60% 62% at 50% 50%, rgba(0,0,0,.82), rgba(0,0,0,.55) 65%, rgba(0,0,0,0) 100%) !important; box-shadow:none !important; border:0 !important}   /* a soft pool of dark behind the letters, no edges */
   .ug-keys button, .ug-keys.below button{background:none !important; border:0 !important; box-shadow:none !important; color:rgba(239,236,225,.82); text-shadow:0 0 6px rgba(0,0,0,.95), 0 0 2px #000}
-  .ug-keys button:active{background:none !important; color:#f0c868; text-shadow:0 0 8px rgba(240,200,104,.8)}
+  .ug-keys button:active, .ug-keys button.hit{background:none !important; color:#f0c868; text-shadow:0 0 8px rgba(240,200,104,.8)}
   .ug-keys.below button.wide{letter-spacing:.45em; color:rgba(240,200,104,.85)}
   .ug-word input{background:none !important; border:0 !important; border-bottom:1px solid rgba(200,150,62,.55) !important; box-shadow:none !important; text-shadow:0 0 6px #000}
   .ug-word input:focus{box-shadow:none !important}
@@ -4244,7 +4244,7 @@ const LIVING = (function(){
   // ---------- the doll's head in the bedroom (the camera, after Fatal Frame): it drifts in from a corner and comes for you. a ring comes up in the
   // middle of the view; keep its face inside the ring and the runes light, faster the closer it is. when they are all lit, a press takes the
   // picture and it is gone. a picture taken early only knocks it back. if it reaches you, it has you ----------
-  const HAUNT = {FIRST:[8, 14], AGAIN:[10, 20], CHARGE:2.6, SPEED:.46, START:1.1, SNAPS:3, REACH:.8, GRACE:1600};
+  const HAUNT = {FIRST:[8, 14], AGAIN:[10, 20], CHARGE:2.6, SPEED:.46, START:TOUCH ? 2.4 : 1.1, SNAPS:3, REACH:.8, GRACE:TOUCH ? 2800 : 1600, MIN:TOUCH ? 1.8 : 1.0};      // phones: the heads start well back and give longer before they close in (less room to react on a small screen)
   let hauntTurn = 0;      // whose turn: his, hers, his...
   // drawn once where you cannot see it, so the first real appearance costs nothing
   function warmUp(obj){ obj.visible = true; obj.position.set(camera.position.x, -40, camera.position.z); setTimeout(()=>{ obj.visible = false; }, 120); }
@@ -4284,14 +4284,14 @@ const LIVING = (function(){
     const side = Math.random() < .5 ? -1 : 1; let px = camera.position.x, pz = camera.position.z, best = -1;
     const others = hauntAlive().filter(o => o !== H);
     for(let i = 0; i < 18; i++){
-      const a = yaw + Math.PI + side * (i % 2 ? 1 : -1) * (.6 + Math.random() * (others.length ? 1.6 : .9)), R = HAUNT.START + (others.length ? Math.floor(i / 6) * .8 : 0);      // with others out already: wider, and further round
+      const a = yaw + Math.PI + side * (i % 2 ? 1 : -1) * (.6 + Math.random() * (others.length ? 1.6 : .9)), R = HAUNT.START + (others.length || TOUCH ? Math.floor(i / 6) * .8 : 0);      // with others out already (or on a phone): wider, and further round
       let x = camera.position.x - Math.sin(a) * R, z = camera.position.z - Math.cos(a) * R;
       x = Math.max(b.minX + .5, Math.min(b.maxX - .5, x)); z = Math.max(b.minZ + .5, Math.min(b.maxZ - .5, z));
       let d = Math.hypot(x - camera.position.x, z - camera.position.z);
       if(others.some(o => Math.hypot(o.px - x, o.pz - z) < .9)) d *= .3;      // not on top of another one
       if(d > best){ best = d; px = x; pz = z; }
     }
-    if(best < 1.0){ H.next = now + 2500 + Math.random() * 2500; return false; }      // nowhere to stand: wait for you to move on
+    if(best < HAUNT.MIN){ H.next = now + 2500 + Math.random() * 2500; return false; }      // nowhere to stand: wait for you to move on
     H.on = true; H.t0 = now; H.grace = now + HAUNT.GRACE; H.charge = 0; H.snaps = 0; H.px = px; H.pz = pz; H.py = 1.75; H.seed = Math.random() * 7; H.toldFull = false;
     H.model.position.set(H.px, H.py, H.pz); H.model.visible = true; if(H.mats) H.mats.forEach(mt => mt.emissiveIntensity = TOUCH ? .75 : .5);
     if(H.who === 'her'){ H.herHead.eyes.forEach(e => e.visible = true); H.herHead.glow.intensity = 1.8; }
@@ -5434,7 +5434,7 @@ const LIVING = (function(){
       panel.querySelector('.tw-input').remove();
       const keys = document.createElement('div'); keys.className = 'ug-keys below tw-keys qwerty';
       panel.querySelector('.tw').appendChild(keys);
-      keys.addEventListener('click', e => { const b = e.target.closest('button'); if(b && panel.dataset.game === 'type') typeChar(b.dataset.k); });
+      keys.addEventListener('pointerdown', e => { const b = e.target.closest('button'); if(b && panel.dataset.game === 'type'){ e.preventDefault(); e.stopPropagation(); typeChar(b.dataset.k); b.classList.add('hit'); setTimeout(()=>b.classList.remove('hit'), 160); } });      // on the finger landing, not the click that follows (no delay, no missed taps when the finger slides)
       renderTypewriter();
     }
   }
@@ -5446,8 +5446,8 @@ const LIVING = (function(){
     const pool = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').filter(c => !set.includes(c));
     for(let i = 0; i < 5 && pool.length; i++) set.push(pool.splice((Math.random() * pool.length) | 0, 1)[0]);
     for(let i = set.length - 1; i > 0; i--){ const j = (Math.random() * (i + 1)) | 0; [set[i], set[j]] = [set[j], set[i]]; }
-    const half = Math.ceil(set.length / 2);
-    keys.innerHTML = [set.slice(0, half), set.slice(half)].map(row => '<div class="krow">' + row.map(c => '<button type="button" data-k="' + c + '">' + c + '</button>').join('') + '</div>').join('');
+    const per = Math.ceil(set.length / 3), rows = [set.slice(0, per), set.slice(per, per * 2), set.slice(per * 2)].filter(r => r.length);      // three rows of up to five
+    keys.innerHTML = rows.map(row => '<div class="krow">' + row.map(c => '<button type="button" data-k="' + c + '">' + c + '</button>').join('') + '</div>').join('');
   }
   function renderTypewriter(){
     if(TOUCH) typewriterKeys();
