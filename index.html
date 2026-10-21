@@ -608,8 +608,13 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .living.touch .living-red{mix-blend-mode:normal; background:radial-gradient(ellipse at center, rgba(90,0,0,0) 0%, rgba(70,0,0,.45) 60%, rgba(10,0,0,.9) 100%)}
 .living.touch .cam-frame{mix-blend-mode:normal; background-image:var(--cfa)}
 .living.touch:has(.living-watch.on) .livcv{filter:none}
-.cam-edge{position:absolute; left:0; top:0; width:16px; height:16px; border-left:3px solid #e2352b; border-top:3px solid #e2352b; pointer-events:none; z-index:7; display:none; filter:drop-shadow(0 0 6px rgba(226,53,43,.9))}
-.cam-edge.on{display:block; animation:edgeblink .5s steps(1) infinite}
+.cam-edge{position:absolute; left:0; top:0; width:150px; height:150px; margin:-75px 0 0 -75px; border-radius:50%; pointer-events:none; z-index:7; display:none;
+  background:radial-gradient(circle, rgba(235,40,28,.62) 0%, rgba(235,40,28,.26) 36%, rgba(235,40,28,0) 70%)}      /* a head out of sight: a red glow on that edge of the view with a bold arrow pointing to it */
+.cam-edge::after{content:''; position:absolute; left:56%; top:50%; width:0; height:0; border-top:20px solid transparent; border-bottom:20px solid transparent; border-left:32px solid #ff3b2b; transform:translateY(-50%); filter:drop-shadow(0 0 8px rgba(255,60,40,1)) drop-shadow(0 0 2px #000)}
+.cam-edge.on{display:block; animation:edgepulse var(--ed,.6s) ease-in-out infinite}
+@keyframes edgepulse{50%{opacity:.5}}
+.living.touch .cam-edge{width:112px; height:112px; margin:-56px 0 0 -56px}
+.living.touch .cam-edge::after{border-top-width:16px; border-bottom-width:16px; border-left-width:26px}
 @keyframes edgeblink{0%,100%{opacity:.95} 50%{opacity:.35}}
 .living-flash.go{animation:camflash .32s ease-out both}
 @keyframes camflash{0%{opacity:.28} 100%{opacity:0}}
@@ -2405,7 +2410,7 @@ const LIVING = (function(){
   function edgeMarkers(){
     if(!EV){ EV = new THREE.Vector3(); EVm = new THREE.Matrix4(); }
     camera.updateMatrixWorld(); EVm.copy(camera.matrixWorld).invert();      // (the camera's own inverse is not kept up to date while it hangs in the scene)
-    const A = level && level.arena, on = !!(A && A.state === 'fighting');
+    const A = level && level.arena, Wv = level && level.waves, on = !!(A && A.state === 'fighting') || !!(Wv && Wv.state === 'fighting');      // the big room and unlimited
     if(!on){ for(const e of edgeEls) if(e.classList.contains('on')) e.classList.remove('on'); return; }
     if(!wrapW){ wrapW = wrap.clientWidth; wrapH = wrap.clientHeight; }
     const W = wrapW, H = wrapH;
@@ -2416,8 +2421,10 @@ const LIVING = (function(){
       const tv = Math.tan(camera.fov * Math.PI / 360), seen = ahead > 0 && Math.abs(EV.x / ahead) < tv * camera.aspect * .9 && Math.abs(EV.y / ahead) < tv * .9;
       if(seen) continue;
       const dx = Math.sin(phi), dy = Math.cos(phi) * -1;                           // on screen: behind = down, left = left
-      const sc = Math.min((W / 2 - 34) / Math.max(1e-3, Math.abs(dx)), (H / 2 - 34) / Math.max(1e-3, Math.abs(dy)));
-      const e = edgeEls[k++]; e.style.transform = 'translate(' + (W / 2 + dx * sc - 8) + 'px,' + (H / 2 + dy * sc - 8) + 'px) rotate(' + (Math.atan2(dy, dx) * 180 / Math.PI + 135) + 'deg)'; e.classList.add('on'); } }
+      const M = TOUCH ? 48 : 64, sc = Math.min((W / 2 - M) / Math.max(1e-3, Math.abs(dx)), (H / 2 - M) / Math.max(1e-3, Math.abs(dy)));
+      const dd = Math.hypot(EV.x, EV.z), near = Math.max(0, Math.min(1, 1 - (dd - .8) / 5));      // nearer: bigger, and it beats faster
+      const e = edgeEls[k++]; e.style.transform = 'translate(' + (W / 2 + dx * sc) + 'px,' + (H / 2 + dy * sc) + 'px) rotate(' + (Math.atan2(dy, dx) * 180 / Math.PI) + 'deg) scale(' + (.8 + near * .55).toFixed(2) + ')';
+      e.style.setProperty('--ed', (.75 - near * .5).toFixed(2) + 's'); e.classList.add('on'); } }
     for(; k < edgeEls.length; k++) edgeEls[k].classList.remove('on');
   }
   function flashWhite(){ if(!flashEl) return; flashEl.classList.remove('go'); void flashEl.offsetWidth; flashEl.classList.add('go'); }
@@ -6019,7 +6026,7 @@ const LIVING = (function(){
     hud = document.createElement('div'); hud.className = 'living-hud'; wrap.appendChild(hud);
     fadeEl = document.createElement('div'); fadeEl.className = 'living-fade'; wrap.appendChild(fadeEl);
     flashEl = document.createElement('div'); flashEl.className = 'living-flash'; wrap.appendChild(flashEl);
-    for(let i = 0; i < 3; i++){ const e = document.createElement('i'); e.className = 'cam-edge'; wrap.appendChild(e); edgeEls.push(e); }
+    for(let i = 0; i < 5; i++){ const e = document.createElement('i'); e.className = 'cam-edge'; wrap.appendChild(e); edgeEls.push(e); }
     panel = document.createElement('div'); panel.className = 'game-panel'; wrap.appendChild(panel);
     panel.addEventListener('mousedown', e=>{ e.stopPropagation(); if(e.button === 2 && !TOUCH) closePanel(); }); panel.addEventListener('contextmenu', e=>e.preventDefault()); panel.addEventListener('click', e=>e.stopPropagation());
     msgEl = document.createElement('div'); msgEl.className = 'living-msg'; wrap.appendChild(msgEl);
