@@ -4473,7 +4473,7 @@ const LIVING = (function(){
       }
     }
     capEl.classList.remove('full');
-    if(killedAny){ plushScream(); redLevel = 1; }
+    if(killedAny){ plushScream(); redLevel = 1; camReady = nowS + 1000; }      // a clean kill: the flash is ready again in a second, not 3.2
     else if(wrongOne){ redLevel = Math.max(redLevel, .8); flash(wrongOne.who === 'her' ? 'she will not be forgotten' : 'he will not be remembered'); }
     else plushSteps(2, 0);
     return true;
