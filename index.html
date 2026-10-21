@@ -4453,7 +4453,7 @@ const LIVING = (function(){
     const nowS = performance.now(); if(nowS < camReady) return false;      // still charging: nothing happens
     camReady = nowS + RECHARGE;
     // the shutter: a white flash, a click
-    flashWhite(); camFlashPic(); lsfx('shutter', .9);
+    flashWhite(); camFlashPic(); lsfx('shutter', .55);
     plushClick(true); if(plushAudio()) burst(AC.currentTime + .06, .05, .3, 1200, 2600, 0);
     // the flash takes in everything in the ring, not only the one in front: each is judged on its own
     const hit = hauntAlive().filter(o => o.inside && !o.dying && !o.scare); if(!hit.includes(H)) hit.push(H);
