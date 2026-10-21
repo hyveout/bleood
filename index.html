@@ -1060,6 +1060,7 @@ body.mob-full .mob-exit:active{opacity:1; border-color:rgba(232,227,214,.9)}
 .game-panel.on{display:flex}
 .game-panel.jolt{animation:panic .12s steps(2) 2}
 .game-panel .tw{position:relative; width:min(70%,420px); text-align:center; font-family:var(--crtface); color:#e6e2d8}
+.game-panel .tw-line{display:none}      /* (typed letters go into the blanks above) */
 .game-panel .tw-word{font-size:clamp(1.6rem,4vw,2.6rem); letter-spacing:.3em; white-space:nowrap; text-shadow:-1.1px 0 rgba(255,0,70,.55), 1.1px 0 rgba(0,240,220,.45)}
 .game-panel .tw-line{margin-top:6%; font-size:clamp(1.3rem,3vw,2rem); letter-spacing:.3em; min-height:1.4em; color:#fff}
 .game-panel .tw-caret{animation:blink 1s steps(1) infinite; opacity:.7}
@@ -5608,7 +5609,7 @@ const LIVING = (function(){
   }
   function renderTypewriter(){
     if(TOUCH) typewriterKeys();
-    panel.querySelector('.tw-word').textContent = '_'.repeat(WORDS[twIndex].length);      // the word is not given: only how many letters. it is on the bedroom walls, through the camera
+    panel.querySelector('.tw-word').textContent = twTyped + '_'.repeat(Math.max(0, WORDS[twIndex].length - twTyped.length));      // the letters fill the blanks as they are typed      // the word is not given: only how many letters. it is on the bedroom walls, through the camera
     panel.querySelector('.tw-typed').textContent = twTyped;
     panel.querySelector('.tw-count').textContent = (twIndex + 1) + ' / ' + WORDS.length;
   }
