@@ -4295,8 +4295,10 @@ const LIVING = (function(){
           }
         }else{
           // she comes, fast: up to speed in half a second, a little quicker than you can walk
-          const sp = Math.min(1, (now - level.chase) / 500) * (TOUCH ? 2.55 : 3.0) * dtS;      // (phones: a little slower, there is less screen to see her coming)
-          if(dist > 1.2){ gp.x = Math.max(-.9, Math.min(.9, gp.x + dx / dist * sp)); gp.z += dz / dist * sp; }
+          // (easier now: she takes a second to get going, runs only a little faster than you walk, and stops dead once you are through the door)
+          const atDoor = switching || camera.position.z < level.exitBackZ + .9;
+          const sp = atDoor ? 0 : Math.min(1, (now - level.chase) / 1000) * (TOUCH ? 2.35 : 2.6) * dtS;      // (phones: a little slower, there is less screen to see her coming)
+          if(dist > 1.0 || atDoor){ gp.x = Math.max(-.9, Math.min(.9, gp.x + dx / Math.max(dist, .01) * sp)); gp.z += dz / Math.max(dist, .01) * sp; }
           else jumpscare(level.watch);                                                           // she has you
           level.demon.group.rotation.y = Math.atan2(dx, dz);                                     // always facing you
           redLevel = Math.max(redLevel, .35 + Math.max(0, 1 - dist / 9) * .45);                 // the closer she gets, the redder it goes
