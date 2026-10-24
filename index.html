@@ -5853,7 +5853,7 @@ const LIVING = (function(){
       const n = Math.max(1, Math.ceil(Math.hypot(dx, dy) / 3));
       for(let i = 0; i < n; i++){
         pos[0] += dx / n; pos[1] += dy / n;
-        if(!inSlot(pos[0], pos[1])){ pos = start.slice(); ang = 0; hitFlash = 1; panel.classList.add('jolt'); setTimeout(()=>panel.classList.remove('jolt'), 200); break; }
+        if(!inSlot(pos[0], pos[1])){ pos = start.slice(); ang = 0; hitFlash = 1; lsfx('locked', .8);      /* it hit the side: back to the start */ panel.classList.add('jolt'); setTimeout(()=>panel.classList.remove('jolt'), 200); break; }
         if(Math.hypot(pos[0] - goal[0], pos[1] - goal[1]) < 8){
           done = true; pos = goal.slice(); draw();
           setTimeout(()=>{ closePanel(); level.chest.base.userData.open = true; lsfx('chest', .9); story('the key turns'); }, 450);
@@ -6086,7 +6086,7 @@ const LIVING = (function(){
     });
     photoEl = document.createElement('div'); photoEl.className = 'living-photo'; photoEl.innerHTML = '<img alt="" src="' + PHOTO_A + '"><span>is this me?</span>'; wrap.appendChild(photoEl);
     tipEl = document.createElement('div'); tipEl.className = 'living-tip';
-    tipEl.innerHTML = '<div class="tip-body"><div class="tip-line1">You are haunted by both your past and your present</div><div class="tip-heads"><video class="tip-film" src="' + (TOUCH ? 'bleood_cam_tip_m.mp4' : 'bleood_cam_tip.mp4') + '" muted loop playsinline autoplay preload="auto"></video></div><div class="tip-line2">Flash them when your runic meter is full. REMEMBER him. FORGET her.</div><div class="tip-line3">' + (TOUCH ? 'You can only see them through the camera.' : 'You can only see them through the camera. C raises it.') + '</div><div class="tip-go">' + (TOUCH ? 'tap to continue' : 'press any key') + '</div></div>';
+    tipEl.innerHTML = '<div class="tip-body"><div class="tip-line1">You are haunted by both your past and your present</div><div class="tip-heads"><video class="tip-film" src="' + (TOUCH ? 'bleood_cam_tip_m.mp4' : 'bleood_cam_tip.mp4') + '" muted loop playsinline autoplay preload="auto"></video></div><div class="tip-line2">Flash them when your runic meter is full. REMEMBER him. FORGET her.</div><div class="tip-line3">' + (TOUCH ? 'You can only see them through the camera.' : 'You can only see them through the camera. C raises it, E flashes.') + '</div><div class="tip-go">' + (TOUCH ? 'tap to continue' : 'press any key') + '</div></div>';
     wrap.appendChild(tipEl);
     tipEl.addEventListener('touchend', e=>{ e.preventDefault(); e.stopPropagation(); closeTip(); });
     redEl = document.createElement('div'); redEl.className = 'living-red'; wrap.appendChild(redEl);
