@@ -4613,7 +4613,7 @@ const LIVING = (function(){
     level.bounds = {minX:-w/2 + .35, maxX:w/2 - .35, minZ:-d/2 + .35, maxZ:d/2 + .6};
     scene.fog = new THREE.Fog(FOGC, 1.5, 12);
     g.add(new THREE.AmbientLight(0x6a6058, .06));
-    level.distort = .5; level.redChance = 0;
+    level.distort = 0; level.redChance = 0;      // (no wobble here)
     // a baseboard-dark wall round the exit, and the door itself, standing open
     const back = door(g, 0, -d/2, 0, 'back');
     let out;
@@ -4729,7 +4729,7 @@ const LIVING = (function(){
     level.bounds = {minX:-w/2+.35, maxX:w/2-.35, minZ:-d/2+.35, maxZ:d/2-.35};
     shell(g, w, d, h, {floor:'ritual', ceil:'black', wall:'black'}, {back:0});      // black walls and ceiling, so the candles are all there is
     scene.fog = new THREE.Fog(FOGC, 3.5, 11);
-    level.distort = 0.35;
+    level.distort = 0;      // (no wobble here)
     g.add(new THREE.AmbientLight(FF ? 0x2e4442 : 0x3a3630, 0.16));      // dark, so the candles are all there is
 
     // ---- the floor: an alchemist's diagram, drawn in old blood and touched with gold. planetary and elemental signs run round a ring;
@@ -4825,6 +4825,8 @@ const LIVING = (function(){
     imgTex(PHOTO_A, tx=>{ photo.material.map = tx; photo.material.needsUpdate = true; });
     photo.userData = {kind:'photo'};
     photo.visible = false; level.hidden.push(photo);
+    const photoHit = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.4), new THREE.MeshBasicMaterial({transparent:true, opacity:0, depthWrite:false}));      // (an unseen, bigger patch round it: easier to touch)
+    photoHit.rotation.x = -Math.PI/2; photoHit.position.set(0, .03, 0); photoHit.userData = photo.userData; photoHit.visible = false; g.add(photoHit); level.hidden.push(photoHit);
     // lighting them: each candle you touch catches; when the last one burns, the room shows what it was hiding
     level.revealed = false;
     level.lightCandle = (cd)=>{
@@ -4832,7 +4834,7 @@ const LIVING = (function(){
       cd.lit = true; cd.fl.visible = true; cd.halo.visible = true; lsfx('candle', 1);
       if(candles.every(k => k.lit)){
         level.revealed = performance.now(); redLevel = Math.max(redLevel, .7);
-        level.hidden.forEach(o => o.visible = true); level.interactives.push(photo);
+        level.hidden.forEach(o => o.visible = true); level.interactives.push(photo, photoHit); flash("there's something below her");
         level.interactives = level.interactives.filter(o => !(o.userData && o.userData.kind === 'ritualcandle'));
       }
     };
@@ -4863,7 +4865,8 @@ const LIVING = (function(){
                    w:new THREE.Vector3((Math.random() - .5) * 14, (Math.random() - .5) * 14, (Math.random() - .5) * 14), life:2.4 + Math.random() * 1.6, age:0});
       };
       level.group.children.slice().forEach(o=>{
-        if(o.isLight){ level.group.remove(o); return; }         // the old candles' light and the room's ambient go with the room
+        if(o.isLight){ if(o.isPointLight){ o.intensity = 0; return; } level.group.remove(o); return; }         // the room's ambient goes; its point lights stay in the scene at nothing (a light taken away makes every material recompile: that was the stall)
+        if(o.userData && o.userData.keep) return;      // (the clearing, built beforehand)
         if(o === demonG || o === fxg) return;
         if(o.isSprite || o.isPoints || (o.material && o.material.blending === THREE.AdditiveBlending)){ level.group.remove(o); return; }
         const gp = o.geometry && o.geometry.parameters;
@@ -4892,32 +4895,23 @@ const LIVING = (function(){
     // what is behind the room: the clearing from the homepage, in grey. grass underfoot, a great many trees like long dark streaks,
     // and everything falling away into darkness the further you look, so it has no edge
     const forestImg = new Image(); forestImg.crossOrigin = 'anonymous'; { const fe = document.querySelector('.scene'); const bg = fe ? getComputedStyle(fe, '::before').backgroundImage : ''; const mm = bg.match(/url\(["']?(.*?)["']?\)$/); if(mm) forestImg.src = mm[1]; }
-    function buildClearing(){
-      const cg = new THREE.Group(); level.group.add(cg); level.clearing = cg;
-      // the homepage's greys, not black: a pale grey mist overhead, darkening to a dark grey horizon, dark grey grainy ground, and distance
-      // that fades into that same dark grey
-      scene.background.setHex(0x070707);
-      scene.fog = new THREE.Fog(0x070707, 4, 22);      // the far trees go into the dark before the ring of them ends
-      { const gr = document.getElementById('grain'); if(gr) gr.style.opacity = TOUCH ? '0' : LIVING_GRAIN; }
+    // the clearing's things are made while you are still in the room (hidden), so the moment of the crash only shows them
+    function makeClearingGroup(){
+      const cg = new THREE.Group(); cg.userData.keep = true; cg.visible = false; level.group.add(cg);
       {   // a sky of grey mist, following you so it can never be reached
         const sc = document.createElement('canvas'); sc.width = 4; sc.height = 256; const s2 = sc.getContext('2d'), sg = s2.createLinearGradient(0, 0, 0, 256);
-        sg.addColorStop(0, '#171717'); sg.addColorStop(.35, '#121212'); sg.addColorStop(.5, '#0a0a0a'); sg.addColorStop(1, '#060606');      // just light enough overhead that the trunks show against it
+        sg.addColorStop(0, '#171717'); sg.addColorStop(.35, '#121212'); sg.addColorStop(.5, '#0a0a0a'); sg.addColorStop(1, '#060606');
         s2.fillStyle = sg; s2.fillRect(0, 0, 4, 256);
         const sky = new THREE.Mesh(new THREE.SphereGeometry(46, 24, 16), new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(sc), side:THREE.BackSide, fog:false, depthWrite:false}));
-        sky.renderOrder = -10; sky.frustumCulled = false; cg.add(sky); level.sky = sky; level.skyMat = sky.material;
+        sky.renderOrder = -10; sky.frustumCulled = false; cg.add(sky); cg.userData.sky = sky;
       }
-      if(false && forestImg.complete && forestImg.naturalWidth){      // OFF: the painted forest wall showed as a cylinder. the homepage's own trees, wrapped round the horizon and eaten by distance
-        const bc = document.createElement('canvas'); bc.width = 1600; bc.height = 440; const b2 = bc.getContext('2d'); b2.drawImage(forestImg, 0, 0, forestImg.naturalWidth, forestImg.naturalHeight * .44, 0, 0, 1600, 440);
-        const ft = new THREE.CanvasTexture(bc); ft.wrapS = THREE.RepeatWrapping; ft.repeat.set(3, 1);
-        const wall = new THREE.Mesh(new THREE.CylinderGeometry(20, 20, 11.5, 48, 1, true), new THREE.MeshBasicMaterial({map:ft, side:THREE.BackSide, fog:false})); wall.position.y = 5.4; cg.add(wall); level.wallMat = wall.material;
-      }
-      const gc = document.createElement('canvas'); gc.width = gc.height = 256; const g2 = gc.getContext('2d');      // grass: near black, flecked, blown flat one way
+      const gc = document.createElement('canvas'); gc.width = gc.height = 256; const g2 = gc.getContext('2d');
       g2.fillStyle = '#131313'; g2.fillRect(0, 0, 256, 256);
       for(let i = 0; i < 6500; i++){ const v = 10 + (Math.random() * 56 | 0); g2.fillStyle = 'rgba(' + v + ',' + v + ',' + v + ',' + (.35 + Math.random() * .5) + ')'; g2.fillRect(Math.random() * 256, Math.random() * 256, 1 + Math.random() * 2, 1 + Math.random() * 2); }
       for(let i = 0; i < 320; i++){ const x = Math.random() * 256, y = Math.random() * 256, l = 5 + Math.random() * 13, a = -1.9 + Math.random() * .8; g2.strokeStyle = 'rgba(112,112,112,' + (.2 + Math.random() * .35) + ')'; g2.lineWidth = 1; g2.beginPath(); g2.moveTo(x, y); g2.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); g2.stroke(); }
       const gt = new THREE.CanvasTexture(gc); gt.wrapS = gt.wrapT = THREE.RepeatWrapping; gt.repeat.set(40, 40); gt.magFilter = THREE.NearestFilter;
       const floor = new THREE.Mesh(new THREE.PlaneGeometry(90, 90), new THREE.MeshLambertMaterial({map:gt})); floor.rotation.x = -Math.PI / 2; cg.add(floor);
-      {   // the trees: two hundred and forty black streaks, mostly thin, all far taller than the sky is high
+      {
         const N = 240, trunks = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({color:0x0b0b0b}), N), m4 = new THREE.Matrix4(), q0 = new THREE.Quaternion(), P = new THREE.Vector3(), S = new THREE.Vector3();
         for(let i = 0; i < N; i++){
           const a = Math.random() * TAU, r = 4.6 + Math.pow(Math.random(), .7) * 19.5, wdt = .05 + Math.pow(Math.random(), 2.2) * .5, hgt = 34 + Math.random() * 14;
@@ -4925,12 +4919,22 @@ const LIVING = (function(){
         }
         trunks.instanceMatrix.needsUpdate = true; trunks.frustumCulled = false; cg.add(trunks);
       }
-      level.amb = new THREE.AmbientLight(0xffffff, .95); cg.add(level.amb);      // enough that the ground shows as drawn
-      // the ring of five lilies with a candle between each pair, exactly as on the front page; the ring is wider than where you stand
       const lm = new THREE.SpriteMaterial({color:0xe2e0dc, transparent:true, alphaTest:.05}); imgTex(FLOWER, tx=>{ lm.map = tx; lm.needsUpdate = true; });
       for(let k = 0; k < 5; k++){ const [x, z] = polar((k + .5) * TAU / 5, 3.7); const sp = new THREE.Sprite(lm); sp.scale.set(1.35, 1.25, 1); sp.position.set(x, .6, z); cg.add(sp); }
+      return cg;
+    }
+    function buildClearing(){
+      const cg = level.clearingPre || makeClearingGroup(); level.clearingPre = null; cg.visible = true; level.clearing = cg;
+      level.sky = cg.userData.sky; level.skyMat = level.sky.material;
+      // the homepage's greys, not black: a pale grey mist overhead, darkening to a dark grey horizon, dark grey grainy ground, and distance
+      // that fades into that same dark grey
+      scene.background.setHex(0x070707);
+      scene.fog = new THREE.Fog(0x070707, 4, 22);      // the far trees go into the dark before the ring of them ends
+      { const gr = document.getElementById('grain'); if(gr) gr.style.opacity = TOUCH ? '0' : LIVING_GRAIN; }
+      level.amb = new THREE.AmbientLight(0xffffff, .95); cg.add(level.amb);      // enough that the ground shows as drawn
+      const spare = candles.filter(c => c.L).map(c => c.L);      // the old candles' lights, kept at nothing: the new candles take them (no light is added or removed)
       candles.length = 0; level.solids = [];
-      for(let k = 0; k < 5; k++){ if(k === 2) continue; const [x, z] = polar(k * TAU / 5, 3.7); ritualCandle(x, z, .34, true); }
+      for(let k = 0; k < 5; k++){ if(k === 2) continue; const [x, z] = polar(k * TAU / 5, 3.7); ritualCandle(x, z, .34, false); const cd = candles[candles.length - 1], L = spare.shift(); if(L){ L.position.set(x, .34 + .22, z); cd.L = L; cd.real = true; } }
       level.solids.push({minX:-.5, maxX:.5, minZ:-.5, maxZ:.5});
       level.distort = 0;
     }
@@ -4982,7 +4986,7 @@ const LIVING = (function(){
       level.group.children.slice().forEach(o => { if(o !== E.group) level.group.remove(o); });      // the clearing and her, gone
       level.demon = null; level.sky = null; candles.length = 0; level.solids = [];
       { const gr = document.getElementById('grain'); if(gr) gr.style.opacity = TOUCH ? '0' : LIVING_GRAIN; }
-      pitch = 0; buildAbyss(); level.shake = .2;
+      pitch = 0; buildAbyss(); level.shake = 0;
       level.bounds = {minX:-1e5, maxX:1e5, minZ:-1e5, maxZ:1e5}; level.blockZMax = ()=> 1e5; level.blockZMin = ()=> -1e5;
     }
     level.answer = answer;
@@ -5009,7 +5013,7 @@ const LIVING = (function(){
         // the photograph fills the screen, and you ask yourself
         const t = (now - E.t0) / 1000;
         look(.02, .07);
-        level.shake = .004 + Math.min(1, t / 2.6) * .05;
+        level.shake = 0;
         candles.forEach(c => { if(c.L) c.L.intensity *= .35 + Math.random() * 1.6; });
         if(t > .5 && !E.said){ E.said = true; photoEl.classList.add('on'); }
         if(t > 3.2){ photoEl.classList.remove('on'); E.stage = 1; E.t1 = now; }
@@ -5027,7 +5031,7 @@ const LIVING = (function(){
           E.riseNow = E.rise;
         }
         lookAtHer(.07);
-        level.shake = .05 + tB * .04;
+        level.shake = 0;
         candles.forEach(c => { if(c.L) c.L.intensity *= .6 + Math.random() * 1.5; });
         if(level.beam) level.beam.opacity = Math.min(1.6, .8 + tB * .35);
         if(tB > 2.6) boom();
@@ -5055,7 +5059,7 @@ const LIVING = (function(){
           const tyaw = ty0 + ws * off + (1 - ws) * wrapA(hy - ty0), tpit = ws * (.1 + .05 * Math.sin(tb * 2.4)) + (1 - ws) * hp;
           yaw += wrapA(tyaw - yaw) * .15; pitch += (tpit - pitch) * .15;
         }
-        level.shake = Math.max(E.stage === 3 ? .006 : 0, .32 * Math.exp(-tb * 2.2));
+        level.shake = 0;
         if(level.sky) level.sky.position.copy(cam);
         for(let i = E.fx.length - 1; i >= 0; i--){
           const f = E.fx[i]; f.age += dt; const o = f.o;
@@ -5071,7 +5075,7 @@ const LIVING = (function(){
       }else{
         // white, and the black door straight ahead
         const tw = (now - E.abyssAt) / 1000;
-        level.shake = Math.max(0, .2 * Math.exp(-tw * 2.6));
+        level.shake = 0;
         if(tw > 2.0 && E.locked && !E.leaving) E.locked = false;      // you can move in the white the whole time
         // the credits come up in front of you, one card at a time, wherever you walk
         const CT0 = 2.2, IN = 1.3, HOLD = 3.2, OUT = 1.2, GAP = .6, per = IN + HOLD + OUT + GAP, tc = tw - CT0;
@@ -5113,6 +5117,9 @@ const LIVING = (function(){
         if(ta > 1.5 && ta < 1.85) doorParts.forEach(o => o.visible = Math.random() < .5);
         if(ta >= 1.85){ doorParts.forEach(o => o.visible = false); filler.visible = true; doorGone = true; }
       }
+      if(level.demon && !level.warmed){ level.warmed = true;
+        try{ if(!level.clearingPre) level.clearingPre = makeClearingGroup(); const vis = level.hidden.map(o => o.visible); level.hidden.forEach(o => o.visible = true); level.demon.group.visible = true; level.clearingPre.visible = true;
+          renderer.compile(scene, camera); level.hidden.forEach((o, i) => o.visible = vis[i]); level.clearingPre.visible = false; }catch(e){} }
       if(level.demon){ level.demon.group.visible = !!level.revealed; level.demon.group.position.y = 1.0 + Math.sin(now / 1400) * 0.09 + (ending ? ending.rise : 0); if(ending) level.demon.group.position.z = ending.dz || 0; }
       // the flames: real light flickers hard, the tall ones only breathe
       candles.forEach(c=>{
@@ -5123,7 +5130,7 @@ const LIVING = (function(){
         c.fl.scale.set(.85 + Math.sin(now / 230 + c.seed) * .05, 1.5 + Math.sin(now / 160 + c.seed * 3) * .12, .85);
         c.halo.scale.setScalar(.72 * (.92 + (k - 1) * 1.2)); c.halo.material.opacity = .78 + (k - 1) * .5;
       });
-      crown.intensity = level.revealed ? Math.min(1, (now - level.revealed) / 1500) * (1.35 + Math.sin(now / 900) * .22) : 0;
+      crown.intensity = (level.revealed && !(ending && ending.stage >= 2)) ? Math.min(1, (now - level.revealed) / 1500) * (1.35 + Math.sin(now / 900) * .22) : 0;
       if(level.pool) level.pool.opacity = .42 + Math.sin(now / 1100) * .1;
       if(level.beam) level.beam.opacity = .8 + Math.sin(now / 1300) * .18;
       // the embers climb, and start again from the floor
