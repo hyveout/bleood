@@ -1056,7 +1056,8 @@ body.mob-full .mob-exit:active{opacity:1; border-color:rgba(232,227,214,.9)}
   letter-spacing:.12em; color:#e6e2d8; text-shadow:-1.1px 0 rgba(255,0,70,.55), 1.1px 0 rgba(0,240,220,.45), 0 2px 8px #000;
   opacity:0; transition:opacity .3s ease; pointer-events:none}
 .living-msg.on{opacity:1}
-.game-panel{position:absolute; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.78); z-index:6; cursor:default}
+.game-panel{position:absolute; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.78); z-index:9; cursor:default}      /* over the camera frame and its buttons */
+.living:not(.locked) .game-panel .safe-cur{display:none}      /* the mouse is free in a challenge: no steered pointer */
 .game-panel.on{display:flex}
 .game-panel.jolt{animation:panic .12s steps(2) 2}
 .game-panel .tw{position:relative; width:min(70%,420px); text-align:center; font-family:var(--crtface); color:#e6e2d8}
@@ -1085,7 +1086,7 @@ body.mob-full .mob-exit:active{opacity:1; border-color:rgba(232,227,214,.9)}
   background:radial-gradient(ellipse at center, rgba(150,0,0,.35) 0%, rgba(70,0,0,.8) 60%, rgba(10,0,0,.97) 100%); mix-blend-mode:multiply}
 /* the warning: no box. the room fades to black, her head floats in the dark, and the words are scratched under it */
 .game-panel .paint-look{position:relative; width:min(56vmin,380px); max-width:86%; padding:14px 14px 18px; background:#0d0a08; border:2px solid #000; box-shadow:0 18px 30px rgba(0,0,0,.85); display:flex; flex-direction:column; align-items:center; gap:10px}
-.game-panel .paint-img{display:block; width:100%; height:auto; image-rendering:pixelated; filter:contrast(1.1) brightness(.9)}
+.game-panel .paint-img{display:block; width:auto; max-width:100%; max-height:min(58vh,560px); margin:0 auto; height:auto; image-rendering:pixelated; filter:contrast(1.1) brightness(.9)}
 .game-panel .paint-frame{position:relative; width:100%}
 .game-panel .paint-img.true{image-rendering:auto}
 .game-panel .paint-look .safe-back[hidden]{display:none !important}
@@ -6029,7 +6030,9 @@ const LIVING = (function(){
     penDown = ()=>{ if(!hot) return; if(hot.classList.contains('paint-key')) take(); else if(hot.classList.contains('paint-reveal')) reveal(); else closePanel(); setTimeout(place, 30); };
     penUp = null; setTimeout(place, 30);
   }
+  let panelFreed = false;
   function closePanel(){ KNIFE_CUT.stop(); penMove = penDown = penUp = null;
+    if(panelFreed){ panelFreed = false; if(running && wrap.requestPointerLock){ try{ const r = wrap.requestPointerLock(); if(r && r.catch) r.catch(()=>{}); }catch(_){ } } }      // back to looking about (or, if the browser will not, the next click on the view takes it)
     if(level && level.haunts){ const nw = performance.now(), cam = camera.position; for(const H of hauntAlive()){ if(H.dying || H.scare) continue; H.grace = nw + 2500;      // out of a challenge: a moment's grace, and they stand off
       const dx = H.px - cam.x, dz = H.pz - cam.z, d = Math.max(.01, Math.hypot(dx, dz)); if(d < 1.6){ const b = level.bounds; H.px = Math.max(b.minX + .4, Math.min(b.maxX - .4, cam.x + dx / d * 1.6)); H.pz = Math.max(b.minZ + .4, Math.min(b.maxZ - .4, cam.z + dz / d * 1.6)); } } } if(pullCleanup){ const f = pullCleanup; pullCleanup = null; try{ f(); }catch(e){} } panel.classList.remove('on'); panel.innerHTML = ''; panel.dataset.game = ''; penMove = penDown = penUp = null; tracing = false; }
 
@@ -6065,7 +6068,7 @@ const LIVING = (function(){
     flashEl = document.createElement('div'); flashEl.className = 'living-flash'; wrap.appendChild(flashEl);
     for(let i = 0; i < 5; i++){ const e = document.createElement('i'); e.className = 'cam-edge'; wrap.appendChild(e); edgeEls.push(e); }
     panel = document.createElement('div'); panel.className = 'game-panel'; wrap.appendChild(panel);
-    panel.addEventListener('mousedown', e=>{ e.stopPropagation(); if(e.button === 2 && !TOUCH) closePanel(); }); panel.addEventListener('contextmenu', e=>e.preventDefault()); panel.addEventListener('click', e=>e.stopPropagation());
+    panel.addEventListener('mousedown', e=>{ e.stopPropagation(); if(e.button === 2 && !TOUCH) closePanel(); else if(e.button === 0 && penDown && panel.dataset.game === 'trace' && document.pointerLockElement !== wrap) penDown(); });      // (the mouse free: the trace still starts on a press) panel.addEventListener('contextmenu', e=>e.preventDefault()); panel.addEventListener('click', e=>e.stopPropagation());
     msgEl = document.createElement('div'); msgEl.className = 'living-msg'; wrap.appendChild(msgEl);
     camFrame = document.createElement('div'); camFrame.className = 'cam-frame'; camFrame.innerHTML = (TOUCH ? '<div class="cfp"><b></b><b></b><b></b></div>' : '') + '<span class="cf-tag"></span><span class="cf-count"></span><span class="cf-charge">recharging</span><div class="cf-mode"><span data-m="forget">forget</span><span data-m="remember">remember</span><small></small></div>'; wrap.appendChild(camFrame);
     camFrame.querySelector('.cf-mode small').textContent = TOUCH ? 'tap to switch' : '1 / 2 or scroll to switch';
@@ -6151,12 +6154,12 @@ const LIVING = (function(){
     wrap.addEventListener('contextmenu', e=>e.preventDefault());
     document.addEventListener('pointerlockchange', ()=>{ wrap.classList.toggle('locked', document.pointerLockElement === wrap); });
     document.addEventListener('mousemove', e=>{
-      if(document.pointerLockElement !== wrap) return;
       if(panel.classList.contains('on')){ if(penMove) penMove(e.movementX, e.movementY); return; }
+      if(document.pointerLockElement !== wrap) return;
       yaw -= e.movementX * 0.0022; pitch -= e.movementY * 0.0022;
       pitch = Math.max(-1.35, Math.min(1.35, pitch));
     });
-    document.addEventListener('mousedown', e=>{ if(!panel.classList.contains('on')) return; if(e.button === 2){ closePanel(); return; } if(e.button === 0 && penDown) penDown(); });      // (right click leaves any challenge)
+    document.addEventListener('mousedown', e=>{ if(!panel.classList.contains('on')) return; if(e.button === 2){ closePanel(); return; } if(e.button === 0 && penDown && (document.pointerLockElement === wrap || panel.dataset.game === 'trace')) penDown(); });      // (right click leaves any challenge; unlocked, buttons take their own clicks)
     document.addEventListener('mouseup', e=>{ if(e.button === 0 && penUp) penUp(); });
     document.addEventListener('mouseup', ()=> plushHold(false));
     addEventListener('keydown', e=>{
@@ -6389,6 +6392,8 @@ const LIVING = (function(){
 
 
     // phones: which controls are on screen. the corridor game: only the light button. the ending: only the stick (and nothing while she asks)
+    if(!TOUCH){ const pOn = panel.classList.contains('on');
+      if(pOn && document.pointerLockElement === wrap && document.exitPointerLock){ panelFreed = true; document.exitPointerLock(); } }      // a challenge open: the mouse is yours, to click
     if(TOUCH){ const ui = (level && level.plush && level.plush.active) ? 'corr' : (level && level.ending) ? (level.asking ? 'ask' : 'end') : '';
       if(ui !== wrap.dataset.ui){ wrap.dataset.ui = ui; if(ui && ui !== 'corr' && camUp) setCamUp(false); } }
     if(level && level.pooled) syncPooled();
