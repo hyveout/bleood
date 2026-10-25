@@ -4398,14 +4398,15 @@ const LIVING = (function(){
     return true;
   }
   // the flash takes it: a second flash, the head flung away spinning and swelling, and a burst of dark and red from where it was
+  let SHARD_G = null;
   function hauntBurst(H){
     const m = H.model; if(!m) return;
     H.dying = performance.now(); level.shake = .12; redLevel = 1;
     lsfx(H.who === 'her' ? 'herdie' : 'himdie', .9);      // its death cry: his or hers
-    setTimeout(flashWhite, 170);
     const fx = H.fx = [], gM = new THREE.MeshBasicMaterial({color:0x1a0406, transparent:true, opacity:.95, depthWrite:false, fog:false}), rM = new THREE.MeshBasicMaterial({color:0xc01818, transparent:true, opacity:.9, depthWrite:false, fog:false});
-    for(let i = 0; i < 28; i++){
-      const q = new THREE.Mesh(new THREE.PlaneGeometry(.06 + Math.random() * .1, .06 + Math.random() * .1), i % 3 ? gM : rM);
+    if(!SHARD_G) SHARD_G = [new THREE.PlaneGeometry(.1, .08), new THREE.PlaneGeometry(.14, .12)];      // (shared: nothing new is built for each kill)
+    for(let i = 0; i < 10; i++){
+      const q = new THREE.Mesh(SHARD_G[i % 2], i % 3 ? gM : rM); q.scale.setScalar(.7 + Math.random() * .6);
       q.position.set(H.px, H.py, H.pz); const a = Math.random() * Math.PI * 2, e = (Math.random() - .3) * 1.4, sp = 1.5 + Math.random() * 3.5;
       fx.push({o:q, v:new THREE.Vector3(Math.cos(a) * Math.cos(e) * sp, Math.sin(e) * sp + 1, Math.sin(a) * Math.cos(e) * sp), w:(Math.random() - .5) * 20, life:.55 + Math.random() * .4, age:0});
       level.group.add(q);
@@ -4418,7 +4419,7 @@ const LIVING = (function(){
     const sc = 1 + t * 1.6; m.scale.setScalar(sc); m.visible = t < .55;
     level.shake = Math.max(0, .12 * (1 - t / .4));
     (H.fx || []).forEach(f => { f.age += dt; f.o.position.addScaledVector(f.v, dt); f.v.y -= 4 * dt; f.o.rotation.z += f.w * dt; f.o.lookAt(cam); f.o.material.opacity = Math.max(0, 1 - f.age / f.life); });
-    if(t > .7){ (H.fx || []).forEach(f => level.group.remove(f.o)); H.fx = null; H.dying = 0; m.scale.setScalar(1); level.shake = 0; hauntEnd(true, H); }
+    if(t > .7){ const mats = new Set(); (H.fx || []).forEach(f => { level.group.remove(f.o); mats.add(f.o.material); }); mats.forEach(m2 => m2.dispose()); H.fx = null;      // (the two materials go; the shapes are shared and stay) H.dying = 0; m.scale.setScalar(1); level.shake = 0; hauntEnd(true, H); }
   }
   // caught by the doll's head: the corridor's scare, the head on the camera shaking in your face, then everything starts over
   function hauntScareHim(H){
