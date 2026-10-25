@@ -6393,7 +6393,7 @@ const LIVING = (function(){
 
     // phones: which controls are on screen. the corridor game: only the light button. the ending: only the stick (and nothing while she asks)
     if(!TOUCH){ const pOn = panel.classList.contains('on');
-      if(pOn && document.pointerLockElement === wrap && document.exitPointerLock){ panelFreed = true; document.exitPointerLock(); } }      // a challenge open: the mouse is yours, to click
+      if(pOn && panel.dataset.game !== 'pull' && panel.dataset.game !== 'lock' && document.pointerLockElement === wrap && document.exitPointerLock){      /* (the knife and the key keep the mouse: they are driven by moving it) */ panelFreed = true; document.exitPointerLock(); } }      // a challenge open: the mouse is yours, to click
     if(TOUCH){ const ui = (level && level.plush && level.plush.active) ? 'corr' : (level && level.ending) ? (level.asking ? 'ask' : 'end') : '';
       if(ui !== wrap.dataset.ui){ wrap.dataset.ui = ui; if(ui && ui !== 'corr' && camUp) setCamUp(false); } }
     if(level && level.pooled) syncPooled();
