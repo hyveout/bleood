@@ -1061,7 +1061,9 @@ body.mob-full .mob-exit:active{opacity:1; border-color:rgba(232,227,214,.9)}
 .game-panel.on{display:flex}
 .game-panel.jolt{animation:panic .12s steps(2) 2}
 .game-panel .tw{position:relative; width:min(70%,420px); text-align:center; font-family:var(--crtface); color:#e6e2d8}
-.game-panel .tw-line{display:none}      /* (typed letters go into the blanks above) */
+.game-panel .tw-line{display:none}
+.game-panel .tw-err{min-height:1.4em; margin-top:10px; font-family:var(--crtface); font-size:clamp(.62rem,1.4vw,.8rem); letter-spacing:.24em; text-transform:uppercase; color:#e2352b; opacity:0; transition:opacity .2s}
+.game-panel .tw-err.on{opacity:1}      /* (typed letters go into the blanks above) */
 .game-panel .tw-word{font-size:clamp(1.6rem,4vw,2.6rem); letter-spacing:.3em; white-space:nowrap; text-shadow:-1.1px 0 rgba(255,0,70,.55), 1.1px 0 rgba(0,240,220,.45)}
 .game-panel .tw-line{margin-top:6%; font-size:clamp(1.3rem,3vw,2rem); letter-spacing:.3em; min-height:1.4em; color:#fff}
 .game-panel .tw-caret{animation:blink 1s steps(1) infinite; opacity:.7}
@@ -5628,7 +5630,7 @@ const LIVING = (function(){
   function openTypewriter(){
     twIndex = level.twIndex || 0; twTyped = ''; twKeysFor = -1;      // (leave and come back: the words already typed stay typed)
     panel.classList.add('on'); panel.dataset.game = 'type';
-    panel.innerHTML = '<div class="tw"><div class="tw-word"></div><div class="tw-line"><span class="tw-typed"></span><span class="tw-caret">_</span></div><div class="tw-count"></div>' +
+    panel.innerHTML = '<div class="tw"><div class="tw-word"></div><div class="tw-line"><span class="tw-typed"></span><span class="tw-caret">_</span></div><div class="tw-count"></div><div class="tw-err"></div>' +
                       '<input class="tw-input" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false"><button type="button" class="lock-back tw-back">back</button></div>';
     panel.querySelector('.tw-back').addEventListener('click', e=>{ e.stopPropagation(); closePanel(); });
     panel.querySelector('.tw-back').addEventListener('pointerdown', e=>{ e.stopPropagation(); });
@@ -5659,7 +5661,7 @@ const LIVING = (function(){
     for(let i = 0; i < 5 && pool.length; i++) set.push(pool.splice((Math.random() * pool.length) | 0, 1)[0]);
     for(let i = set.length - 1; i > 0; i--){ const j = (Math.random() * (i + 1)) | 0; [set[i], set[j]] = [set[j], set[i]]; }
     const per = Math.ceil(set.length / 3), rows = [set.slice(0, per), set.slice(per, per * 2), set.slice(per * 2)].filter(r => r.length);      // three rows of up to five
-    keys.innerHTML = rows.map(row => '<div class="krow">' + row.map(c => '<button type="button" data-k="' + c + '">' + c + '</button>').join('') + '</div>').join('');
+    keys.innerHTML = rows.concat([['<']]).map(row => '<div class="krow">' + row.map(c => '<button type="button" data-k="' + (c === '<' ? '&lt;' : c) + '"' + (c === '<' ? ' class="del"' : '') + '>' + (c === '<' ? '&larr;' : c) + '</button>').join('') + '</div>').join('');
   }
   function renderTypewriter(){
     if(TOUCH) typewriterKeys();
@@ -5667,10 +5669,19 @@ const LIVING = (function(){
     panel.querySelector('.tw-typed').textContent = twTyped;
     panel.querySelector('.tw-count').textContent = (twIndex + 1) + ' / ' + WORDS.length;
   }
+  // any letter can be typed; only when every blank is filled is the word judged. wrong: it says so and the line clears
+  let twErrT = 0;
   function typeChar(ch){
     const want = WORDS[twIndex];
-    if(ch === want[twTyped.length]){ lsfx('tick', .9); twTyped += ch; }      // the hammer on the page
-    else { lsfx('locked', .9); twTyped = ''; panel.classList.add('jolt'); setTimeout(()=>panel.classList.remove('jolt'), 200); }
+    if(ch === '<'){ if(twTyped.length){ twTyped = twTyped.slice(0, -1); lsfx('tick', .6); } renderTypewriter(); return; }      // (backspace)
+    if(!/^[A-Z]$/.test(ch) || twTyped.length >= want.length) return;
+    lsfx('tick', .9); twTyped += ch;      // the hammer on the page
+    if(twTyped.length === want.length && twTyped !== want){
+      renderTypewriter();
+      const err = panel.querySelector('.tw-err'); if(err){ err.textContent = 'that is not the word'; err.classList.add('on'); clearTimeout(twErrT); twErrT = setTimeout(()=> err.classList.remove('on'), 1400); }
+      setTimeout(()=>{ if(panel.dataset.game !== 'type') return; lsfx('locked', .9); twTyped = ''; panel.classList.add('jolt'); setTimeout(()=>panel.classList.remove('jolt'), 200); renderTypewriter(); }, 350);
+      return;
+    }
     if(twTyped === want){
       twIndex++; twTyped = ''; level.twIndex = twIndex;
       if(twIndex >= WORDS.length){ closePanel(); done.type = true; flash('challenge complete'); gained(); return; }
@@ -6004,7 +6015,7 @@ const LIVING = (function(){
       }
       draw();
     };
-    penMove = (dx, dy)=> pull(dy * .55);
+    penMove = (dx, dy)=> pull(-dy * .55);      // (the mouse comes down to draw it out)
     penDown = null; penUp = null;
     let lt = null;
     area.addEventListener('touchstart', e=>{ lt = e.touches[0].clientY; e.preventDefault(); }, {passive:false});
@@ -6198,7 +6209,7 @@ const LIVING = (function(){
       if(['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
       if(panel.classList.contains('on')){
         if(e.key === 'Escape'){ closePanel(); return; }
-        if(panel.dataset.game === 'type' && e.key.length === 1){ typeChar(e.key.toUpperCase()); e.preventDefault(); }
+        if(panel.dataset.game === 'type' && (e.key.length === 1 || e.key === 'Backspace')){ typeChar(e.key === 'Backspace' ? '<' : e.key.toUpperCase()); e.preventDefault(); }
         if(panel.dataset.game === 'safe'){ if(/^[0-9]$/.test(e.key)) safePress(e.key); if(e.key === 'Backspace'){ safePress('<'); e.preventDefault(); } }
         return;
       }
