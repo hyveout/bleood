@@ -4419,7 +4419,7 @@ const LIVING = (function(){
     const sc = 1 + t * 1.6; m.scale.setScalar(sc); m.visible = t < .55;
     level.shake = Math.max(0, .12 * (1 - t / .4));
     (H.fx || []).forEach(f => { f.age += dt; f.o.position.addScaledVector(f.v, dt); f.v.y -= 4 * dt; f.o.rotation.z += f.w * dt; f.o.lookAt(cam); f.o.material.opacity = Math.max(0, 1 - f.age / f.life); });
-    if(t > .7){ const mats = new Set(); (H.fx || []).forEach(f => { level.group.remove(f.o); mats.add(f.o.material); }); mats.forEach(m2 => m2.dispose()); H.fx = null;      // (the two materials go; the shapes are shared and stay) H.dying = 0; m.scale.setScalar(1); level.shake = 0; hauntEnd(true, H); }
+    if(t > .7){ const mats = new Set(); (H.fx || []).forEach(f => { level.group.remove(f.o); mats.add(f.o.material); }); mats.forEach(m2 => m2.dispose()); H.fx = null;      /* (the two materials go; the shapes are shared and stay) */ H.dying = 0; m.scale.setScalar(1); level.shake = 0; hauntEnd(true, H); }
   }
   // caught by the doll's head: the corridor's scare, the head on the camera shaking in your face, then everything starts over
   function hauntScareHim(H){
