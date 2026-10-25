@@ -539,6 +539,7 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .living.vig::after{content:""; position:absolute; inset:-2%; pointer-events:none; z-index:2;
   background:radial-gradient(ellipse 90% 86% at 50% 50%, rgba(0,0,0,.14) 0%, rgba(0,0,0,.22) 22%, rgba(0,0,0,.52) 44%, rgba(0,0,0,.82) 64%, rgba(0,0,0,.95) 82%, rgba(0,0,0,.98) 100%);
   animation:vigbreathe 7s ease-in-out infinite}
+.living.vig.gpuvig::after{display:none}      /* (drawn in the grade shader instead) */
 @keyframes vigbreathe{0%,100%{transform:scale(1); opacity:1} 50%{transform:scale(1.06); opacity:.88}}
 .crt.in-living::after{background:
     repeating-linear-gradient(to bottom, rgba(0,0,0,.05) 0 1px, rgba(0,0,0,0) 1px 3px)}
@@ -2815,11 +2816,14 @@ const LIVING = (function(){
     const ct = new THREE.DataTexture(curve, N, 1, THREE.RGBAFormat); ct.minFilter = ct.magFilter = THREE.LinearFilter; ct.needsUpdate = true;
     const pscene = new THREE.Scene(), pcam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
     const pmat = new THREE.ShaderMaterial({
-      uniforms:{tDiffuse:{value:rt.texture}, tCurve:{value:ct}},
+      uniforms:{tDiffuse:{value:rt.texture}, tCurve:{value:ct}, vS:{value:1}, vO:{value:1}, vOn:{value:1}},
       vertexShader:'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
       fragmentShader:[
         'precision mediump float;',
         'uniform sampler2D tDiffuse; uniform sampler2D tCurve; varying vec2 vUv;',
+        'uniform float vS; uniform float vO; uniform float vOn;',
+        /* the breathing vignette (was a CSS layer over the canvas, redrawn at full screen size every frame): the same stops, the same 104% box */
+        'float vigA(float r){ if(r < 0.22) return mix(0.14, 0.22, r / 0.22); if(r < 0.44) return mix(0.22, 0.52, (r - 0.22) / 0.22); if(r < 0.64) return mix(0.52, 0.82, (r - 0.44) / 0.2); if(r < 0.82) return mix(0.82, 0.95, (r - 0.64) / 0.18); if(r < 1.0) return mix(0.95, 0.98, (r - 0.82) / 0.18); return 0.98; }',
         'float tone(float v){ return texture2D(tCurve, vec2(clamp(v, 0.0, 1.0) * ' + ((N - 1) / N).toFixed(6) + ' + ' + (.5 / N).toFixed(6) + ', 0.5)).r; }',
         'vec3 toneV(vec3 c){ return vec3(tone(c.r), tone(c.g), tone(c.b)); }',
         'void main(){',
@@ -2828,7 +2832,9 @@ const LIVING = (function(){
         '  vec3 b = clamp(mat3(0.913, 0.032, 0.030,  0.111, 0.953, 0.100,  0.011, 0.011, 0.806) * c, 0.0, 1.0);',
         '  float d = abs(c.r - c.g) + abs(c.g - c.b) + abs(c.b - c.r);',
         '  float m = clamp(4.0 * d - 0.4, 0.0, 1.0);',
-        '  gl_FragColor = vec4(mix(toneV(a), toneV(b), m), 1.0);',
+        '  vec3 o = mix(toneV(a), toneV(b), m);',
+        '  if(vOn > 0.5){ vec2 q = vec2(vUv.x, 1.0 - vUv.y); vec2 e = (q + 0.02) / 1.04; e = 0.5 + (e - 0.5) / vS; o *= 1.0 - vigA(length(vec2((e.x - 0.5) / 0.9, (e.y - 0.5) / 0.86))) * vO; }',
+        '  gl_FragColor = vec4(o, 1.0);',
         '}'].join('\n'),
       depthTest:false, depthWrite:false
     });
@@ -5118,7 +5124,7 @@ const LIVING = (function(){
         if(ta >= 1.85){ doorParts.forEach(o => o.visible = false); filler.visible = true; doorGone = true; }
       }
       if(level.demon && !level.warmed){ level.warmed = true;
-        try{ if(!level.clearingPre) level.clearingPre = makeClearingGroup(); const vis = level.hidden.map(o => o.visible); level.hidden.forEach(o => o.visible = true); level.demon.group.visible = true; level.clearingPre.visible = true;
+        try{ if(!level.clearingPre) level.clearingPre = makeClearingGroup(); const vis = level.hidden.map(o => o.visible); level.hidden.forEach(o => o.visible = true); level.demon.group.visible = true; level.clearingPre.visible = true; padLights();
           renderer.compile(scene, camera); level.hidden.forEach((o, i) => o.visible = vis[i]); level.clearingPre.visible = false; }catch(e){} }
       if(level.demon){ level.demon.group.visible = !!level.revealed; level.demon.group.position.y = 1.0 + Math.sin(now / 1400) * 0.09 + (ending ? ending.rise : 0); if(ending) level.demon.group.position.z = ending.dz || 0; }
       // the flames: real light flickers hard, the tall ones only breathe
@@ -6103,10 +6109,13 @@ const LIVING = (function(){
     camera = new THREE.PerspectiveCamera(70, 1, 0.05, 60);
     scene.add(camera);
     ray = new THREE.Raycaster();
+    for(let i = 0; i < PAD_P; i++){ const L = new THREE.PointLight(0x000000, 0, .001); L.position.set(0, -500, 0); L.userData.pad = true; scene.add(L); padP.push(L); }
+    for(let i = 0; i < PAD_S; i++){ const L = new THREE.SpotLight(0x000000, 0, .001); L.position.set(0, -500, 0); L.userData.pad = true; scene.add(L); padS.push(L); }
 
 
 
 
+    wrap.addEventListener('touchstart', e => { const t = e.changedTouches[0], r = wrap.getBoundingClientRect(); if(!t || t.clientX < r.right - r.width * .15 || t.clientY > r.top + r.height * .15) return; const n = performance.now(); fpsTaps = fpsTaps.filter(x => n - x < 2000); fpsTaps.push(n); if(fpsTaps.length >= 5){ fpsTaps = []; toggleFps(); } }, {passive:true, capture:true});      // five taps in the top right corner: the frame meter
     reticle = document.createElement('div'); reticle.className = 'reticle'; wrap.appendChild(reticle);
     hud = document.createElement('div'); hud.className = 'living-hud'; wrap.appendChild(hud);
     fadeEl = document.createElement('div'); fadeEl.className = 'living-fade'; wrap.appendChild(fadeEl);
@@ -6149,7 +6158,7 @@ const LIVING = (function(){
     wrap.appendChild(noteOverlay);
 
     if(GRADE) wrap.classList.add('ff');
-    wrap.classList.add('vig');
+    wrap.classList.add('vig', 'gpuvig');
     if(TOUCH){
       wrap.classList.add('touch');
       { useBtn = document.createElement('div'); useBtn.className = 'use-btn'; useBtn.innerHTML = '<span class="u">use</span><span class="f">flash</span>'; wrap.appendChild(useBtn);
@@ -6340,8 +6349,43 @@ const LIVING = (function(){
     if(nz > zMin && nz < zMax && !hitZ) p.z = nz;
   }
 
-  const FPS = /[?&#]fps\b/.test(location.search + location.hash);      // ?fps on the address: a frame meter in the corner
-  let fpsEl = null, fpsN = 0, fpsT = 0, fpsWork = 0;
+  // the light count is held the same in every room: three.js rebuilds every surface's shader whenever the number of lights changes,
+  // which was the stutter at every door (12 to 15 shaders rebuilt each time). dark stand-in lights make up the difference, up to 22 (the most any room had)
+  const PAD_P = 22, PAD_S = 3, padP = [], padS = [];
+  function padLights(){
+    if(!scene) return;
+    let np = 0, ns = 0;
+    (function walk(o){ if(o.visible === false) return; if(o.isPointLight){ if(!o.userData.pad) np++; } else if(o.isSpotLight){ if(!o.userData.pad) ns++; } const ch = o.children; for(let i = 0; i < ch.length; i++) walk(ch[i]); })(scene);
+    for(let i = 0; i < padP.length; i++) padP[i].visible = i < PAD_P - np;
+    for(let i = 0; i < padS.length; i++) padS[i].visible = i < PAD_S - ns;
+  }
+  // the rest of the shaders the later rooms use (her, the doll's head, the glows, the dust), built once behind the loading bar
+  // rather than in the middle of a chase. kept for good: their materials are never thrown away, so neither are the shaders
+  let warmedAll = false; const warmKeep = [];
+  async function warmShaders(){
+    try{
+      const zoo = new THREE.Group(), G = new THREE.PlaneGeometry(.01, .01), T = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1, THREE.RGBAFormat);
+      const add = (m, inst)=>{ warmKeep.push(m); zoo.add(inst ? new THREE.InstancedMesh(G, m, 1) : new THREE.Mesh(G, m)); };
+      add(new THREE.MeshBasicMaterial({fog:false}));
+      add(new THREE.MeshBasicMaterial({map:T, fog:false, side:THREE.DoubleSide}));
+      add(new THREE.MeshBasicMaterial({map:T, fog:false, side:THREE.BackSide}));
+      add(new THREE.MeshBasicMaterial({}), true);
+      add(new THREE.MeshBasicMaterial({side:THREE.DoubleSide}));
+      add(new THREE.MeshPhongMaterial({side:THREE.DoubleSide}));
+      add(new THREE.MeshStandardMaterial({map:T, side:THREE.DoubleSide}));
+      [new THREE.SpriteMaterial({map:T, fog:false}), new THREE.SpriteMaterial({alphaTest:.05}), new THREE.SpriteMaterial({map:T, alphaTest:.05})].forEach(m => { warmKeep.push(m); zoo.add(new THREE.Sprite(m)); });
+      { const m = new THREE.PointsMaterial({size:.01}); warmKeep.push(m); const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0], 3)); zoo.add(new THREE.Points(pg, m)); }
+      const D = await loadDemon(1.8).catch(()=> null); if(D && D.group) zoo.add(D.group);
+      const H = await loadDollHead().catch(()=> null); if(H) zoo.add(H);
+      zoo.position.set(0, -200, 0); scene.add(zoo); padLights(); renderer.compile(scene, camera); scene.remove(zoo);
+    }catch(e){}
+  }
+  // the frame meter: ?fps on the address, the ` key, or five quick taps in the top right corner on a phone. shows frames a second,
+  // the worst frame in that second (a stutter shows up there even when the average looks fine), the work per frame, draws and objects
+  let FPS = /[?&#]fps\b/.test(location.search + location.hash);
+  let fpsEl = null, fpsN = 0, fpsT = 0, fpsWork = 0, fpsPrev = 0, fpsWorst = 0, fpsTaps = [];
+  function toggleFps(){ FPS = !FPS; fpsN = 0; fpsWork = 0; fpsWorst = 0; fpsT = performance.now(); fpsPrev = 0; if(fpsEl){ fpsEl.style.display = FPS ? '' : 'none'; if(FPS) fpsEl.textContent = '…'; } }
+  addEventListener('keydown', e => { if(running && (e.code === 'Backquote' || e.key === '`')) toggleFps(); });
   function loop(now){
     if(!running) return;
     raf = requestAnimationFrame(loop);
@@ -6349,8 +6393,8 @@ const LIVING = (function(){
     const t0 = FPS ? performance.now() : 0;
     if(FPS && renderer){ renderer.info.autoReset = false; renderer.info.reset(); }
     loopBody(now);
-    if(FPS){ fpsWork += performance.now() - t0; fpsN++; if(now - fpsT > 1000){ if(!fpsEl){ fpsEl = document.createElement('div'); fpsEl.style.cssText = 'position:absolute;right:6px;top:6px;z-index:40;font:11px monospace;color:#7dff9a;background:rgba(0,0,0,.6);padding:3px 5px;pointer-events:none'; crt.appendChild(fpsEl); }
-      fpsEl.textContent = Math.round(fpsN * 1000 / (now - fpsT)) + ' fps · ' + (fpsWork / fpsN).toFixed(1) + ' ms · ' + renderer.info.render.calls + ' draws · ' + (level && level.group ? level.group.children.length : 0) + ' objs'; fpsN = 0; fpsWork = 0; fpsT = now; } }
+    if(FPS){ fpsWork += performance.now() - t0; fpsN++; if(fpsPrev) fpsWorst = Math.max(fpsWorst, now - fpsPrev); fpsPrev = now; if(now - fpsT > 1000){ if(!fpsEl){ fpsEl = document.createElement('div'); fpsEl.style.cssText = 'position:absolute;right:6px;top:6px;z-index:40;font:11px monospace;color:#7dff9a;background:rgba(0,0,0,.6);padding:3px 5px;pointer-events:none'; crt.appendChild(fpsEl); }
+      fpsEl.style.display = ''; fpsEl.textContent = Math.round(fpsN * 1000 / (now - fpsT)) + ' fps · worst ' + Math.round(fpsWorst) + ' ms · ' + (fpsWork / fpsN).toFixed(1) + ' ms · ' + renderer.info.render.calls + ' draws · ' + (level && level.group ? level.group.children.length : 0) + ' objs'; fpsN = 0; fpsWork = 0; fpsWorst = 0; fpsT = now; } }
   }
   function loopBody(now){      // phones: 30 frames a second, steady, instead of 60 that cannot be held
     const dt = Math.min((now - last) / 1000, TOUCH ? .08 : 0.05); last = now;
@@ -6442,11 +6486,13 @@ const LIVING = (function(){
     if(TOUCH){ const ui = (level && level.plush && level.plush.active) ? 'corr' : (level && level.ending) ? (level.asking ? 'ask' : 'end') : '';
       if(ui !== wrap.dataset.ui){ wrap.dataset.ui = ui; if(ui && ui !== 'corr' && camUp) setCamUp(false); } }
     if(level && level.pooled) syncPooled();
+    padLights();
     if(post){
       post.pmat.uniforms.time.value = now / 1000;
       renderer.setRenderTarget(post.rt); renderer.render(scene, camera);
       renderer.setRenderTarget(null); renderer.render(post.pscene, post.pcam);
     }else if(grade){
+      { const U = grade.pmat.uniforms; if(TOUCH || reduce){ U.vS.value = 1; U.vO.value = 1; } else { const ph = (now / 7000) % 1, h = ph < .5 ? ph * 2 : 2 - ph * 2, k = h * h * (3 - 2 * h); U.vS.value = 1 + .06 * k; U.vO.value = 1 - .12 * k; } }      // (7 s, out and back, as the CSS one breathed)
       renderer.setRenderTarget(grade.rt); renderer.render(scene, camera);
       renderer.setRenderTarget(null); renderer.render(grade.pscene, grade.pcam);
     }else{
@@ -6509,7 +6555,8 @@ const LIVING = (function(){
     crt.classList.add('in-living'); { const gr = document.getElementById('grain'); if(gr) gr.style.opacity = TOUCH ? '0' : LIVING_GRAIN; }      // light scanlines, almost no grain
     resize();
     loadBar(.75); await paint();
-    try{ renderer.compile(scene, camera); if(grade) renderer.compile(grade.pscene, grade.pcam); }catch(e){}      // the shaders, built now rather than on the first frame
+    try{ padLights(); renderer.compile(scene, camera); if(grade) renderer.compile(grade.pscene, grade.pcam); }catch(e){}
+    if(!warmedAll){ warmedAll = true; loadBar(.85); await paint(); await warmShaders(); }      // the shaders, built now rather than on the first frame
     loadBar(.95); await paint();
     loadBar(1); setTimeout(()=> loadBar(null), 200);
     running = true; last = performance.now(); fade = 1; fadeTo = 0;
@@ -9912,7 +9959,7 @@ function drawNoise(ctx, cvs, alphaMax){
   ctx.save(); ctx.translate(-ox, -oy); ctx.fillStyle = ctx.createPattern(tile, 'repeat'); ctx.fillRect(0, 0, cvs.width + 256, cvs.height + 256); ctx.restore();
 }
 sizeGrain(); drawNoise(gx,g,255);
-if(!reduce){ setInterval(()=>drawNoise(gx,g,255), 90); }
+if(!reduce){ setInterval(()=>{ if(g.style.opacity === '0') return; drawNoise(gx,g,255); }, 90); }      // (none while it is hidden: phones in Living)
 
 /* ---- the figure in the middle of the ring ---- */
 // the figure's colour maps, one per material, applied by hand once she's on screen
