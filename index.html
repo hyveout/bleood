@@ -628,6 +628,9 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .living-open.on{display:flex}
 .living-open .lo-lines{display:flex; flex-direction:column; gap:.55em; max-width:28em; text-align:center; font-family:var(--display); font-size:clamp(1.15rem,3.2vw,2.2rem); line-height:1.3; color:#e8e4da; transition:opacity .9s ease}
 .living-open .lo-lines.out{opacity:0}
+.living-open .lo-vid{position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000; opacity:0; transition:opacity .6s ease; pointer-events:none}
+.living-open .lo-vid.on{opacity:1}
+.living-open .lo-lines, .living-open .lo-skip{position:relative; z-index:1}
 .living-open .lo-lines p{opacity:0; transform:translateY(6px); transition:opacity 1.3s ease, transform 1.3s ease}
 .living-open .lo-lines p.in{opacity:1; transform:none}
 .living-open .lo-skip{position:absolute; left:0; right:0; bottom:7%; text-align:center; font-family:var(--crtface); font-size:clamp(.6rem,1.2vw,.8rem); letter-spacing:.3em; text-transform:uppercase; color:rgba(220,215,205,.35); display:none}
@@ -2414,11 +2417,23 @@ const LIVING = (function(){
     [1.0, 'I tried to keep him.'], [2.4, 'He would not be kept.'], [3.0, ''],
     [1.2, 'So I did what I had to do.'], [4.0, '']];
   let openEl = null, opening = null, openNext = true;
+  const CUT1_SRC = 'bleood_cutscene1.mp4', CUT1_LEN = 28.2; let cut1Vid = null;
   const openSeen = key=>{ try{ return localStorage.getItem('bleood_living_' + key) === '1'; }catch(e){ return false; } };
   // words on black: `lines` as [gap, text] pairs ('' clears the screen); `key` remembers it has been watched; `onEnd` runs when it is over
   function showOpening(lines, key, onEnd){
-    lines = lines || OPEN_LINES; key = key || 'open';
+    key = key || 'open';
     if(!openEl){ openEl = document.createElement('div'); openEl.className = 'living-open'; openEl.innerHTML = '<div class="lo-lines"></div><span class="lo-skip">press any key to skip</span>'; wrap.appendChild(openEl); }
+    if(!cut1Vid){ cut1Vid = document.createElement('video'); cut1Vid.className = 'lo-vid'; cut1Vid.muted = true; cut1Vid.playsInline = true; cut1Vid.setAttribute('playsinline', ''); cut1Vid.setAttribute('webkit-playsinline', ''); cut1Vid.preload = 'auto'; cut1Vid.src = CUT1_SRC; openEl.insertBefore(cut1Vid, openEl.firstChild); }
+    // cutscene 1: the film (bleood_cutscene1.mp4) plays over the black in place of the opening words; the black holds for as long as it
+    // runs (timed from when it really starts), then you wake on the bed. skipping stops it. if the film cannot play, the words come instead
+    if(key === 'open' && !lines && cut1Vid){
+      lines = [[0, ''], [CUT1_LEN, '']];
+      try{ cut1Vid.currentTime = 0; }catch(_){ }
+      cut1Vid.onplaying = ()=>{ cut1Vid.classList.add('on'); if(opening && opening.key === 'open' && !opening.vidStarted){ opening.vidStarted = true; opening.t0 = performance.now(); } };
+      const pr = cut1Vid.play();
+      if(pr && pr.catch) pr.catch(()=>{ if(opening && opening.key === 'open' && !opening.vidStarted){ cut1Vid.classList.remove('on'); const O = opening; showOpening(OPEN_LINES, 'open', O.onEnd); } });
+    }
+    lines = lines || OPEN_LINES;
     openEl.querySelector('.lo-lines').innerHTML = ''; openEl.classList.add('on'); openEl.classList.toggle('skip', openSeen(key));
     let t = 0; opening = {t0:performance.now(), at:lines.map(([gap, text])=>{ t += gap; return {t, text}; }), i:0, finished:false, key, onEnd};
   }
@@ -2433,6 +2448,7 @@ const LIVING = (function(){
   }
   function endOpening(){
     if(!opening) return; const O = opening; opening = null; openEl.classList.remove('on');
+    if(O.key === 'open' && cut1Vid){ try{ cut1Vid.pause(); }catch(_){ } cut1Vid.classList.remove('on'); }
     try{ localStorage.setItem('bleood_living_' + O.key, '1'); }catch(e){}
     if(level && level.intro){ level.intro.t0 = performance.now(); bedSound(true); }      // now you wake on the bed
     if(O.onEnd) O.onEnd();
@@ -5320,7 +5336,7 @@ const LIVING = (function(){
     roomBuf(src).then(b => { const c = AC; if(!b || !c || h.dead) return;
       try{ const n = c.createBufferSource(), g = c.createGain(), t0 = c.currentTime; n.buffer = b;
         if(o.loop !== false){ n.loop = true; n.loopStart = o.loopStart || 0; n.loopEnd = Math.min(b.duration, o.loopEnd || b.duration); }
-        g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(h.vol, t0 + (o.fade || .05)); n.connect(g); g.connect(c.destination); n.start(t0, o.at || 0); h.node = n; h.gain = g; }catch(_){ } });
+        g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(h.vol, t0 + (o.fade || .05)); n.connect(g); g.connect(c.destination); n.start(t0, o.at || 0); h.node = n; h.gain = g; if(o.onStart) o.onStart(); }catch(_){ } });
     return h;
   }
   // the first hallway (the chase): its own ambience as you walk toward her, a static that rises the nearer she is, and the chase itself
