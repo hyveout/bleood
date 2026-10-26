@@ -1689,7 +1689,9 @@ function layoutRing(){
     scene.appendChild(el);
     // its name, under the bloom. kept outside the flower so it sits above the dark (the flowers fade into it; the names stay readable)
     const nm = document.createElement('span'); nm.className = 'flower-name'; nm.textContent = p.title; nm.setAttribute('aria-hidden', 'true');
-    nm.style.left = x + '%'; nm.style.top = 'calc(' + y + '% - ' + (size * .22).toFixed(1) + 'px)';      /* the bloom's heart */ nm.style.setProperty('--s', size + 'px');
+    { const r = ((((i*47)%36)-18)) * Math.PI / 180, hx = -.115, hy = -.075;      // the lily's heart sits up and left of the picture's middle; turned with the flower
+      const ox = (hx * Math.cos(r) - hy * Math.sin(r)) * size, oy = (hx * Math.sin(r) + hy * Math.cos(r)) * size;
+      nm.style.left = 'calc(' + x + '% + ' + ox.toFixed(1) + 'px)'; nm.style.top = 'calc(' + y + '% - ' + (size * .22 - oy).toFixed(1) + 'px)'; } nm.style.setProperty('--s', size + 'px');
     el.addEventListener('mouseenter', ()=> nm.classList.add('on')); el.addEventListener('mouseleave', ()=> nm.classList.remove('on'));
     el.addEventListener('focus', ()=> nm.classList.add('on')); el.addEventListener('blur', ()=> nm.classList.remove('on'));
     scene.appendChild(nm);
