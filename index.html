@@ -1687,15 +1687,20 @@ function flowerPts(im){
 function placeNames(){
   const sr = scene.getBoundingClientRect();
   scene.querySelectorAll('.flower-name').forEach(nm => {
-    const im = nm._fl && nm._fl.querySelector('img'); if(!im) return;
-    const r = im.getBoundingClientRect(), w = im.offsetWidth || r.width, h = im.offsetHeight || r.height, cx = r.left + r.width / 2, cy = r.top + r.height / 2, a = nm._r || 0;
+    const im = nm._fl && nm._fl.querySelector('img'), bl = nm._fl && nm._fl.querySelector('.bloom'); if(!im || !bl) return;
+    // measured from the bloom's box, not the picture: the picture sways (and lifts on hover), so measuring it put the names a little
+    // higher or lower depending on the moment. the bloom's middle is where the picture turns about
+    const r = bl.getBoundingClientRect(), w = bl.offsetWidth || r.width, h = bl.offsetHeight || r.height, cx = r.left + r.width / 2, cy = r.top + r.height / 2, a = nm._r || 0;
     const P = flowerPts(im); let mx = 0, bottom = .45, topY = -.45;
     if(P){ let lo = 1, hi = -1, by = -1, ty = 1; const ca = Math.cos(a), sa = Math.sin(a);
       for(const [px, py] of P){ const X = px * ca - py * sa, Y = px * sa + py * ca; if(X < lo) lo = X; if(X > hi) hi = X; if(Y > by) by = Y; if(Y < ty) ty = Y; }
       mx = (lo + hi) / 2; bottom = by; topY = ty; }
     // phones: the two flowers behind her get their names over them (under them, the names ran into her wings); the rest just below the lowest petal
     const above = NAMES_ABOVE.matches && nm._back; nm.classList.toggle('above', above);      // (the two behind her)
-    nm.style.left = (cx + mx * w - sr.left) + 'px'; nm.style.top = (above ? cy + topY * h - 4 : cy + bottom * h + 4) - sr.top + 'px';
+    // pinned to the flower's own spot in the ring (a % of the scene) plus a fixed offset, so if the page shifts as she loads, they move together
+    const fx = parseFloat(nm._fl.style.left) || 0, fy = parseFloat(nm._fl.style.top) || 0, ax = sr.left + fx / 100 * sr.width, ay = sr.top + fy / 100 * sr.height;
+    const lx = cx + mx * w, ly = above ? cy + topY * h - 4 : cy + bottom * h + 4;
+    nm.style.left = 'calc(' + fx + '% + ' + (lx - ax).toFixed(1) + 'px)'; nm.style.top = 'calc(' + fy + '% + ' + (ly - ay).toFixed(1) + 'px)';
   });
 }
 function layoutRing(){
@@ -1746,13 +1751,14 @@ function layoutRing(){
     scene.appendChild(el);
     // its name, under the bloom. kept outside the flower so it sits above the dark (the flowers fade into it; the names stay readable)
     const nm = document.createElement('span'); nm.className = 'flower-name'; nm.textContent = p.title; nm.setAttribute('aria-hidden', 'true');
-    nm.style.setProperty('--s', size + 'px'); nm._back = depth < .5; nm._fl = el;      // (at its flower's depth: behind her when the flower is, and in the dark with it) nm._r = ((((i*47)%36)-18)) * Math.PI / 180;      // (placed on the lily's heart once the flower is laid out: placeNames)
+    nm.style.setProperty('--s', size + 'px'); nm._back = depth < .5; if(nm._back && NAMES_ABOVE.matches) nm.classList.add('above'); nm._fl = el; nm._r = ((((i*47)%36)-18)) * Math.PI / 180;      /* (above from the start: added later, the name slid up into place. _r: the flower's turn) */
     el.addEventListener('mouseenter', ()=> nm.classList.add('on')); el.addEventListener('mouseleave', ()=> nm.classList.remove('on'));
     el.addEventListener('focus', ()=> nm.classList.add('on')); el.addEventListener('blur', ()=> nm.classList.remove('on'));
     scene.appendChild(nm);
     const fi = el.querySelector('img'); if(fi && !fi.complete) fi.addEventListener('load', placeNames, {once:true});
   });
   paintDark(); requestAnimationFrame(placeNames);
+  if(!scene._ro && window.ResizeObserver){ scene._ro = new ResizeObserver(()=> requestAnimationFrame(placeNames)); scene._ro.observe(scene); }      // (and again whenever the ring's box changes size)
 }
 
 /* ---- gallery: pieces scattered, two frame styles ---- */
