@@ -1088,12 +1088,16 @@ body.mob-full .mob-exit:active{opacity:1; border-color:rgba(232,227,214,.9)}
 .living-red{position:absolute; inset:0; z-index:4; pointer-events:none; opacity:0;
   background:radial-gradient(ellipse at center, rgba(150,0,0,.35) 0%, rgba(70,0,0,.8) 60%, rgba(10,0,0,.97) 100%); mix-blend-mode:multiply}
 /* the warning: no box. the room fades to black, her head floats in the dark, and the words are scratched under it */
-.game-panel .paint-look{position:relative; width:min(56vmin,380px); max-width:86%; padding:14px 14px 18px; background:#0d0a08; border:2px solid #000; box-shadow:0 18px 30px rgba(0,0,0,.85); display:flex; flex-direction:column; align-items:center; gap:10px}
-.game-panel .paint-img{display:block; width:auto; max-width:100%; max-height:min(58vh,560px); margin:0 auto; height:auto; image-rendering:pixelated; filter:contrast(1.1) brightness(.9)}
-.game-panel .paint-frame{position:relative; width:100%}
+.game-panel .paint-look{position:relative; width:min(80vmin,560px); max-width:86%; padding:14px 14px 18px; background:#0d0a08; border:2px solid #000; box-shadow:0 18px 30px rgba(0,0,0,.85); display:flex; flex-direction:column; align-items:center; gap:10px}
+.game-panel .paint-img{display:block; width:auto; max-width:100%; max-height:min(70vh,640px); margin:0 auto; height:auto; image-rendering:pixelated; filter:contrast(1.1) brightness(.9)}
+.game-panel .paint-frame{position:relative; width:fit-content; max-width:100%; margin:0 auto}
+/* the true painting sits exactly over the hanging one's canvas (inside its frame) and fades in over it */
+.game-panel .paint-true{position:absolute; left:19.6%; top:16%; width:60.3%; height:67.9%; object-fit:cover; opacity:0; transition:opacity 4.5s cubic-bezier(.45,0,.55,1); filter:contrast(1.1) brightness(.9); pointer-events:none}
+.game-panel .paint-true.on{opacity:1} .game-panel .paint-true.now{transition:none}
 .game-panel .paint-img.true{image-rendering:auto}
 .game-panel .paint-look .safe-back[hidden]{display:none !important}
-.game-panel .paint-frame .paint-key{width:26%; animation:keyglow 1.6s ease-in-out infinite}
+.game-panel .paint-frame .paint-key{width:28%; animation:keyglow 1.6s ease-in-out infinite, keyin 1.2s ease-out}
+@keyframes keyin{from{opacity:0}}
 @keyframes keyglow{50%{filter:drop-shadow(0 0 10px rgba(255,226,150,.95)) drop-shadow(0 2px 3px #000)}}      /* the key in the true painting: big enough to find, and it glints */
 .game-panel .paint-key{position:absolute; left:50%; top:50%; width:16%; aspect-ratio:1; transform:translate(-50%,-50%) rotate(-55deg); background:none; border:0; padding:0; cursor:pointer; filter:drop-shadow(0 2px 3px #000)}
 .game-panel .paint-key img{width:100%; height:100%; object-fit:contain; image-rendering:pixelated}
@@ -6074,18 +6078,20 @@ const LIVING = (function(){
   function openPainting(){
     const H1 = level.hall1;
     panel.classList.add('on'); panel.dataset.game = 'painting';
-    panel.innerHTML = '<div class="paint-look"><div class="paint-frame"><img class="paint-img" alt="" src="' + (H1.revealed ? PAINTING_TRUE : PAINTING_FILE) + '"></div>' +
-      '<button type="button" class="safe-back paint-reveal"' + (H1.revealed ? ' hidden' : '') + '>reveal actual painting</button>' +
+    // the painting as it hangs; after a moment its canvas slowly gives way to what it really is (no button, no words: it just turns)
+    panel.innerHTML = '<div class="paint-look"><div class="paint-frame"><img class="paint-img" alt="" src="' + PAINTING_FILE + '"><img class="paint-true' + (H1.revealed ? ' on now' : '') + '" alt="" src="' + PAINTING_TRUE + '"></div>' +
       '<button type="button" class="safe-back" data-k="back">back</button></div>';
-    const frame = panel.querySelector('.paint-frame'), img = panel.querySelector('.paint-img'), rev = panel.querySelector('.paint-reveal');
+    const frame = panel.querySelector('.paint-frame'), tru = panel.querySelector('.paint-true');
     const addKey = ()=>{ if(H1.hasKey || frame.querySelector('.paint-key')) return;
       const kb = document.createElement('button'); kb.type = 'button'; kb.className = 'paint-key'; kb.innerHTML = '<img alt="" src="' + KEY_ICON + '">'; frame.appendChild(kb);
       kb.addEventListener('click', e=>{ e.stopPropagation(); take(); }); };
-    const reveal = ()=>{ if(H1.revealed) return; H1.revealed = true; lsfx('paper', 1); flashWhite();
-      img.src = PAINTING_TRUE; img.classList.add('true'); rev.hidden = true; addKey(); };
     const take = ()=>{ if(H1.hasKey) return; H1.hasKey = true; lsfx('pick'); flash('key obtained'); const k = frame.querySelector('.paint-key'); if(k) k.remove(); };
-    if(H1.revealed){ img.classList.add('true'); addKey(); }
-    rev.addEventListener('click', e=>{ e.stopPropagation(); reveal(); });
+    const tok = {}; panel._paintTok = tok; const still = ()=> panel._paintTok === tok && panel.classList.contains('on') && panel.dataset.game === 'painting';
+    if(H1.revealed) addKey();
+    else{
+      setTimeout(()=>{ if(still()) tru.classList.add('on'); }, 2000);                                          // a couple of seconds of the real thing
+      setTimeout(()=>{ if(!still()) return; H1.revealed = true; addKey(); }, 2000 + 4800);                     // then the turn (4.5 s), and the key is there
+    }
     panel.querySelector('[data-k="back"]').addEventListener('click', e=>{ e.stopPropagation(); closePanel(); });
     // the mouse (locked while you play) drives a pointer over the picture, as in the other panels
     const box = panel.querySelector('.paint-look'), cur = document.createElement('b'); cur.className = 'safe-cur'; box.appendChild(cur);
@@ -6093,7 +6099,7 @@ const LIVING = (function(){
     const place = ()=>{ cur.style.left = (cx * 100) + '%'; cur.style.top = (cy * 100) + '%'; const r = box.getBoundingClientRect(), el = document.elementFromPoint(r.left + cx * r.width, r.top + cy * r.height);
       const k = el && el.closest ? el.closest('.paint-key, .safe-back') : null; if(k !== hot){ if(hot) hot.classList.remove('hot'); hot = k; if(hot) hot.classList.add('hot'); } };
     penMove = (dx, dy)=>{ const r = box.getBoundingClientRect(); cx = Math.max(0, Math.min(1, cx + dx / r.width)); cy = Math.max(0, Math.min(1, cy + dy / r.height)); place(); };
-    penDown = ()=>{ if(!hot) return; if(hot.classList.contains('paint-key')) take(); else if(hot.classList.contains('paint-reveal')) reveal(); else closePanel(); setTimeout(place, 30); };
+    penDown = ()=>{ if(!hot) return; if(hot.classList.contains('paint-key')) take(); else closePanel(); setTimeout(place, 30); };
     penUp = null; setTimeout(place, 30);
   }
   let panelFreed = false;
