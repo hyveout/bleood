@@ -5247,6 +5247,22 @@ const LIVING = (function(){
     const c = realCtx(); if(!c || lbufAsked) return; lbufAsked = true;
     Object.keys(LSFX).forEach(k => { fetch(LSFX[k]).then(r => r.arrayBuffer()).then(ab => new Promise((res, rej) => { const pr = c.decodeAudioData(ab, res, rej); if(pr && pr.catch) pr.catch(()=>{}); })).then(b => { LBUF[k] = b; }).catch(()=>{}); });
   }
+  // the ambience under the whole game: one seamless loop (its last 3 s were blended into its start), played through the sound engine so
+  // there is no gap at the seam. the file carries 0.1 s of extra on each end, so the loop points sit in the middle of real sound
+  const AMB_LIV = {src:'sfx_ambience_living.mp3', vol:.9, len:46.729167, pad:.1};
+  let ambLBuf = null, ambLAsk = null, ambLNode = null, ambLGain = null;
+  function livAmbience(on){
+    const c = AC; if(!c) return;
+    const t = c.currentTime;
+    if(!on){ if(ambLNode){ const n = ambLNode, g = ambLGain; ambLNode = null; ambLGain = null; try{ g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0, t + .8); n.stop(t + .9); }catch(_){ } } return; }
+    if(ambLNode) return;
+    const go = b => { if(!running || ambLNode || !b) return;
+      try{ const n = c.createBufferSource(), g = c.createGain(), t0 = c.currentTime; n.buffer = b; n.loop = true; n.loopStart = AMB_LIV.pad; n.loopEnd = Math.min(b.duration, AMB_LIV.pad + AMB_LIV.len);
+        g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(AMB_LIV.vol, t0 + 2.5); n.connect(g); g.connect(c.destination); n.start(t0, AMB_LIV.pad); ambLNode = n; ambLGain = g; }catch(_){ } };
+    if(ambLBuf) return go(ambLBuf);
+    if(!ambLAsk) ambLAsk = fetch(AMB_LIV.src).then(r => r.arrayBuffer()).then(ab => new Promise((res, rej) => { const p = c.decodeAudioData(ab, res, rej); if(p && p.catch) p.catch(rej); })).then(b => (ambLBuf = b)).catch(() => { ambLAsk = null; return null; });
+    ambLAsk.then(go);
+  }
   function lsfxPlay(k, vol, rate){
     const c = AC, b = LBUF[k]; if(!c || !b || c.state !== 'running') return null;
     try{ const src = c.createBufferSource(); src.buffer = b; if(rate) src.playbackRate.value = rate; const g = c.createGain(); g.gain.value = vol; src.connect(g); g.connect(c.destination); src.start(); return src; }catch(_){ return null; }
@@ -6560,12 +6576,13 @@ const LIVING = (function(){
     loadBar(.95); await paint();
     loadBar(1); setTimeout(()=> loadBar(null), 200);
     running = true; last = performance.now(); fade = 1; fadeTo = 0;
+    livAmbience(true);
     plushAudio();
     raf = requestAnimationFrame(loop);
     addEventListener('resize', resize);
   }
   function stop(){
-    running = false; bedSound(false);
+    running = false; bedSound(false); livAmbience(false);
     cancelAnimationFrame(raf);
     if(camera) dropCameraChildren();
     wrap.classList.remove('on', 'locked'); crt.classList.remove('in-living');
