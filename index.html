@@ -657,6 +657,7 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .living-memory span{font-family:var(--crtface); font-size:clamp(1rem,3vw,1.7rem); letter-spacing:.32em; text-transform:uppercase; color:#e6e2d8; text-shadow:-1.5px 0 rgba(255,20,60,.55), 1.5px 0 rgba(0,235,220,.4)}
 .living-memory .mem-video{position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000; opacity:0; transition:opacity .8s ease}
 .living-memory .mem-video.on{opacity:1}
+.living-memory.film > img, .living-memory.film > span{display:none}
 
 /* attention: the test screen and the Ugetsu-style task popups */
 .attn{position:absolute; inset:0; z-index:12; display:none; flex-direction:column; align-items:center; justify-content:center; gap:10px;
@@ -4418,7 +4419,7 @@ const LIVING = (function(){
           // the first thing: the view rushes down the hall to her face, holds on it, and comes back with the dark behind it
           level.dollyDone = true;
           startDolly({p:new THREE.Vector3(gp.x, 1.75, gp.z - 1.35), yaw:Math.PI, pitch:.02}, {out:2.0, hold:.75, back:1.3, fogTo:[2.0, 6.5],
-            onHold:()=>{ redLevel = Math.max(redLevel, .85); level.shake = .12; lsfx('sting', .8); }, onEnd:()=>{ level.shake = 0; }});
+            onHold:()=>{ redLevel = Math.max(redLevel, .85); level.shake = .12; }, onEnd:()=>{ level.shake = 0; }});
         }
         if(dolly) return;
         if(!level.chase){
@@ -4715,8 +4716,8 @@ const LIVING = (function(){
     const now0 = performance.now();
     const E = level.waves = {n:0, killed:0, need:0, max:1, gap:1500, state:'break', until:now0 + 3500, nextSpawn:0, best:ENDLESS_BEST()};
     level.speedMul = 1;
+    setHUD('unlimited');      // (always: after a catch the last wave's count must not linger)
     if(endlessLast){ flash('you reached wave ' + endlessLast + '. best: wave ' + E.best); E.until = now0 + 4500; }
-    else setHUD('unlimited');
     if(!endlessTipSeen){ endlessTipSeen = true; setTimeout(()=>{ if(level && level.waves === E) openTip(); }, 400); }
     level.tick = (now)=>{
       if(tipOpen) E.until = Math.max(E.until, now + 1500);
@@ -5576,7 +5577,7 @@ const LIVING = (function(){
       if(m){
         plushShow(P, true);
         if(t < 1.1){ plushPlace(P, 0); }                                                                                         // on its chair, in the light
-        else if(t < 1.5){ const k = sm((t - 1.1) / .4); m.position.set(cx + (ex - cx) * k, cy + (ey - cy) * k + Math.sin(k * Math.PI) * .2, cz + (ez - cz) * k); m.rotation.set(0, Math.PI / 2, 0); if(!P.intro.rushed){ P.intro.rushed = true; lsfx('sting', .9); redLevel = Math.max(redLevel, .8); level.shake = .14; } }      // at you, fast
+        else if(t < 1.5){ const k = sm((t - 1.1) / .4); m.position.set(cx + (ex - cx) * k, cy + (ey - cy) * k + Math.sin(k * Math.PI) * .2, cz + (ez - cz) * k); m.rotation.set(0, Math.PI / 2, 0); if(!P.intro.rushed){ P.intro.rushed = true; lsfxPlay('dollscream', .9); redLevel = Math.max(redLevel, .8); level.shake = .14; } }      // at you, fast
         else if(t < 2.5){ m.position.set(ex + (Math.random() - .5) * .014, ey + (Math.random() - .5) * .014, ez + (Math.random() - .5) * .014); m.rotation.set(0, Math.PI / 2 + Math.sin(t * 9) * .05, Math.sin(t * 7) * .04); }      // in your face
         else if(t < 3.9){ const k = sm((t - 2.5) / 1.4); m.position.set(ex + (cx - ex) * k, ey + (cy - ey) * k + Math.sin(k * Math.PI) * .25, ez + (cz - ez) * k); m.rotation.set(0, Math.PI / 2, Math.sin(t * 5) * .05); level.shake = 0; }      // back to its chair
         else { plushPlace(P, 0); }
@@ -5651,7 +5652,7 @@ const LIVING = (function(){
     memoryEl.classList.add('on');
     M.finish = ()=>{
       if(M.done) return; M.done = true; clearTimeout(memoryTimer);
-      memoryEl.classList.remove('on'); const v = memoryEl.querySelector('video'); if(v){ v.pause(); v.remove(); }
+      memoryEl.classList.remove('on', 'film'); const v = memoryEl.querySelector('video'); if(v){ v.pause(); v.remove(); }
       if(level.memory === M) level.memory = null;
       level.memoryDone = true;
       if(level.exitDoor){ openDoor(level.exitDoor); lsfx('doorOpen', .9); level.interactives = level.interactives.filter(o => !(o.userData && o.userData.kind === 'shutdoor')); }      // now the door will open
@@ -5660,6 +5661,7 @@ const LIVING = (function(){
       // cutscene 2, after the flashlight game. the house's ambience steps aside; it can be skipped (any key or a tap) only once it has
       // been watched to the end. if the film cannot play, her words come instead
       const seen = (()=>{ try{ return localStorage.getItem('bleood_living_cut2') === '1'; }catch(_){ return false; } })();
+      memoryEl.classList.add('film');      // (the film alone: no photograph and no 'memory' label coming up first)
       const v = document.createElement('video'); v.src = MEMORY_VIDEO; v.muted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', ''); v.preload = 'auto'; v.className = 'mem-video'; memoryEl.appendChild(v);
       let snd = null, started = false;
       const fin0 = M.finish; let skipper = null;
