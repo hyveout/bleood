@@ -247,11 +247,11 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
   filter:grayscale(1) brightness(1.08) drop-shadow(0 0 14px rgba(255,255,255,.55)) drop-shadow(0 6px 5px rgba(0,0,0,.85));
 }
 .flower:focus-visible{outline:1px dashed var(--bone); outline-offset:4px}
-/* the page each flower leads to, written under its bloom: above the dark, so it can be read before any candle is lit */
-.flower-name{position:absolute; z-index:17; transform:translateX(-50%); white-space:nowrap; pointer-events:none;
-  font-family:var(--crtface); font-size:max(12px, min(calc(var(--s) * .12), 19px)); letter-spacing:.14em; text-transform:uppercase; line-height:1; color:var(--bone); opacity:.6;
-  text-shadow:0 0 8px #000, 0 0 3px #000; transition:opacity .35s ease}
-.flower-name.on{opacity:1}
+/* the page each flower leads to, small, in the heart of its bloom: above the dark, so it can be read before any candle is lit */
+.flower-name{position:absolute; z-index:17; transform:translate(-50%,-50%); white-space:nowrap; pointer-events:none;
+  font-family:var(--crtface); font-size:max(9px, min(calc(var(--s) * .075), 13px)); letter-spacing:.08em; text-transform:lowercase; line-height:1; color:var(--bone); opacity:.75;
+  text-shadow:0 0 4px #000, 0 0 2px #000, 0 0 1px #000; transition:opacity .35s ease, transform .6s cubic-bezier(.3,1.08,.5,1)}
+.flower-name.on{opacity:1; transform:translate(-50%, calc(-50% - var(--s) * .09))}      /* rises with the bloom */
 /* home ring: each flower on a short stem; hover and it grows, lifting the bloom (same as the flower link on every page) */
 .flower .bloom{position:relative; z-index:1; display:block; width:100%; height:100%; transition:transform .6s cubic-bezier(.3,1.08,.5,1)}
 @media (hover:hover) and (pointer:fine){ .flower:hover .bloom{transform:translateY(-9%)} }
@@ -1689,7 +1689,7 @@ function layoutRing(){
     scene.appendChild(el);
     // its name, under the bloom. kept outside the flower so it sits above the dark (the flowers fade into it; the names stay readable)
     const nm = document.createElement('span'); nm.className = 'flower-name'; nm.textContent = p.title; nm.setAttribute('aria-hidden', 'true');
-    nm.style.left = x + '%'; nm.style.top = 'calc(' + y + '% + ' + (size * .13).toFixed(1) + 'px)'; nm.style.setProperty('--s', size + 'px');
+    nm.style.left = x + '%'; nm.style.top = 'calc(' + y + '% - ' + (size * .22).toFixed(1) + 'px)';      /* the bloom's heart */ nm.style.setProperty('--s', size + 'px');
     el.addEventListener('mouseenter', ()=> nm.classList.add('on')); el.addEventListener('mouseleave', ()=> nm.classList.remove('on'));
     el.addEventListener('focus', ()=> nm.classList.add('on')); el.addEventListener('blur', ()=> nm.classList.remove('on'));
     scene.appendChild(nm);
