@@ -3069,7 +3069,7 @@ const LIVING = (function(){
     if(tipEl){ tipOpen = false; tipEl.classList.remove('on'); }
   }
   function clearLevel(){
-    chaseSoundsStop(false); if(ambDuck !== 1) livAmbienceDuck(1, 2);
+    chaseSoundsStop(false); if(level && level.endSnd){ level.endSnd.stop(1.5); level.endSnd = null; } if(ambDuck !== 1) livAmbienceDuck(1, 2);
     if(camFrame){ camUp = false; camFrame.classList.remove('on'); capEl.classList.remove('on', 'full'); capHint.classList.remove('on'); if(camBtn) camBtn.classList.remove('on'); }
     if(creditsEl){ creditsEl.style.opacity = 0; creditsEl.dataset.i = ''; }
     dropCameraChildren();
@@ -4763,6 +4763,7 @@ const LIVING = (function(){
 
   // ================= FINAL ROOM: the ritual =================
   function buildRitual(){
+    roomBuf(END_SND);      // (the ending's sound, ready before the photo is touched)
     curBuilder = buildRitual; curBump = 0;
     clearLevel();
     const g = level.group, w = 8, d = 8, h = 3.4, rnd = (lo, hi) => lo + Math.random() * (hi - lo);
@@ -4891,6 +4892,10 @@ const LIVING = (function(){
     function startEnding(){
       if(ending) return;
       ending = level.ending = {t0:performance.now(), stage:0, locked:true, fx:[], rise:0, answer:null};
+      // the ending's sound (made to the animation: the crash through the sky lands at 5.8 s). the house's ambience steps aside for it
+      // and comes back slowly once it has run out
+      livAmbienceDuck(0, .5); level.endSnd = roomSound(END_SND, {vol:1, fade:.03, loop:false});
+      { const lv = level; setTimeout(()=>{ if(level === lv && lv.endSnd){ lv.endSnd = null; livAmbienceDuck(1, 4); } }, END_LEN * 1000); }
       if(level.demon) level.demon.lockT = 1;      // from now on she does nothing but look at you
       level.interactives.length = 0; if(hover) glowOff(hover); hover = null;
     }
@@ -5303,6 +5308,7 @@ const LIVING = (function(){
     return h;
   }
   // the first hallway (the chase): its own ambience as you walk toward her, a static that rises the nearer she is, and the chase itself
+  const END_SND = 'sfx_living_end.mp3', END_LEN = 22.9;
   const CHASE_SND = {walk:'sfx_chase_walk.mp3', stat:'sfx_chase_static.mp3', run:'sfx_chase_run.mp3', WALK:1, STAT:1, RUN:.7, FAR:21, NEAR:8};
   function chaseSoundsStop(fast){ const S = level && level.chaseSnd; if(!S) return; ['walk', 'stat', 'run'].forEach(k => { if(S[k]) S[k].stop(fast ? .08 : (k === 'run' && S.escaped) ? 2.0 : .6); }); level.chaseSnd = null; }      // (escaped: the chase fades out over the doorway rather than cutting)
   function livAmbience(on){
@@ -6651,7 +6657,7 @@ const LIVING = (function(){
     addEventListener('resize', resize);
   }
   function stop(){
-    running = false; bedSound(false); livAmbience(false); chaseSoundsStop(true);
+    running = false; bedSound(false); livAmbience(false); chaseSoundsStop(true); if(level && level.endSnd){ level.endSnd.stop(.3); level.endSnd = null; }
     cancelAnimationFrame(raf);
     if(camera) dropCameraChildren();
     wrap.classList.remove('on', 'locked'); crt.classList.remove('in-living');
