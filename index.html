@@ -3056,6 +3056,7 @@ const LIVING = (function(){
     if(tipEl){ tipOpen = false; tipEl.classList.remove('on'); }
   }
   function clearLevel(){
+    chaseSoundsStop(false); if(ambDuck !== 1) livAmbienceDuck(1, 2);
     if(camFrame){ camUp = false; camFrame.classList.remove('on'); capEl.classList.remove('on', 'full'); capHint.classList.remove('on'); if(camBtn) camBtn.classList.remove('on'); }
     if(creditsEl){ creditsEl.style.opacity = 0; creditsEl.dataset.i = ''; }
     dropCameraChildren();
@@ -4275,6 +4276,9 @@ const LIVING = (function(){
       spawnDemon(2.0, 0, 0.3, HOME_Z, {watch:{spawn:{x:0, z:-d/2 + 1.2, yaw:Math.PI}, home:[0, 0.3, HOME_Z], openMin:1, openMax:2, closedMin:1e9, closedMax:1e9, first:1e12}});
       const herLight = new THREE.PointLight(0xff5030, .9, 6, 1.6); herLight.position.set(0, 2.2, HOME_Z - 1.2); g.add(herLight);   // a dim red light over her, so she can be seen through the dark
       level.chase = null;
+      livAmbienceDuck(0, 1.5);      // the house's own ambience gives way to this hall's
+      level.chaseSnd = {walk:roomSound(CHASE_SND.walk, {vol:CHASE_SND.WALK, fade:1.5, loopStart:8, loopEnd:24}), stat:roomSound(CHASE_SND.stat, {vol:0, fade:.05, loopStart:8, loopEnd:24}), run:null, escaped:false};
+      roomBuf(CHASE_SND.run);      // (ready before she runs)
       // the way you came in is shut behind you, until you have seen her
       const back = door(g, 0, -d/2, 0, 'back'); level.backDoor = back;
       level.exitBackZ = -d/2 - .15;
@@ -4305,6 +4309,7 @@ const LIVING = (function(){
       if(level.candleLight) level.candleLight.intensity = (level.plush && level.plush.dark ? 0 : .7) + Math.sin(now / 70) * .06 + (Math.random() - .5) * .15;
       if(p === 2 && level.demon && level.watch && !level.watch.scaring){
         const gp = level.demon.group.position, dx = camera.position.x - gp.x, dz = camera.position.z - gp.z, dist = Math.hypot(dx, dz);
+        { const S = level.chaseSnd; if(S && S.stat && !S.escaped){ const k = Math.max(0, Math.min(1, (CHASE_SND.FAR - dist) / (CHASE_SND.FAR - CHASE_SND.NEAR))); S.stat.setVol(CHASE_SND.STAT * k * k, .2); } }      // the static: louder the nearer she is
         if(!level.dollyDone && chaseSeen){ level.dollyDone = true; if(scene.fog){ scene.fog.near = 2.0; scene.fog.far = 6.5; } }      // (seen once: not again after a death)
         if(!level.dollyDone && !dolly && !level.intro){
           chaseSeen = true;
@@ -4319,6 +4324,7 @@ const LIVING = (function(){
           const fx = -Math.sin(yaw), fz = -Math.cos(yaw), ang = Math.acos(Math.max(-1, Math.min(1, (-dx * fx - dz * fz) / Math.max(.001, dist))));
           if((dist < 9.2 && ang < .8) || dist < 3.5){
             level.chase = now; redLevel = Math.max(redLevel, .9); level.shake = .25;
+            { const S = level.chaseSnd; if(S){ if(S.walk) S.walk.stop(.8); S.run = roomSound(CHASE_SND.run, {vol:CHASE_SND.RUN, fade:.03, loopStart:4, loopEnd:8}); } }      // she runs: the chase plays (its middle loops if you are slow, its tail plays out once you are through)
             if(level.backDoor){ openDoor(level.backDoor); lsfx('doorOpen', .9); }                                     // and behind you, the door you came through swings open
             story('run');
           }
@@ -4326,6 +4332,7 @@ const LIVING = (function(){
           // she comes, fast: up to speed in half a second, a little quicker than you can walk
           // (easier now: she takes a second to get going, runs only a little faster than you walk, and stops dead once you are through the door)
           const atDoor = switching || camera.position.z < level.exitBackZ + .9;
+          { const S = level.chaseSnd; if(S && atDoor && !S.escaped){ S.escaped = true; if(S.run && S.run.node) S.run.node.loop = false; else if(S.run) S.run.stop(.5); if(S.stat) S.stat.stop(1.2); } }      // through the door: the chase runs out its tail, the static goes
           const sp = atDoor ? 0 : Math.min(1, (now - level.chase) / 1000) * (TOUCH ? 2.35 : 2.6) * dtS;      // (phones: a little slower, there is less screen to see her coming)
           if(dist > 1.0 || atDoor){ gp.x = Math.max(-.9, Math.min(.9, gp.x + dx / Math.max(dist, .01) * sp)); gp.z += dz / Math.max(dist, .01) * sp; }
           else jumpscare(level.watch);                                                           // she has you
@@ -5266,6 +5273,25 @@ const LIVING = (function(){
   // there is no gap at the seam. the file carries 0.1 s of extra on each end, so the loop points sit in the middle of real sound
   const AMB_LIV = {src:'sfx_ambience_living.mp3', vol:.9, len:46.729167, pad:.1};
   let ambLBuf = null, ambLAsk = null, ambLNode = null, ambLGain = null;
+  let ambDuck = 1;
+  function livAmbienceDuck(k, sec){ ambDuck = k; const c = AC; if(!c || !ambLGain) return; const t = c.currentTime, g = ambLGain.gain; try{ g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(AMB_LIV.vol * k, t + (sec || 1.5)); }catch(_){ } }
+  // sounds for one room: fetched and decoded once, then played through the sound engine (loops without a gap)
+  const RBUF = {}, RASK = {};
+  function roomBuf(src){ const c = AC; if(!c) return Promise.resolve(null); if(RBUF[src]) return Promise.resolve(RBUF[src]);
+    if(!RASK[src]) RASK[src] = fetch(src).then(r => r.arrayBuffer()).then(ab => new Promise((res, rej) => { const p = c.decodeAudioData(ab, res, rej); if(p && p.catch) p.catch(rej); })).then(b => (RBUF[src] = b)).catch(() => { RASK[src] = null; return null; });
+    return RASK[src]; }
+  function roomSound(src, o){      // o: {vol, fade, loopStart, loopEnd, loop, at}; returns a handle whose node/gain arrive when the sound is ready
+    const h = {node:null, gain:null, dead:false, vol:o.vol, setVol(v, sec){ h.vol = v; if(!h.gain) return; const c = AC, t = c.currentTime, g = h.gain.gain; try{ g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(v, t + (sec == null ? .15 : sec)); }catch(_){ } },
+      stop(sec){ h.dead = true; if(!h.node) return; const c = AC, t = c.currentTime, g = h.gain.gain; try{ g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(0, t + (sec || .05)); h.node.stop(t + (sec || .05) + .05); }catch(_){ } } };
+    roomBuf(src).then(b => { const c = AC; if(!b || !c || h.dead) return;
+      try{ const n = c.createBufferSource(), g = c.createGain(), t0 = c.currentTime; n.buffer = b;
+        if(o.loop !== false){ n.loop = true; n.loopStart = o.loopStart || 0; n.loopEnd = Math.min(b.duration, o.loopEnd || b.duration); }
+        g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(h.vol, t0 + (o.fade || .05)); n.connect(g); g.connect(c.destination); n.start(t0, o.at || 0); h.node = n; h.gain = g; }catch(_){ } });
+    return h;
+  }
+  // the first hallway (the chase): its own ambience as you walk toward her, a static that rises the nearer she is, and the chase itself
+  const CHASE_SND = {walk:'sfx_chase_walk.mp3', stat:'sfx_chase_static.mp3', run:'sfx_chase_run.mp3', WALK:1, STAT:1, RUN:.7, FAR:21, NEAR:8};
+  function chaseSoundsStop(fast){ const S = level && level.chaseSnd; if(!S) return; ['walk', 'stat', 'run'].forEach(k => { if(S[k]) S[k].stop(fast ? .08 : (k === 'run' && S.escaped) ? 2.0 : .6); }); level.chaseSnd = null; }      // (escaped: the chase fades out over the doorway rather than cutting)
   function livAmbience(on){
     const c = AC; if(!c) return;
     const t = c.currentTime;
@@ -5273,7 +5299,7 @@ const LIVING = (function(){
     if(ambLNode) return;
     const go = b => { if(!running || ambLNode || !b) return;
       try{ const n = c.createBufferSource(), g = c.createGain(), t0 = c.currentTime; n.buffer = b; n.loop = true; n.loopStart = AMB_LIV.pad; n.loopEnd = Math.min(b.duration, AMB_LIV.pad + AMB_LIV.len);
-        g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(AMB_LIV.vol, t0 + 2.5); n.connect(g); g.connect(c.destination); n.start(t0, AMB_LIV.pad); ambLNode = n; ambLGain = g; }catch(_){ } };
+        g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(AMB_LIV.vol * ambDuck, t0 + 2.5); n.connect(g); g.connect(c.destination); n.start(t0, AMB_LIV.pad); ambLNode = n; ambLGain = g; }catch(_){ } };
     if(ambLBuf) return go(ambLBuf);
     if(!ambLAsk) ambLAsk = fetch(AMB_LIV.src).then(r => r.arrayBuffer()).then(ab => new Promise((res, rej) => { const p = c.decodeAudioData(ab, res, rej); if(p && p.catch) p.catch(rej); })).then(b => (ambLBuf = b)).catch(() => { ambLAsk = null; return null; });
     ambLAsk.then(go);
@@ -5559,6 +5585,7 @@ const LIVING = (function(){
   }
   function jumpscare(W){
     W.scaring = true; W.open = false;
+    chaseSoundsStop(true);
     // in the chair it is her own head that comes at you; a demon in the hallway sends one of her heads
     const built = W.head ? null : getScareRig();
     const H = W.head || built.group, eyes = W.head ? W.eyes : built.eyes, glow = W.head ? W.eyeGlow : built.glow;
@@ -6599,7 +6626,7 @@ const LIVING = (function(){
     addEventListener('resize', resize);
   }
   function stop(){
-    running = false; bedSound(false); livAmbience(false);
+    running = false; bedSound(false); livAmbience(false); chaseSoundsStop(true);
     cancelAnimationFrame(raf);
     if(camera) dropCameraChildren();
     wrap.classList.remove('on', 'locked'); crt.classList.remove('in-living');
