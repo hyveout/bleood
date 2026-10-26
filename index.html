@@ -3119,7 +3119,7 @@ const LIVING = (function(){
     if(tipEl){ tipOpen = false; tipEl.classList.remove('on'); }
   }
   function clearLevel(){
-    chaseSoundsStop(false); if(level && level.scanSnd){ level.scanSnd.stop(.6); level.scanSnd = null; } if(level && level.endSnd){ level.endSnd.stop(1.5); level.endSnd = null; } if(ambDuck !== 1) livAmbienceDuck(1, 2);
+    if(cut3Snd){ cut3Snd.stop(1.0); cut3Snd = null; } chaseSoundsStop(false); if(level && level.scanSnd){ level.scanSnd.stop(.6); level.scanSnd = null; } if(level && level.endSnd){ level.endSnd.stop(1.5); level.endSnd = null; } if(ambDuck !== 1) livAmbienceDuck(1, 2);
     if(camFrame){ camUp = false; camFrame.classList.remove('on'); capEl.classList.remove('on', 'full'); capHint.classList.remove('on'); if(camBtn) camBtn.classList.remove('on'); }
     if(creditsEl){ creditsEl.style.opacity = 0; creditsEl.dataset.i = ''; }
     dropCameraChildren();
@@ -4919,6 +4919,7 @@ const LIVING = (function(){
       // the ending's sound (made to the animation: the crash through the sky lands at 5.8 s). the house's ambience steps aside for it
       // and comes back slowly once it has run out
       livAmbienceDuck(0, .5); level.endSnd = roomSound(END_SND, {vol:1, fade:.03, loop:false});
+      if(cut3Vid){ try{ cut3Vid.preload = 'auto'; cut3Vid.load(); }catch(_){ } } roomBuf(CUT3_SFX);      // (the "yes" film, fetched while the ending plays)
       { const lv = level; setTimeout(()=>{ if(level === lv && lv.endSnd){ lv.endSnd = null; livAmbienceDuck(1, 4); } }, END_LEN * 1000); }
       if(level.demon) level.demon.lockT = 1;      // from now on she does nothing but look at you
       level.interactives.length = 0; if(hover) glowOff(hover); hover = null;
@@ -5047,7 +5048,24 @@ const LIVING = (function(){
       redLevel = 1;
     }
     // her question is answered with a key or a tap; either answer leads to the same place: white, and a black door
+    // "yes": cutscene 3 (her taking you) plays first, with its own sound, then the white and the credits as before. "no" goes straight on
     function answer(a){
+      const E = ending; if(!E || E.stage !== 3) return;
+      if(a === 'yes' && cut3Vid){
+        E.stage = 3.5; level.asking = false; askEl.classList.remove('on'); askEl.querySelector('.ask-choices').classList.remove('on');
+        if(level.endSnd){ level.endSnd.stop(.6); level.endSnd = null; }
+        let over = false; const finish = ()=>{ if(over) return; over = true; clearTimeout(guard); cut3Vid.onended = null; cut3Vid.classList.remove('on'); try{ cut3Vid.pause(); }catch(_){ } if(ending === E){ E.stage = 3; answerGo('yes'); } };
+        const guard = setTimeout(finish, 16000);
+        const go3 = ()=>{ try{ cut3Vid.currentTime = 0; }catch(_){ }
+          cut3Vid.onended = finish;
+          cut3Vid.onplaying = ()=>{ if(cut3Vid._started) return; cut3Vid._started = true; cut3Vid.classList.add('on'); cut3Snd = roomSound(CUT3_SFX, {vol:1, fade:.02, loop:false}); };
+          cut3Vid._started = false; const pr = cut3Vid.play(); if(pr && pr.catch) pr.catch(finish); };
+        if(RBUF[CUT3_SFX]) go3(); else { let w = false; const g = ()=>{ if(!w){ w = true; go3(); } }; roomBuf(CUT3_SFX).then(g); setTimeout(g, 2000); }
+        return;
+      }
+      answerGo(a);
+    }
+    function answerGo(a){
       const E = ending; if(!E || E.stage !== 3) return;
       E.answer = a; E.stage = 4; E.abyssAt = performance.now(); level.asking = false;
       try{ localStorage.setItem('bleood_living_beaten', '1'); }catch(_){ }      // the story is done: unlimited opens on the title screen
@@ -5644,6 +5662,7 @@ const LIVING = (function(){
   // the same for every way she can catch you: her head in the haunting, the eyes in the dark room, the chase. if the film cannot
   // play, the old lunge (her head at your face) stands in
   const JS_VIDEO = 'bleood_jumpscare.mp4';
+  const CUT3_SRC = 'bleood_cutscene3.mp4', CUT3_SFX = 'sfx_cutscene3.mp3'; let cut3Vid = null, cut3Snd = null;      // cutscene 3: after "yes"
   let jsVid = null, jsOn = false, jsSnd = null;      // (the film's sound, the neck snap, played with it)
   function jumpscare(W){
     if(jsOn) return;
@@ -6289,6 +6308,7 @@ const LIVING = (function(){
     tipEl.addEventListener('touchend', e=>{ e.preventDefault(); e.stopPropagation(); closeTip(); });
     redEl = document.createElement('div'); redEl.className = 'living-red'; wrap.appendChild(redEl);
     watchEl = document.createElement('div'); watchEl.className = 'living-watch'; wrap.appendChild(watchEl);      // the 'she is looking' state: red, throbbing, the picture straining
+    cut3Vid = document.createElement('video'); cut3Vid.className = 'js-vid'; cut3Vid.muted = true; cut3Vid.playsInline = true; cut3Vid.setAttribute('playsinline', ''); cut3Vid.setAttribute('webkit-playsinline', ''); cut3Vid.preload = 'none'; cut3Vid.src = CUT3_SRC; wrap.appendChild(cut3Vid);
     jsVid = document.createElement('video'); jsVid.className = 'js-vid'; jsVid.muted = true; jsVid.playsInline = true; jsVid.setAttribute('playsinline', ''); jsVid.setAttribute('webkit-playsinline', ''); jsVid.preload = 'auto'; jsVid.src = JS_VIDEO; wrap.appendChild(jsVid);
     scareEl = document.createElement('div'); scareEl.className = 'jumpscare'; scareEl.innerHTML = '<img src="' + TARGET_IMG + '" alt="">'; wrap.appendChild(scareEl);
 
@@ -6712,7 +6732,7 @@ const LIVING = (function(){
     addEventListener('resize', resize);
   }
   function stop(){
-    running = false; bedSound(false); livAmbience(false); chaseSoundsStop(true); if(level && level.scanSnd){ level.scanSnd.stop(.1); level.scanSnd = null; } if(level && level.endSnd){ level.endSnd.stop(.3); level.endSnd = null; }
+    running = false; bedSound(false); livAmbience(false); chaseSoundsStop(true); if(cut3Snd){ cut3Snd.stop(.2); cut3Snd = null; } if(cut3Vid){ try{ cut3Vid.pause(); }catch(_){ } cut3Vid.classList.remove('on'); } if(level && level.scanSnd){ level.scanSnd.stop(.1); level.scanSnd = null; } if(level && level.endSnd){ level.endSnd.stop(.3); level.endSnd = null; }
     cancelAnimationFrame(raf);
     if(camera) dropCameraChildren();
     wrap.classList.remove('on', 'locked'); crt.classList.remove('in-living');
