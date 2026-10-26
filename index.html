@@ -2426,12 +2426,12 @@ const LIVING = (function(){
     if(!cut1Vid){ cut1Vid = document.createElement('video'); cut1Vid.className = 'lo-vid'; cut1Vid.muted = true; cut1Vid.playsInline = true; cut1Vid.setAttribute('playsinline', ''); cut1Vid.setAttribute('webkit-playsinline', ''); cut1Vid.preload = 'auto'; cut1Vid.src = CUT1_SRC; openEl.insertBefore(cut1Vid, openEl.firstChild); }
     // cutscene 1: the film (bleood_cutscene1.mp4) plays over the black in place of the opening words; the black holds for as long as it
     // runs (timed from when it really starts), then you wake on the bed. skipping stops it. if the film cannot play, the words come instead
-    if(key === 'open' && !lines && cut1Vid){
+    if(key === 'open' && !lines && cut1Vid){ key = 'cut1';      // (its own record: having read the old words does not count as having watched it)
       lines = [[0, ''], [CUT1_LEN, '']];
       try{ cut1Vid.currentTime = 0; }catch(_){ }
-      cut1Vid.onplaying = ()=>{ cut1Vid.classList.add('on'); if(opening && opening.key === 'open' && !opening.vidStarted){ opening.vidStarted = true; opening.t0 = performance.now(); } };
+      cut1Vid.onplaying = ()=>{ cut1Vid.classList.add('on'); if(opening && opening.key === 'cut1' && !opening.vidStarted){ opening.vidStarted = true; opening.t0 = performance.now(); } };
       const pr = cut1Vid.play();
-      if(pr && pr.catch) pr.catch(()=>{ if(opening && opening.key === 'open' && !opening.vidStarted){ cut1Vid.classList.remove('on'); const O = opening; showOpening(OPEN_LINES, 'open', O.onEnd); } });
+      if(pr && pr.catch) pr.catch(()=>{ if(opening && opening.key === 'cut1' && !opening.vidStarted){ cut1Vid.classList.remove('on'); const O = opening; showOpening(OPEN_LINES, 'open', O.onEnd); } });
     }
     lines = lines || OPEN_LINES;
     openEl.querySelector('.lo-lines').innerHTML = ''; openEl.classList.add('on'); openEl.classList.toggle('skip', openSeen(key));
@@ -2448,8 +2448,8 @@ const LIVING = (function(){
   }
   function endOpening(){
     if(!opening) return; const O = opening; opening = null; openEl.classList.remove('on');
-    if(O.key === 'open' && cut1Vid){ try{ cut1Vid.pause(); }catch(_){ } cut1Vid.classList.remove('on'); }
-    try{ localStorage.setItem('bleood_living_' + O.key, '1'); }catch(e){}
+    if(O.key === 'cut1' && cut1Vid){ try{ cut1Vid.pause(); }catch(_){ } cut1Vid.classList.remove('on'); }
+    if(O.finished){ try{ localStorage.setItem('bleood_living_' + O.key, '1'); }catch(e){} }      // (only once it has been seen to the end: then it can be skipped)
     if(level && level.intro){ level.intro.t0 = performance.now(); bedSound(true); }      // now you wake on the bed
     if(O.onEnd) O.onEnd();
   }
@@ -3101,7 +3101,7 @@ const LIVING = (function(){
     if(tipEl){ tipOpen = false; tipEl.classList.remove('on'); }
   }
   function clearLevel(){
-    chaseSoundsStop(false); if(level && level.endSnd){ level.endSnd.stop(1.5); level.endSnd = null; } if(ambDuck !== 1) livAmbienceDuck(1, 2);
+    chaseSoundsStop(false); if(level && level.scanSnd){ level.scanSnd.stop(.6); level.scanSnd = null; } if(level && level.endSnd){ level.endSnd.stop(1.5); level.endSnd = null; } if(ambDuck !== 1) livAmbienceDuck(1, 2);
     if(camFrame){ camUp = false; camFrame.classList.remove('on'); capEl.classList.remove('on', 'full'); capHint.classList.remove('on'); if(camBtn) camBtn.classList.remove('on'); }
     if(creditsEl){ creditsEl.style.opacity = 0; creditsEl.dataset.i = ''; }
     dropCameraChildren();
@@ -4746,6 +4746,7 @@ const LIVING = (function(){
     camera.position.set(0, EYE, -d/2 + 1.2); yaw = Math.PI; pitch = 0;
     setHUD('');
     const scareW = {eyes:[], eyeGlow:{intensity:0}, scaring:false}; level.scareW = scareW; const t0 = performance.now();
+    level.scanSnd = roomSound(SCAN_SRC, {vol:0, fade:.05, loopStart:.1, loopEnd:.1 + SCAN_LEN}); level._sg = 99;
     hauntSetup(); hauntArm(HAUNT.AGAIN);      // the heads come here too, among the girls
     let doorGlow = null;
     if(TOUCH){      // phones: a very faint light in the doorway, coming up as you get close
@@ -4761,6 +4762,7 @@ const LIVING = (function(){
         doorGlow.gp.material.opacity = .02 + k * .1; doorGlow.spill.material.opacity = k * .06; }
       if(scareW.scaring) return;
       hauntStep(now, Math.min(.05, (now - (level._ht || now)) / 1000)); level._ht = now;
+      if(level.scanSnd){ const k = Math.max(0, Math.min(1, 1 - level._sg / SCAN_NEAR)); level.scanSnd.setVol(SCAN_VOL * k * k, .2); } level._sg = 99;      // the scan's hum: louder the nearer you are to the nearest red beam
       level.demons.forEach(G=>{
         // she drifts about the room on a slow loop, turning as she goes, and her light sweeps across the way she is facing
         const nx = G.hx + Math.sin(t * G.wA + G.ph) * G.rA, nz = G.hz + Math.cos(t * G.wB + G.ph) * G.rB;
@@ -4773,6 +4775,7 @@ const LIVING = (function(){
         // are you in her light? inside the cone's reach and within its spread, measured flat along the floor
         const dx = camera.position.x - G.cx, dz = camera.position.z - G.cz, dist = Math.hypot(dx, dz), ry = G.D.group.rotation.y;
         const fx = Math.sin(ry), fz = Math.cos(ry), along = dx * fx + dz * fz, across = Math.abs(dx * fz - dz * fx);
+        { const half = .35 + Math.max(0, Math.min(7.2, along)) * .3, out = Math.max(0, across - half), past = along < 0 ? -along : along > 7.2 ? along - 7.2 : 0; level._sg = Math.min(level._sg, Math.hypot(out, past)); }
         if(now - t0 > 2500 && along > .8 && along < 7.2 && across < .35 + along * .3){      // (a moment's grace as you come in)
           scareW.scaring = true; redLevel = 1; level.shake = .25;
           jumpscare(scareW);
@@ -5341,6 +5344,7 @@ const LIVING = (function(){
   }
   // the first hallway (the chase): its own ambience as you walk toward her, a static that rises the nearer she is, and the chase itself
   const END_SND = 'sfx_living_end.mp3', END_LEN = 22.9;
+  const SCAN_SRC = 'sfx_red_scan.mp3', SCAN_LEN = 29.375, SCAN_VOL = 1, SCAN_NEAR = 4.5;      // the dark room's red scan: silent 4.5 m from a beam, full in it
   const CHASE_SND = {walk:'sfx_chase_walk.mp3', stat:'sfx_chase_static.mp3', run:'sfx_chase_run.mp3', WALK:1, STAT:1, RUN:.7, FAR:21, NEAR:8};
   function chaseSoundsStop(fast){ const S = level && level.chaseSnd; if(!S) return; ['walk', 'stat', 'run'].forEach(k => { if(S[k]) S[k].stop(fast ? .08 : (k === 'run' && S.escaped) ? 2.0 : .6); }); level.chaseSnd = null; }      // (escaped: the chase fades out over the doorway rather than cutting)
   function livAmbience(on){
@@ -5654,7 +5658,7 @@ const LIVING = (function(){
   function jumpscare(W){
     if(jsOn) return;
     W.scaring = true; W.open = false;
-    chaseSoundsStop(true);
+    chaseSoundsStop(true); if(level && level.scanSnd){ level.scanSnd.stop(.08); level.scanSnd = null; }
     if(jsVid){
       jsOn = true; redLevel = 0; level.shake = 0;
       const done = ()=>{ if(!jsOn) return; jsOn = false; clearTimeout(guard); jsVid.onended = null;
@@ -6712,7 +6716,7 @@ const LIVING = (function(){
     addEventListener('resize', resize);
   }
   function stop(){
-    running = false; bedSound(false); livAmbience(false); chaseSoundsStop(true); if(level && level.endSnd){ level.endSnd.stop(.3); level.endSnd = null; }
+    running = false; bedSound(false); livAmbience(false); chaseSoundsStop(true); if(level && level.scanSnd){ level.scanSnd.stop(.1); level.scanSnd = null; } if(level && level.endSnd){ level.endSnd.stop(.3); level.endSnd = null; }
     cancelAnimationFrame(raf);
     if(camera) dropCameraChildren();
     wrap.classList.remove('on', 'locked'); crt.classList.remove('in-living');
