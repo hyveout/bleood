@@ -247,11 +247,12 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
   filter:grayscale(1) brightness(1.08) drop-shadow(0 0 14px rgba(255,255,255,.55)) drop-shadow(0 6px 5px rgba(0,0,0,.85));
 }
 .flower:focus-visible{outline:1px dashed var(--bone); outline-offset:4px}
-/* the page each flower leads to, small, just under its bloom, at the flower's depth (so the dark dims it with the flowers) */
-.flower-name{position:absolute; transform:translate(-50%,0); white-space:nowrap; pointer-events:none;
-  font-family:var(--crtface); font-size:max(9px, min(calc(var(--s) * .075), 13px)); letter-spacing:.08em; text-transform:lowercase; line-height:1; color:var(--bone); opacity:.9;
-  text-shadow:0 0 4px #000, 0 0 2px #000, 0 0 1px #000; transition:opacity .35s ease, transform .6s cubic-bezier(.3,1.08,.5,1)}
-.flower-name.on{opacity:1; transform:translate(-50%, calc(var(--s) * -.09))}      /* rises with the bloom */
+/* the page each flower leads to, small, by its bloom. above the dark so it stays readable, but dimmer the fewer candles burn (--night) */
+.flower-name{position:absolute; z-index:17; transform:translate(-50%,0); white-space:nowrap; pointer-events:none;
+  font-family:var(--crtface); font-size:max(9px, min(calc(var(--s) * .075), 13px)); letter-spacing:.08em; text-transform:lowercase; line-height:1; color:var(--bone); opacity:calc(.95 - var(--night, 0) * .7);
+  text-shadow:0 0 4px #000, 0 0 2px #000, 0 0 1px #000; transition:opacity .6s ease, transform .6s cubic-bezier(.3,1.08,.5,1)}
+.flower-name.on{opacity:1; transform:translate(-50%, calc(var(--s) * -.09))}
+.flower-name.above{transform:translate(-50%,-100%)} .flower-name.above.on{transform:translate(-50%, calc(-100% - var(--s) * .09))}      /* rises with the bloom */
 /* home ring: each flower on a short stem; hover and it grows, lifting the bloom (same as the flower link on every page) */
 .flower .bloom{position:relative; z-index:1; display:block; width:100%; height:100%; transition:transform .6s cubic-bezier(.3,1.08,.5,1)}
 @media (hover:hover) and (pointer:fine){ .flower:hover .bloom{transform:translateY(-9%)} }
@@ -1672,6 +1673,7 @@ function paintDark(){
 }
 // each name goes on its lily's heart, measured from where the browser actually drew the flower (not worked out from the numbers,
 // which some browsers lay out a little differently). the heart sits up and left of the picture's middle, turned with the flower
+const NAMES_ABOVE = matchMedia('(pointer: coarse), (max-width: 700px)');
 let FLOWER_PTS = null;      // the lily's own outline (opaque points of the picture, -.5..+.5), so each name goes under the petals as drawn
 function flowerPts(im){
   if(FLOWER_PTS) return FLOWER_PTS;
@@ -1687,11 +1689,13 @@ function placeNames(){
   scene.querySelectorAll('.flower-name').forEach(nm => {
     const im = nm._fl && nm._fl.querySelector('img'); if(!im) return;
     const r = im.getBoundingClientRect(), w = im.offsetWidth || r.width, h = im.offsetHeight || r.height, cx = r.left + r.width / 2, cy = r.top + r.height / 2, a = nm._r || 0;
-    const P = flowerPts(im); let mx = 0, bottom = .45;
-    if(P){ let lo = 1, hi = -1, by = -1; const ca = Math.cos(a), sa = Math.sin(a);
-      for(const [px, py] of P){ const X = px * ca - py * sa, Y = px * sa + py * ca; if(X < lo) lo = X; if(X > hi) hi = X; if(Y > by) by = Y; }
-      mx = (lo + hi) / 2; bottom = by; }
-    nm.style.left = (cx + mx * w - sr.left) + 'px'; nm.style.top = (cy + bottom * h + 4 - sr.top) + 'px';      // centred under the flower, just below its lowest petal
+    const P = flowerPts(im); let mx = 0, bottom = .45, topY = -.45;
+    if(P){ let lo = 1, hi = -1, by = -1, ty = 1; const ca = Math.cos(a), sa = Math.sin(a);
+      for(const [px, py] of P){ const X = px * ca - py * sa, Y = px * sa + py * ca; if(X < lo) lo = X; if(X > hi) hi = X; if(Y > by) by = Y; if(Y < ty) ty = Y; }
+      mx = (lo + hi) / 2; bottom = by; topY = ty; }
+    // phones: the two flowers behind her get their names over them (under them, the names ran into her wings); the rest just below the lowest petal
+    const above = NAMES_ABOVE.matches && nm._back; nm.classList.toggle('above', above);      // (the two behind her)
+    nm.style.left = (cx + mx * w - sr.left) + 'px'; nm.style.top = (above ? cy + topY * h - 4 : cy + bottom * h + 4) - sr.top + 'px';
   });
 }
 function layoutRing(){
@@ -1742,7 +1746,7 @@ function layoutRing(){
     scene.appendChild(el);
     // its name, under the bloom. kept outside the flower so it sits above the dark (the flowers fade into it; the names stay readable)
     const nm = document.createElement('span'); nm.className = 'flower-name'; nm.textContent = p.title; nm.setAttribute('aria-hidden', 'true');
-    nm.style.setProperty('--s', size + 'px'); nm.style.zIndex = el.style.zIndex; nm._fl = el;      // (at its flower's depth: behind her when the flower is, and in the dark with it) nm._r = ((((i*47)%36)-18)) * Math.PI / 180;      // (placed on the lily's heart once the flower is laid out: placeNames)
+    nm.style.setProperty('--s', size + 'px'); nm._back = depth < .5; nm._fl = el;      // (at its flower's depth: behind her when the flower is, and in the dark with it) nm._r = ((((i*47)%36)-18)) * Math.PI / 180;      // (placed on the lily's heart once the flower is laid out: placeNames)
     el.addEventListener('mouseenter', ()=> nm.classList.add('on')); el.addEventListener('mouseleave', ()=> nm.classList.remove('on'));
     el.addEventListener('focus', ()=> nm.classList.add('on')); el.addEventListener('blur', ()=> nm.classList.remove('on'));
     scene.appendChild(nm);
