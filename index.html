@@ -4363,8 +4363,8 @@ const LIVING = (function(){
           kt.needsUpdate = true; };
         if(document.fonts && document.fonts.load) document.fonts.load('300px Haunteod').then(paintKMF, paintKMF); else paintKMF();
         level.secret = {S, bounds:{minX:S.x0 - .45, maxX:S.x1 - .35, minZ:S.z0 + .35, maxZ:S.z1 - .35}};
-        // the big room's near wall can be walked through only at its door, and here, past the hall's end
-        level.xWalls = [{x:-w/2, allow:z => Math.abs(z - ARENA_Z) < .45 || (z > S.z0 + .35 && z < S.z1 - .35 && !(level.arena && level.arena.state === 'fighting'))}];      // (not mid-fight)
+        // the hall's left wall can be crossed only at its two doors (the big room, the doll's corridor) and here, past the hall's end
+        level.xWalls = [{x:-w/2, allow:z => Math.abs(z - ARENA_Z) < .45 || Math.abs(z - SIDE_Z) < .45 || (z > S.z0 + .35 && z < S.z1 - .35 && !(level.arena && level.arena.state === 'fighting'))}];      // (not mid-fight)
       }
       // the doll, and the light you hold
       level.plush = plushSetup(g, RX0, SIDE_Z);
