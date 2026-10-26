@@ -589,7 +589,12 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .use-btn{position:absolute; right:25%; bottom:8%; width:12%; aspect-ratio:1; border-radius:50%; border:1px solid rgba(233,232,228,.4); background:rgba(0,0,0,.4); display:none; z-index:7; touch-action:none;
   font-family:var(--crtface); font-size:clamp(.55rem,2.4vw,.8rem); letter-spacing:.2em; color:rgba(233,232,228,.7); align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent}
 .use-btn:active, .use-btn.pressed{border-color:#fff; color:#fff; background:rgba(240,200,104,.22)}
-.use-btn .f{display:none} .living.cam-up .use-btn .u{display:none} .living.cam-up .use-btn .f{display:inline}      /* with the camera up the button flashes */
+.use-btn .f{display:none} .living.cam-up .use-btn .u{display:none} .living.cam-up .use-btn .f{display:inline}
+.living.cam-up.cam-use .use-btn .u{display:inline} .living.cam-up.cam-use .use-btn .f{display:none}
+.living-sensed{position:absolute; left:4%; top:9%; z-index:7; pointer-events:none; font-family:var(--crtface); font-size:clamp(.6rem,1.15vw,.8rem); letter-spacing:.16em; text-transform:lowercase; color:rgba(233,228,218,.78); text-shadow:0 0 6px #000; opacity:0; transition:opacity 1.2s ease}
+.living-sensed.on{opacity:1; animation:sensed 2.4s ease-in-out infinite}
+@keyframes sensed{50%{opacity:.45}}
+@media (pointer:coarse){ .living-sensed{left:5%; top:9%} }      /* with the camera up the button flashes */
 .living.touch .use-btn{display:flex} .use-btn.hot{border-color:#fff; color:#fff; box-shadow:0 0 12px rgba(240,200,104,.45)}
 .living.touch .cap-hint, .living.touch .living-hint{display:none}
 .liv-deck{display:none}
@@ -2572,7 +2577,7 @@ const LIVING = (function(){
     storyBusy = true; flash(s);
     setTimeout(nextStory, 2600);
   }
-  let hover = null, wantInteract = false;
+  let hover = null, wantInteract = false; let sensedEl = null, sensedOn = false;
 
   const NOTES = ['note one goes here', 'note two goes here', 'note three goes here'];   // the text on the three notes
 
@@ -6275,6 +6280,7 @@ const LIVING = (function(){
 
     wrap.addEventListener('touchstart', e => { const t = e.changedTouches[0], r = wrap.getBoundingClientRect(); if(!t || t.clientX < r.right - r.width * .15 || t.clientY > r.top + r.height * .15) return; const n = performance.now(); fpsTaps = fpsTaps.filter(x => n - x < 2000); fpsTaps.push(n); if(fpsTaps.length >= 5){ fpsTaps = []; toggleFps(); } }, {passive:true, capture:true});      // five taps in the top right corner: the frame meter
     reticle = document.createElement('div'); reticle.className = 'reticle'; wrap.appendChild(reticle);
+    sensedEl = document.createElement('div'); sensedEl.className = 'living-sensed'; sensedEl.textContent = 'something is here...'; wrap.appendChild(sensedEl);
     hud = document.createElement('div'); hud.className = 'living-hud'; wrap.appendChild(hud);
     fadeEl = document.createElement('div'); fadeEl.className = 'living-fade'; wrap.appendChild(fadeEl);
     flashEl = document.createElement('div'); flashEl.className = 'living-flash'; wrap.appendChild(flashEl);
@@ -6628,6 +6634,9 @@ const LIVING = (function(){
       reticle.classList.toggle('hot', !!hover); if(useBtn) useBtn.classList.toggle('hot', !!hover); if(deckUse) deckUse.classList.toggle('hot', !!hover);
       const pr = hover && hover.userData && hover.userData.prompt; promptEl.textContent = pr || ''; promptEl.classList.toggle('on', !!pr);
     }
+    wrap.classList.toggle('cam-use', !!(camUp && hover && hover.userData && hover.userData.camOnly));      // (phones: aimed at something only the camera shows, the button says use, not flash)
+    // something is here: while a head is about (unseen without the camera), a small line says so. not in the fights, where they are the point
+    if(sensedEl){ const fight = !!(level && ((level.arena && level.arena.state === 'fighting') || level.waves)); const on = !!(level && !fight && !switching && hauntAlive().length); if(on !== sensedOn){ sensedOn = on; sensedEl.classList.toggle('on', on); } }
     if(wantInteract){
       wantInteract = false;
       // during the opening, a press of E, space or a tap skips ahead once it has had a moment to play
