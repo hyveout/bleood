@@ -954,10 +954,12 @@ body.mob-full .attn .cd-exit{display:block; margin-top:12px; color:rgba(232,227,
 .playgate.pg-living .pg-play{width:min(34%,300px); padding:0; border:0; background:none; font-size:0; line-height:0; color:transparent; text-shadow:none; transition:filter .25s}
 .playgate.pg-living .pg-play img.pg-red{display:block; width:100%; height:auto; pointer-events:none; animation:playpulse 2.6s ease-in-out infinite}
 .playgate.pg-living .pg-play:hover, .playgate.pg-living .pg-play:focus-visible{background:none; filter:drop-shadow(0 0 8px rgba(255,40,20,.55))}
-.playgate.pg-living .pg-endless.locked{opacity:.38; cursor:default}
-.playgate.pg-living .pg-endless.locked:hover{color:rgba(233,232,228,.75); border-color:rgba(233,232,228,.3); background:none}
+.playgate.pg-living button.pg-endless{font-family:var(--display); font-size:clamp(1.2rem,3.6cqw,2.1rem); letter-spacing:.06em; text-transform:none; padding:.1em .4em; border:0; background:none; color:#ece9e2; text-shadow:0 0 10px rgba(0,0,0,.9)}
+.playgate.pg-living button.pg-endless:hover{color:#fff; background:none; border:0; text-shadow:0 0 12px rgba(255,248,230,.5)}
+.playgate.pg-living button.pg-endless.locked{opacity:1; color:rgba(200,198,192,.32); cursor:default}
+.playgate.pg-living button.pg-endless.locked:hover{color:rgba(200,198,192,.32); text-shadow:0 0 10px rgba(0,0,0,.9)}
 .playgate .pg-endless .pg-lock{display:none}
-.playgate.pg-living .pg-endless.locked .pg-lock{display:block; margin-top:.5em; font-size:.62em; letter-spacing:.14em; text-transform:lowercase}
+.playgate.pg-living .pg-endless.locked .pg-lock{display:block; margin-top:.45em; font-family:"VCR OSD Mono",var(--type); font-size:clamp(.5rem,1.2cqw,.7rem); letter-spacing:.14em; text-transform:lowercase}
 .playgate.pg-living .pg-endless{display:block; font-family:"VCR OSD Mono",var(--type); font-size:clamp(.8rem,2.2vw,1.05rem); letter-spacing:.32em; padding:.55em 1.3em .55em 1.6em; color:rgba(233,232,228,.75); background:none; border:1px solid rgba(233,232,228,.25); cursor:pointer; transition:background .25s, border-color .25s, color .25s}
 .playgate.pg-living .pg-endless:hover{color:#fff; border-color:rgba(233,232,228,.8); background:rgba(233,232,228,.06)}
 .playgate .pg-bar{display:none}
@@ -4828,52 +4830,20 @@ const LIVING = (function(){
     level.distort = 0;      // (no wobble here)
     g.add(new THREE.AmbientLight(FF ? 0x2e4442 : 0x3a3630, 0.16));      // dark, so the candles are all there is
 
-    // ---- the floor: an alchemist's diagram, drawn in old blood and touched with gold. planetary and elemental signs run round a ring;
-    //      inside it the old figure of squaring the circle: a square in the circle, a circle in the square, a triangle in that, and a sun at the centre ----
+    // ---- the floor: the stone circle, glowing red once every candle burns ----
     const SR = 2.07, TAU = Math.PI * 2, polar = (th, r)=> [Math.sin(th) * r, -Math.cos(th) * r];   // th = 0 is straight ahead of the door
     {
-      const pc = document.createElement('canvas'); pc.width = pc.height = 1024; const p2 = pc.getContext('2d'); p2.scale(2, 2); p2.lineCap = 'round'; p2.lineJoin = 'round';
-      const C = 256, gl = p2.createRadialGradient(C, C, 30, C, C, 256); gl.addColorStop(0, 'rgba(120,10,14,.0)'); gl.addColorStop(.7, 'rgba(120,10,14,.2)'); gl.addColorStop(1, 'rgba(120,10,14,0)');
-      p2.fillStyle = gl; p2.fillRect(0, 0, 512, 512);
-      const pass = (fn)=>{ [[7, 'rgba(70,4,8,.95)'], [3.4, 'rgba(176,26,26,.7)'], [1.2, 'rgba(214,166,74,.5)']].forEach(([lw, col])=>{ p2.strokeStyle = col; p2.lineWidth = lw; fn(); }); };
-      const circ = (r)=>{ p2.beginPath(); p2.arc(C, C, r, 0, TAU); p2.stroke(); };
-      const poly = (pts)=>{ p2.beginPath(); pts.forEach(([x, y], i)=> i ? p2.lineTo(C + x, C + y) : p2.moveTo(C + x, C + y)); p2.closePath(); p2.stroke(); };
-      const R1 = 236, R2 = 190, Rg = 213, K = R2 / Math.SQRT2;     // outer ring, inner ring, the middle of the glyph band, half the square's side
-      // the rings, with a scale of small ticks between them
-      pass(()=>{ circ(R1); circ(R2); circ(K); circ(K * .5); circ(11); });
-      pass(()=>{ for(let k = 0; k < 96; k++){ const th = k / 96 * TAU, r0 = k % 4 ? R2 : R2 - 6; p2.beginPath(); p2.moveTo(C + Math.sin(th) * r0, C - Math.cos(th) * r0); p2.lineTo(C + Math.sin(th) * (R2 + 8), C - Math.cos(th) * (R2 + 8)); p2.stroke(); } });
-      // squaring the circle: a square inside the ring, a circle inside the square, a triangle inside that circle, a circle inside the triangle
-      pass(()=>{ poly([[-K, -K], [K, -K], [K, K], [-K, K]]); poly([[0, -K], [K * .866, K * .5], [-K * .866, K * .5]]); });
-      // eight fine spokes from the small circle out to the square's circle, and the sun at the centre
-      pass(()=>{ for(let k = 0; k < 8; k++){ const th = k / 8 * TAU + TAU / 16; p2.beginPath(); p2.moveTo(C + Math.sin(th) * 14, C - Math.cos(th) * 14); p2.lineTo(C + Math.sin(th) * (K * .5), C - Math.cos(th) * (K * .5)); p2.stroke(); } });
-      p2.fillStyle = 'rgba(214,166,74,.7)'; p2.beginPath(); p2.arc(C, C, 3.4, 0, TAU); p2.fill();
-      // the signs, twelve of them, each standing on the ring with its head toward the outside
-      const s = 19, GL = {
-        fire:  ()=>{ p2.beginPath(); p2.moveTo(0, -s); p2.lineTo(s * .9, s * .7); p2.lineTo(-s * .9, s * .7); p2.closePath(); p2.stroke(); },
-        water: ()=>{ p2.beginPath(); p2.moveTo(0, s); p2.lineTo(s * .9, -s * .7); p2.lineTo(-s * .9, -s * .7); p2.closePath(); p2.stroke(); },
-        air:   ()=>{ p2.beginPath(); p2.moveTo(0, -s); p2.lineTo(s * .9, s * .7); p2.lineTo(-s * .9, s * .7); p2.closePath(); p2.moveTo(-s * .55, s * .18); p2.lineTo(s * .55, s * .18); p2.stroke(); },
-        earth: ()=>{ p2.beginPath(); p2.moveTo(0, s); p2.lineTo(s * .9, -s * .7); p2.lineTo(-s * .9, -s * .7); p2.closePath(); p2.moveTo(-s * .55, -s * .18); p2.lineTo(s * .55, -s * .18); p2.stroke(); },
-        sun:   ()=>{ p2.beginPath(); p2.arc(0, 0, s * .8, 0, TAU); p2.stroke(); p2.beginPath(); p2.arc(0, 0, 2.6, 0, TAU); p2.fill(); },
-        moon:  ()=>{ p2.beginPath(); p2.arc(0, 0, s * .85, -1.35, 1.35); p2.arc(s * .42, 0, s * .68, 1.05, -1.05, true); p2.stroke(); },
-        mercury:()=>{ p2.beginPath(); p2.arc(0, s * .1, s * .42, 0, TAU); p2.moveTo(-s * .38, -s * .62); p2.arc(0, -s * .62, s * .38, Math.PI, 0, true); p2.moveTo(0, s * .52); p2.lineTo(0, s * 1.05); p2.moveTo(-s * .32, s * .82); p2.lineTo(s * .32, s * .82); p2.stroke(); },
-        venus: ()=>{ p2.beginPath(); p2.arc(0, -s * .38, s * .46, 0, TAU); p2.moveTo(0, s * .08); p2.lineTo(0, s * 1.0); p2.moveTo(-s * .34, s * .55); p2.lineTo(s * .34, s * .55); p2.stroke(); },
-        mars:  ()=>{ p2.beginPath(); p2.arc(-s * .15, s * .22, s * .46, 0, TAU); p2.moveTo(s * .17, -s * .1); p2.lineTo(s * .82, -s * .8); p2.moveTo(s * .3, -s * .8); p2.lineTo(s * .82, -s * .8); p2.lineTo(s * .82, -s * .28); p2.stroke(); },
-        jupiter:()=>{ p2.beginPath(); p2.moveTo(s * .25, -s); p2.lineTo(s * .25, s); p2.moveTo(-s * .72, s * .32); p2.lineTo(s * .8, s * .32); p2.moveTo(s * .25, -s); p2.lineTo(-s * .72, s * .32); p2.stroke(); },
-        saturn:()=>{ p2.beginPath(); p2.moveTo(0, -s); p2.lineTo(0, -s * .1); p2.moveTo(-s * .32, -s * .72); p2.lineTo(s * .32, -s * .72); p2.moveTo(0, -s * .42); p2.bezierCurveTo(s * .8, -s * .3, s * .7, s * .5, 0, s * .95); p2.stroke(); },
-        sulfur:()=>{ p2.beginPath(); p2.moveTo(0, -s); p2.lineTo(s * .6, -s * .1); p2.lineTo(-s * .6, -s * .1); p2.closePath(); p2.moveTo(0, -s * .1); p2.lineTo(0, s); p2.moveTo(-s * .34, s * .5); p2.lineTo(s * .34, s * .5); p2.stroke(); },
-      };
-      const order = ['fire', 'sun', 'mercury', 'air', 'moon', 'venus', 'water', 'mars', 'jupiter', 'earth', 'saturn', 'sulfur'];
-      order.forEach((name, k)=>{
-        const th = k / 12 * TAU;
-        [[6.5, 'rgba(70,4,8,.95)'], [3.2, 'rgba(176,26,26,.75)'], [1.2, 'rgba(214,166,74,.55)']].forEach(([lw, col])=>{
-          p2.save(); p2.translate(C + Math.sin(th) * Rg, C - Math.cos(th) * Rg); if(!['fire', 'water', 'air', 'earth'].includes(name)) p2.rotate(th); p2.strokeStyle = col; p2.fillStyle = col; p2.lineWidth = lw; GL[name](); p2.restore();
-        });
-      });
-      // old drips off the outer ring
-      for(let k = 0; k < 14; k++){ const th = Math.random() * TAU, x = C + Math.sin(th) * R1, y = C - Math.cos(th) * R1; p2.strokeStyle = 'rgba(70,4,8,.85)'; p2.lineWidth = 3; p2.beginPath(); p2.moveTo(x, y); p2.lineTo(x + rnd(-2, 2), y + rnd(10, 34)); p2.stroke(); }
-      const circle = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 4.6), new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(pc), transparent:true, depthWrite:false, color:0xdcd2d2, polygonOffset:true, polygonOffsetFactor:-2}));
+      // the floor: Sameer's stone circle with its ring of Greek words, its lines and letters
+      // burning red on a faint dark stain, with a soft red glow laid over them. sized so the candles stand on its outer ring
+      const circleM = new THREE.MeshBasicMaterial({transparent:true, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-2, opacity:0});
+      imgTex('ritual_circle.webp', tx => { tx.minFilter = THREE.LinearMipmapLinearFilter; tx.magFilter = THREE.LinearFilter; tx.anisotropy = 4; tx.needsUpdate = true; circleM.map = tx; circleM.opacity = 1; circleM.needsUpdate = true; });
+      const circle = new THREE.Mesh(new THREE.PlaneGeometry(4.5, 4.5), circleM);
       circle.rotation.x = -Math.PI / 2; circle.rotation.z = Math.PI; circle.position.y = .007; g.add(circle);      // turned so it reads upright from the door
-      circle.visible = false; level.hidden = [circle];                      // not there until every candle burns
+      const glowM = new THREE.MeshBasicMaterial({transparent:true, opacity:0, blending:THREE.AdditiveBlending, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-3});
+      imgTex('ritual_circle_glow.webp', tx => { tx.magFilter = THREE.LinearFilter; tx.minFilter = THREE.LinearFilter; glowM.map = tx; glowM.opacity = .7; glowM.needsUpdate = true; });
+      const glow = new THREE.Mesh(new THREE.PlaneGeometry(4.5, 4.5), glowM);
+      glow.rotation.x = -Math.PI / 2; glow.rotation.z = Math.PI; glow.position.y = .009; g.add(glow); level.circleGlow = glowM;
+      circle.visible = false; glow.visible = false; level.hidden = [circle, glow];      // not there until every candle burns
       // a warm pool of light on the boards under her
       const pool = new THREE.Mesh(new THREE.PlaneGeometry(6.4, 6.4), new THREE.MeshBasicMaterial({map:haloTex(), color:0xff9a50, transparent:true, opacity:.5, blending:THREE.AdditiveBlending, depthWrite:false}));
       pool.rotation.x = -Math.PI / 2; pool.position.y = .012; g.add(pool); level.pool = pool.material; pool.visible = false; level.hidden.push(pool);
