@@ -2430,7 +2430,7 @@ const LIVING = (function(){
     [1.0, 'I tried to keep him.'], [2.4, 'He would not be kept.'], [3.0, ''],
     [1.2, 'So I did what I had to do.'], [4.0, '']];
   let openEl = null, opening = null, openNext = true;
-  const CUT1_SRC = 'bleood_cutscene1.mp4', CUT1_LEN = 28.2; let cut1Vid = null;
+  const CUT1_SRC = 'bleood_cutscene1.mp4', CUT1_LEN = 28.2, CUT1_SFX = 'sfx_cutscene1.mp3'; let cut1Vid = null, cut1Snd = null;      // (the film and its sound, started together)
   const openSeen = key=>{ try{ return localStorage.getItem('bleood_living_' + key) === '1'; }catch(e){ return false; } };
   // words on black: `lines` as [gap, text] pairs ('' clears the screen); `key` remembers it has been watched; `onEnd` runs when it is over
   function showOpening(lines, key, onEnd){
@@ -2442,9 +2442,12 @@ const LIVING = (function(){
     if(key === 'open' && !lines && cut1Vid){ key = 'cut1';      // (its own record: having read the old words does not count as having watched it)
       lines = [[0, ''], [CUT1_LEN, '']];
       try{ cut1Vid.currentTime = 0; }catch(_){ }
-      cut1Vid.onplaying = ()=>{ cut1Vid.classList.add('on'); if(opening && opening.key === 'cut1' && !opening.vidStarted){ opening.vidStarted = true; opening.t0 = performance.now(); } };
-      const pr = cut1Vid.play();
-      if(pr && pr.catch) pr.catch(()=>{ if(opening && opening.key === 'cut1' && !opening.vidStarted){ cut1Vid.classList.remove('on'); const O = opening; showOpening(OPEN_LINES, 'open', O.onEnd); } });
+      cut1Vid.onplaying = ()=>{ cut1Vid.classList.add('on'); if(opening && opening.key === 'cut1' && !opening.vidStarted){ opening.vidStarted = true; opening.t0 = performance.now(); if(cut1Snd) cut1Snd.stop(.05); cut1Snd = roomSound(CUT1_SFX, {vol:1, fade:.02, loop:false}); livAmbienceDuck(0, .4); } };
+      const go1 = ()=>{
+        const pr = cut1Vid.play();
+        if(pr && pr.catch) pr.catch(()=>{ if(opening && opening.key === 'cut1' && !opening.vidStarted){ cut1Vid.classList.remove('on'); const O = opening; showOpening(OPEN_LINES, 'open', O.onEnd); } });
+      };
+      if(RBUF[CUT1_SFX]) go1(); else { let went = false; const g1 = ()=>{ if(!went){ went = true; go1(); } }; roomBuf(CUT1_SFX).then(g1); setTimeout(g1, 2500); }      // (its sound decoded first, so the two start together)
     }
     lines = lines || OPEN_LINES;
     openEl.querySelector('.lo-lines').innerHTML = ''; openEl.classList.add('on'); openEl.classList.toggle('skip', openSeen(key));
@@ -2461,7 +2464,7 @@ const LIVING = (function(){
   }
   function endOpening(){
     if(!opening) return; const O = opening; opening = null; openEl.classList.remove('on');
-    if(O.key === 'cut1' && cut1Vid){ try{ cut1Vid.pause(); }catch(_){ } cut1Vid.classList.remove('on'); }
+    if(O.key === 'cut1' && cut1Vid){ try{ cut1Vid.pause(); }catch(_){ } cut1Vid.classList.remove('on'); if(cut1Snd){ cut1Snd.stop(O.finished ? 1.2 : .4); cut1Snd = null; } livAmbienceDuck(1, 2.5); }
     if(O.finished){ try{ localStorage.setItem('bleood_living_' + O.key, '1'); }catch(e){} }      // (only once it has been seen to the end: then it can be skipped)
     if(level && level.intro){ level.intro.t0 = performance.now(); bedSound(true); }      // now you wake on the bed
     if(O.onEnd) O.onEnd();
@@ -4076,6 +4079,7 @@ const LIVING = (function(){
       if(dr.open && camera.position.z > level.exitZ && Math.abs(camera.position.x - dr.x) < .7) go(buildHallway);
     };
     level.blockZMax = ()=>{ const dr = level.doors[0]; return dr.open ? d/2 + .6 : d/2 - .35; };
+    level.gaps = [{x:1.6, z:d/2 - .35, half:.32, side:1}];
   }
 
   // ================= THE HALLWAY: three passes, each more wrong =================
@@ -4340,9 +4344,11 @@ const LIVING = (function(){
       // the way you came in is shut behind you, until you have seen her
       const back = door(g, 0, -d/2, 0, 'back'); level.backDoor = back;
       level.exitBackZ = -d/2 - .15;
+      level.gaps = [{x:0, z:-d/2 + .35, half:.32, side:-1}];      // (the way back out, through the doorway only)
     }else{
       const back = door(g, 0, -d/2, 0, 'back');
       const out = door(g, 0, d/2, Math.PI, 'next'); level.doors.push(out);
+      level.gaps = [{x:0, z:d/2 - .35, half:.32, side:1}];
       if(p === 1){ out.leaf.userData = {kind:'shutdoor'}; level.interactives.push(out.leaf); level.exitDoor = out; }      // shut, and it stays shut until the memory has been seen
       else{ openDoor(out); out.pivot.rotation.y = out.ry - Math.PI/2; }
       level.exitZ = d/2 + .2;
@@ -4703,7 +4709,7 @@ const LIVING = (function(){
     // a baseboard-dark wall round the exit, and the door itself, standing open
     const back = door(g, 0, -d/2, 0, 'back');
     let out;
-    if(onFront){ out = door(g, exitAt, d/2, Math.PI, 'next'); level.exitZ = d/2 + .2; }
+    if(onFront){ out = door(g, exitAt, d/2, Math.PI, 'next'); level.exitZ = d/2 + .2; level.gaps = [{x:exitAt, z:d/2 - .35, half:.32, side:1}]; }
     else{
       out = door(g, -w/2 + .03, exitAt, Math.PI/2, 'next'); level.bounds.minX = -w/2 - .8;
       level.solids.push({minX:-w/2 - .2, maxX:-w/2, minZ:-d/2 - 1, maxZ:exitAt - .55}, {minX:-w/2 - .2, maxX:-w/2, minZ:exitAt + .55, maxZ:d/2 + 1});
@@ -6509,8 +6515,14 @@ const LIVING = (function(){
     const inside = s => p.x > s.minX-.3 && p.x < s.maxX+.3 && p.z > s.minZ-.3 && p.z < s.maxZ+.3;
     const hitX = level.solids.some(s => !inside(s) && nx > s.minX-.3 && nx < s.maxX+.3 && p.z > s.minZ-.3 && p.z < s.maxZ+.3);
     const hitZ = level.solids.some(s => !inside(s) && p.x > s.minX-.3 && p.x < s.maxX+.3 && nz > s.minZ-.3 && nz < s.maxZ+.3);
-    if(nx > b.minX && nx < b.maxX && !hitX) p.x = nx;
-    if(nz > zMin && nz < zMax && !hitZ) p.z = nz;
+    // a doorway in an end wall: past the wall's line only through the opening itself (an open door used to let you walk through the
+    // wall on either side of it), and once in the opening, no stepping sideways into the wall
+    let gx = false, gz = false;
+    (level.gaps || []).forEach(G => { const past = q => G.side * (q - G.z) > 0;
+      if(past(nz) && Math.abs(p.x - G.x) > G.half) gz = true;
+      if(past(p.z) && Math.abs(nx - G.x) > G.half) gx = true; });
+    if(nx > b.minX && nx < b.maxX && !hitX && !gx) p.x = nx;
+    if(nz > zMin && nz < zMax && !hitZ && !gz) p.z = nz;
   }
 
   // the light count is held the same in every room: three.js rebuilds every surface's shader whenever the number of lights changes,
@@ -6692,7 +6704,7 @@ const LIVING = (function(){
   }
   async function start(o){
     if(running) return;
-    lsfxLoadAll(); { const c = realCtx(); if(c && c.state === 'suspended') c.resume().catch(()=>{}); }      // (inside the PLAY tap: the sound is allowed from here on)
+    lsfxLoadAll(); { const c = realCtx(); if(c && c.state === 'suspended') c.resume().catch(()=>{}); } roomBuf(CUT1_SFX);      // (inside the PLAY tap: the sound is allowed from here on)
     const endless = !!(o && o.endless);
     // the bar is up from the first moment: the engine and the doll if they are not here yet, then the room is built, the doll parsed
     // and the shaders compiled in separate steps with a painted frame between them (one long freeze after PLAY otherwise)
