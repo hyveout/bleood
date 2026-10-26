@@ -4335,6 +4335,35 @@ const LIVING = (function(){
           level.bulbs.push({L:bulb, m:bb, base:i ? .9 : 1.3, flk:{until:0, next:performance.now() + 800 + Math.random() * 3000}}); }); }
       level.arena = {door:ad, block:arenaBlock, cx:acx, cz:acz, w:AW, d:AD, z0:az0, z1:az1, state:'closed', killed:0, need:9, hallBounds:level.bounds, wasInside:false,
         bounds:{minX:acx - AW/2 + .35, maxX:-w/2 + .5, minZ:az0 + .35, maxZ:az1 - .35}};
+      // ---- the secret: the big room's wall, past the end of the hall, gives way when you walk into it. behind it a small room no one
+      //      was meant to find, and on its wall, in blood, KMF ----
+      { const S = {x0:-w/2, x1:w/2, z0:az0, z1:-d/2 - .06};
+        const sw = (pw, ph, x, y, z, ry)=> aw(pw, ph, x, y, z, ry);
+        ap(mat('floor', w, S.z1 - S.z0), w, S.z1 - S.z0, 0, 0, (S.z0 + S.z1) / 2, 0, -Math.PI/2);
+        ap(mat('ceil', w / 1.5, (S.z1 - S.z0) / 1.5), w, S.z1 - S.z0, 0, h, (S.z0 + S.z1) / 2, 0, Math.PI/2);
+        sw(w, h, 0, h/2, S.z0 + .005, 0);                                                   // its far wall
+        sw(w, h, 0, h/2, S.z1 - .005, Math.PI);                                              // the back of the hall's end wall, seen from in here
+        sw(S.z1 - S.z0, h, S.x1 - .005, h/2, (S.z0 + S.z1) / 2, -Math.PI/2);                 // the wall that faces you as you come through
+        sw(S.z1 - S.z0, h, S.x0 + .005, h/2, (S.z0 + S.z1) / 2, Math.PI/2);                  // the wall you came through, from this side (it lets you back)
+        const kL = new THREE.PointLight(0xff3a26, .55, 5, 1.6); kL.position.set(.4, h - .5, (S.z0 + S.z1) / 2); g.add(kL);
+        // the writing: KMF in the camera words' hand, in wet red, with runs dripping down from it
+        const kc = document.createElement('canvas'); kc.width = 1024; kc.height = 512; const kx = kc.getContext('2d');
+        const kt = new THREE.CanvasTexture(kc); const km = new THREE.MeshBasicMaterial({map:kt, transparent:true, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-2});
+        const kp = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 1.3), km); kp.position.set(S.x1 - .02, 1.55, (S.z0 + S.z1) / 2); kp.rotation.y = -Math.PI/2; g.add(kp);
+        const paintKMF = ()=>{ kx.clearRect(0, 0, 1024, 512); kx.textAlign = 'center'; kx.textBaseline = 'middle'; kx.font = '300px Haunteod, serif';
+          kx.fillStyle = 'rgba(70,0,0,.55)'; kx.fillText('KMF', 516, 262);                  // the soaked-in stain under it
+          kx.fillStyle = '#8a0c08'; kx.fillText('KMF', 512, 256);
+          const id = kx.getImageData(0, 0, 1024, 512), dd = id.data, R = (()=>{ let q = 7; return ()=> (q = (q * 16807) % 2147483647) / 2147483647; })();
+          for(let n = 0; n < 46; n++){ const x = 120 + (R() * 780) | 0; let y = -1; for(let yy = 470; yy > 40; yy--){ if(dd[(yy * 1024 + x) * 4 + 3] > 200){ y = yy; break; } } if(y < 0) continue;
+            const len = 20 + R() * 150, wd = 3 + R() * 6; const gr = kx.createLinearGradient(0, y, 0, y + len); gr.addColorStop(0, '#7e0a07'); gr.addColorStop(1, 'rgba(90,6,4,0)');
+            kx.fillStyle = gr; kx.beginPath(); kx.moveTo(x - wd / 2, y - 4); kx.lineTo(x + wd / 2, y - 4); kx.lineTo(x + wd * .3, y + len); kx.lineTo(x - wd * .3, y + len); kx.fill();
+            kx.beginPath(); kx.arc(x, y + len - 2, wd * .45, 0, Math.PI * 2); kx.fillStyle = 'rgba(110,8,5,.7)'; kx.fill(); }
+          kt.needsUpdate = true; };
+        if(document.fonts && document.fonts.load) document.fonts.load('300px Haunteod').then(paintKMF, paintKMF); else paintKMF();
+        level.secret = {S, bounds:{minX:S.x0 - .45, maxX:S.x1 - .35, minZ:S.z0 + .35, maxZ:S.z1 - .35}};
+        // the big room's near wall can be walked through only at its door, and here, past the hall's end
+        level.xWalls = [{x:-w/2, allow:z => Math.abs(z - ARENA_Z) < .45 || (z > S.z0 + .35 && z < S.z1 - .35 && !(level.arena && level.arena.state === 'fighting'))}];      // (not mid-fight)
+      }
       // the doll, and the light you hold
       level.plush = plushSetup(g, RX0, SIDE_Z);
       level.hallLights = lights; level.hallAmb = hallAmb;
@@ -4422,7 +4451,9 @@ const LIVING = (function(){
         const A = level.arena;
         if(A){
           A.door.pivot.rotation.y += ((A.door.ry + (A.door.open ? Math.PI/2 : 0)) - A.door.pivot.rotation.y) * .06;
-          const inside = inArena(); if(inside !== A.wasInside){ A.wasInside = inside; level.bounds = inside ? A.bounds : A.hallBounds; }
+          const inside = inArena(), inS = inSecret(), where = inS ? 's' : inside ? 'a' : 'h';
+          if(where !== A.where){ A.where = where; level.bounds = inS ? level.secret.bounds : inside ? A.bounds : A.hallBounds; }
+          const inSArena = inside; if(inSArena !== A.wasInside) A.wasInside = inSArena;
           if(A.state === 'open' && inside && Math.hypot(camera.position.x - A.cx, camera.position.z - A.cz) < 1.1){
             // in the ring: the door shuts behind you and they come, one after another, until all of them are gone
             A.state = 'fighting'; A.door.open = false; level.solids.push(A.block); lsfx('doorSlam', 1); redLevel = Math.max(redLevel, .7); level.shake = .1; setTimeout(()=>{ if(level.arena === A) level.shake = 0; }, 400);      // the door shuts you in
@@ -4438,8 +4469,9 @@ const LIVING = (function(){
     };
     if(p !== 2){ hauntSetup(); hauntArm(HAUNT.AGAIN); if(level.arena){ level.haunts.push(makeHaunt(), makeHaunt()); } }      // the big room can have three out at once
     const inArena = ()=> !!(level.arena && camera.position.x < -w/2 - .05 && camera.position.z < level.arena.z1 + .3);
-    level.blockZMax = ()=> p === 2 ? d/2 + 30 : inArena() ? level.arena.z1 - .35 : (p === 1 && !level.memoryDone ? d/2 - .5 : d/2 + .6);
-    level.blockZMin = ()=> p === 2 ? (level.backDoor && level.backDoor.open ? -d/2 - .6 : -d/2 + .35) : inArena() ? level.arena.z0 + .35 : -d/2 + .35;
+    const inSecret = ()=> !!(level.secret && camera.position.x > -w/2 - .05 && camera.position.z < level.secret.S.z1 + .02);      // (behind the hall's end, through the big room's wall)
+    level.blockZMax = ()=> p === 2 ? d/2 + 30 : inSecret() ? level.secret.S.z1 - .35 : inArena() ? level.arena.z1 - .35 : (p === 1 && !level.memoryDone ? d/2 - .5 : d/2 + .6);
+    level.blockZMin = ()=> p === 2 ? (level.backDoor && level.backDoor.open ? -d/2 - .6 : -d/2 + .35) : inSecret() ? level.secret.S.z0 + .35 : inArena() ? level.arena.z0 + .35 : -d/2 + .35;
   }
 
   // ---------- the doll's head in the bedroom (the camera, after Fatal Frame): it drifts in from a corner and comes for you. a ring comes up in the
@@ -6517,13 +6549,14 @@ const LIVING = (function(){
     (level.gaps || []).forEach(G => { const past = q => G.side * (q - G.z) > 0;
       if(past(nz) && Math.abs(p.x - G.x) > G.half) gz = true;
       if(past(p.z) && Math.abs(nx - G.x) > G.half) gx = true; });
+    (level.xWalls || []).forEach(W => { if((p.x < W.x) !== (nx < W.x) && !W.allow(p.z)) gx = true; });      // a side wall crossed only where it lets you
     if(nx > b.minX && nx < b.maxX && !hitX && !gx) p.x = nx;
     if(nz > zMin && nz < zMax && !hitZ && !gz) p.z = nz;
   }
 
   // the light count is held the same in every room: three.js rebuilds every surface's shader whenever the number of lights changes,
-  // which was the stutter at every door (12 to 15 shaders rebuilt each time). dark stand-in lights make up the difference, up to 22 (the most any room had)
-  const PAD_P = 22, PAD_S = 3, padP = [], padS = [];
+  // which was the stutter at every door (12 to 15 shaders rebuilt each time). dark stand-in lights make up the difference, up to 24 (the most any room has, with room to spare)
+  const PAD_P = 24, PAD_S = 3, padP = [], padS = [];
   function padLights(){
     if(!scene) return;
     let np = 0, ns = 0;
