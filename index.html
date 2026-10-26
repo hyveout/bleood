@@ -4542,7 +4542,7 @@ const LIVING = (function(){
       if(d > best){ best = d; px = x; pz = z; }
     }
     if(best < HAUNT.MIN){ H.next = now + 2500 + Math.random() * 2500; return false; }      // nowhere to stand: wait for you to move on
-    H.on = true; H.t0 = now; H.grace = now + HAUNT.GRACE; H.charge = 0; H.snaps = 0; H.px = px; H.pz = pz; H.py = 1.75; H.seed = Math.random() * 7; H.toldFull = false;
+    H.on = true; H.t0 = now; H.grace = now + HAUNT.GRACE * (level.waves && level.waves.grace || 1); H.charge = 0; H.snaps = 0; H.px = px; H.pz = pz; H.py = 1.75; H.seed = Math.random() * 7; H.toldFull = false;
     H.model.position.set(H.px, H.py, H.pz); H.model.visible = true; if(H.mats) H.mats.forEach(mt => mt.emissiveIntensity = TOUCH ? .75 : .5);
     if(H.who === 'her'){ H.herHead.eyes.forEach(e => e.visible = true); H.herHead.glow.intensity = 1.8; }
     const inFight = level.arena && level.arena.state === 'fighting';      // (in the big room you are past instructions)
@@ -4697,7 +4697,7 @@ const LIVING = (function(){
     const T = hauntTarget();
     for(const H of hauntAlive()){
       if(H.dying || H.scare) continue;
-      const gain = H.inside && camUp && !charging ?      /* every head in the ring charges, so one flash can take all of them */ (1 / HAUNT.CHARGE) * (1 + Math.max(0, 1 - H.dist / 4) * 1.2) : -.3;      // closer, quicker; look away (or lower the camera) and it drains
+      const gain = H.inside && camUp && !charging ?      /* every head in the ring charges, so one flash can take all of them */ (1 / HAUNT.CHARGE) * (1 + Math.max(0, 1 - H.dist / 4) * 1.2) / (level.waves && level.waves.chargeK || 1) : -.3;      // closer, quicker; look away (or lower the camera) and it drains
       H.charge = Math.max(0, Math.min(1, H.charge + gain * dt));
     }
     capEl.classList.toggle('cold', charging); camFrame.querySelector('.cf-charge').classList.toggle('on', charging && camUp);
@@ -4737,8 +4737,11 @@ const LIVING = (function(){
       if(tipOpen) E.until = Math.max(E.until, now + 1500);
       if(E.state === 'break' && now > E.until){
         // the next wave: more of them, more at once, sent in quicker, and quicker to close in
-        E.n++; E.killed = 0; E.need = 3 + E.n * 2; E.max = Math.min(5, 1 + Math.ceil(E.n / 2)); E.gap = Math.max(350, 1700 - E.n * 130);
-        level.speedMul = Math.min(2.2, 1 + (E.n - 1) * .09); E.state = 'fighting'; E.nextSpawn = now + 900;
+        // (and it never stops getting harder: past wave 14 they keep getting faster, they come in quicker, they wait less before closing in,
+        //  and a flash needs longer to charge on them, all without a ceiling until far past where anyone will last)
+        E.n++; E.killed = 0; E.need = 3 + E.n * 2; E.max = Math.min(5, 1 + Math.ceil(E.n / 2)); E.gap = Math.max(250, 1700 - E.n * 130);
+        level.speedMul = E.n <= 14 ? 1 + (E.n - 1) * .09 : Math.min(3.4, 2.17 + (E.n - 14) * .05);
+        E.grace = Math.max(.3, 1 - (E.n - 1) * .05); E.chargeK = Math.min(1.8, 1 + Math.max(0, E.n - 6) * .05); E.state = 'fighting'; E.nextSpawn = now + 900;
         flash('wave ' + E.n); lsfx('sting', .8); redLevel = Math.max(redLevel, .6);
       }
       if(E.state === 'fighting') setHUD('wave ' + E.n + ' · ' + (E.need - E.killed) + ' left');
@@ -5106,10 +5109,11 @@ const LIVING = (function(){
     function answer(a){
       const E = ending; if(!E || E.stage !== 3) return;
       const FV = a === 'yes' ? cut3Vid : cutNoVid, FS = a === 'yes' ? CUT3_SFX : CUTNO_SFX;      // yes: cutscene 3; no: the kill
+      if(trVid){ try{ trVid.preload = 'auto'; trVid.muted = true; const p = trVid.play(); if(p && p.then) p.then(()=>{ trVid.pause(); trVid.currentTime = 0; }).catch(()=>{}); }catch(_){ } }      // (inside the click: lets the trailer play with sound later, on phones too)
       if(FV){
         E.stage = 3.5; level.asking = false; askEl.classList.remove('on'); askEl.querySelector('.ask-choices').classList.remove('on');
         if(level.endSnd){ level.endSnd.stop(.6); level.endSnd = null; }
-        let over = false; const finish = ()=>{ if(over) return; over = true; clearTimeout(guard); FV.onended = null; FV.classList.remove('on'); try{ FV.pause(); }catch(_){ } if(ending === E){ E.stage = 3; answerGo(a); } };
+        let over = false; const finish = ()=>{ if(over) return; over = true; clearTimeout(guard); FV.onended = null; FV.classList.remove('on'); try{ FV.pause(); }catch(_){ } if(ending === E){ playTrailer(()=>{ if(ending === E){ E.stage = 3; answerGo(a); } }); } };
         const guard = setTimeout(finish, 16000);
         const go3 = ()=>{ try{ FV.currentTime = 0; }catch(_){ }
           FV.onended = finish;
@@ -5118,7 +5122,7 @@ const LIVING = (function(){
         if(RBUF[FS]) go3(); else { let w = false; const g = ()=>{ if(!w){ w = true; go3(); } }; roomBuf(FS).then(g); setTimeout(g, 2000); }
         return;
       }
-      answerGo(a);
+      E.stage = 3.5; playTrailer(()=>{ if(ending === E){ E.stage = 3; answerGo(a); } });
     }
     function answerGo(a){
       const E = ending; if(!E || E.stage !== 3) return;
@@ -5734,7 +5738,22 @@ const LIVING = (function(){
   // play, the old lunge (her head at your face) stands in
   const JS_VIDEO = 'bleood_jumpscare.mp4';
   const CUT3_SRC = 'bleood_cutscene3.mp4', CUT3_SFX = 'sfx_cutscene3.mp3'; let cut3Vid = null, cut3Snd = null;
-  const CUTNO_SRC = 'bleood_cutscene_no.mp4', CUTNO_SFX = 'sfx_cutscene_no.mp3'; let cutNoVid = null;      // and after "no"      // cutscene 3: after "yes"
+  const CUTNO_SRC = 'bleood_cutscene_no.mp4', CUTNO_SFX = 'sfx_cutscene_no.mp3'; let cutNoVid = null;
+  // THE TRAILER: plays after the yes / no film, before the white and the credits, with its own sound. empty = no trailer (straight on).
+  // to add it: set the file here (on the shop: one line in the page's file list). if it is missing or will not play, the game just goes on
+  const TRAILER_SRC = ''; let trVid = null;
+  function playTrailer(then){
+    if(!TRAILER_SRC || !trVid){ then(); return; }
+    let over = false; const seen = (()=>{ try{ return localStorage.getItem('bleood_living_trailer') === '1'; }catch(_){ return false; } })();
+    const fin = ()=>{ if(over) return; over = true; clearTimeout(guard); trVid.onended = trVid.onerror = null; trVid.classList.remove('on'); try{ trVid.pause(); }catch(_){ } removeEventListener('keydown', skip, true); wrap.removeEventListener('touchstart', skip, true); wrap.removeEventListener('mousedown', skip, true); then(); };
+    const skip = e => { if(!seen) return; e.stopPropagation(); fin(); };
+    let guard = setTimeout(fin, 8000);      // (until it starts; once it plays, its own length decides)
+    trVid.onended = ()=>{ try{ localStorage.setItem('bleood_living_trailer', '1'); }catch(_){ } fin(); }; trVid.onerror = fin;
+    trVid.onplaying = ()=>{ clearTimeout(guard); guard = setTimeout(fin, ((trVid.duration && isFinite(trVid.duration)) ? trVid.duration + 3 : 300) * 1000); trVid.classList.add('on'); };
+    if(seen){ addEventListener('keydown', skip, true); wrap.addEventListener('touchstart', skip, {capture:true, passive:true}); wrap.addEventListener('mousedown', skip, true); }
+    try{ trVid.currentTime = 0; trVid.muted = false; }catch(_){ }
+    const pr = trVid.play(); if(pr && pr.catch) pr.catch(()=>{ try{ trVid.muted = true; const p2 = trVid.play(); if(p2 && p2.catch) p2.catch(fin); }catch(_){ fin(); } });      // (if sound is refused, it plays silent rather than not at all)
+  }      // and after "no"      // cutscene 3: after "yes"
   let jsVid = null, jsOn = false, jsSnd = null;      // (the film's sound, the neck snap, played with it)
   function jumpscare(W){
     if(jsOn) return;
@@ -6381,6 +6400,7 @@ const LIVING = (function(){
     tipEl.addEventListener('touchend', e=>{ e.preventDefault(); e.stopPropagation(); closeTip(); });
     redEl = document.createElement('div'); redEl.className = 'living-red'; wrap.appendChild(redEl);
     watchEl = document.createElement('div'); watchEl.className = 'living-watch'; wrap.appendChild(watchEl);      // the 'she is looking' state: red, throbbing, the picture straining
+    if(TRAILER_SRC){ trVid = document.createElement('video'); trVid.className = 'js-vid'; trVid.playsInline = true; trVid.setAttribute('playsinline', ''); trVid.setAttribute('webkit-playsinline', ''); trVid.preload = 'none'; trVid.src = TRAILER_SRC; wrap.appendChild(trVid); }
     cutNoVid = document.createElement('video'); cutNoVid.className = 'js-vid'; cutNoVid.muted = true; cutNoVid.playsInline = true; cutNoVid.setAttribute('playsinline', ''); cutNoVid.setAttribute('webkit-playsinline', ''); cutNoVid.preload = 'none'; cutNoVid.src = CUTNO_SRC; wrap.appendChild(cutNoVid);
     cut3Vid = document.createElement('video'); cut3Vid.className = 'js-vid'; cut3Vid.muted = true; cut3Vid.playsInline = true; cut3Vid.setAttribute('playsinline', ''); cut3Vid.setAttribute('webkit-playsinline', ''); cut3Vid.preload = 'none'; cut3Vid.src = CUT3_SRC; wrap.appendChild(cut3Vid);
     jsVid = document.createElement('video'); jsVid.className = 'js-vid'; jsVid.muted = true; jsVid.playsInline = true; jsVid.setAttribute('playsinline', ''); jsVid.setAttribute('webkit-playsinline', ''); jsVid.preload = 'auto'; jsVid.src = JS_VIDEO; wrap.appendChild(jsVid);
@@ -6814,7 +6834,7 @@ const LIVING = (function(){
     // leaving Living (another game, another page): nothing of it may keep sounding. the films stop, and the sound engine itself is shut,
     // which silences every sound still running or fading out. (the decoded sounds are kept: the next PLAY opens a fresh engine and reuses them)
     if(level && level.endSnd){ level.endSnd.stop(.05); level.endSnd = null; } if(cut1Snd){ cut1Snd.stop(.05); cut1Snd = null; }
-    [cut1Vid, jsVid, cut3Vid, cutNoVid].forEach(v => { if(v){ try{ v.pause(); }catch(_){ } v.classList.remove('on'); } });
+    [cut1Vid, jsVid, cut3Vid, cutNoVid, trVid].forEach(v => { if(v){ try{ v.pause(); }catch(_){ } v.classList.remove('on'); } });
     if(memoryEl){ memoryEl.querySelectorAll('video').forEach(v => { try{ v.pause(); }catch(_){ } }); }
     try{ KNIFE_CUT.stop(); }catch(_){ }
     if(AC){ const c = AC; AC = null; ambLGain = null; ambLNode = null; Object.keys(RASK).forEach(k => { if(!RBUF[k]) RASK[k] = null; }); try{ c.close(); }catch(_){ } }
