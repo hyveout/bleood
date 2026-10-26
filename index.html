@@ -655,7 +655,8 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .living-memory img{max-width:min(58%,400px); max-height:56%; filter:grayscale(.4) contrast(1.15) brightness(.85); animation:memzoom 5.5s ease-in-out both}
 @keyframes memzoom{from{transform:scale(1)} to{transform:scale(1.14)}}
 .living-memory span{font-family:var(--crtface); font-size:clamp(1rem,3vw,1.7rem); letter-spacing:.32em; text-transform:uppercase; color:#e6e2d8; text-shadow:-1.5px 0 rgba(255,20,60,.55), 1.5px 0 rgba(0,235,220,.4)}
-.living-memory .mem-video{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; background:#000}
+.living-memory .mem-video{position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000; opacity:0; transition:opacity .8s ease}
+.living-memory .mem-video.on{opacity:1}
 
 /* attention: the test screen and the Ugetsu-style task popups */
 .attn{position:absolute; inset:0; z-index:12; display:none; flex-direction:column; align-items:center; justify-content:center; gap:10px;
@@ -5283,7 +5284,7 @@ const LIVING = (function(){
   }
   // ---------- the memory, played when you look at the photograph in the first hallway ----------
   // PLACEHOLDER: until the real cutscene exists, the photograph fills a black screen for a few seconds. to use the real one, put its file's address in MEMORY_VIDEO
-  const MEMORY_VIDEO = '';
+  const MEMORY_VIDEO = 'bleood_cutscene2.mp4', MEMORY_SFX = 'sfx_cutscene2.mp3';      // cutscene 2: the film (silent) and its sound, played together through the sound engine
   let memoryTimer = 0;
   // ---------- the doll's head in the corridor (after the plushtrap game in FNAF 4) ----------
   // it hangs in the air over the chair at the far end. in the dark it comes closer, doorway to doorway, and you only hear it; while your light is on it you see it, and it cannot move.
@@ -5654,8 +5655,21 @@ const LIVING = (function(){
       if(level.exitDoor){ openDoor(level.exitDoor); lsfx('doorOpen', .9); level.interactives = level.interactives.filter(o => !(o.userData && o.userData.kind === 'shutdoor')); }      // now the door will open
     };
     if(MEMORY_VIDEO){
-      const v = document.createElement('video'); v.src = MEMORY_VIDEO; v.playsInline = true; v.className = 'mem-video'; memoryEl.appendChild(v);
-      v.addEventListener('ended', M.finish); v.addEventListener('error', M.finish); v.play().catch(M.finish);
+      // cutscene 2, after the flashlight game. the house's ambience steps aside; it can be skipped (any key or a tap) only once it has
+      // been watched to the end. if the film cannot play, her words come instead
+      const seen = (()=>{ try{ return localStorage.getItem('bleood_living_cut2') === '1'; }catch(_){ return false; } })();
+      const v = document.createElement('video'); v.src = MEMORY_VIDEO; v.muted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', ''); v.preload = 'auto'; v.className = 'mem-video'; memoryEl.appendChild(v);
+      let snd = null, started = false;
+      const fin0 = M.finish; let skipper = null;
+      M.finish = ()=>{ if(M.done) return; if(snd){ snd.stop(.5); snd = null; } if(skipper){ removeEventListener('keydown', skipper, true); wrap.removeEventListener('touchstart', skipper, true); wrap.removeEventListener('mousedown', skipper, true); } livAmbienceDuck(1, 2.5); fin0(); };
+      const fallback = ()=>{ if(started || M.done) return; started = true; v.remove(); memoryEl.classList.remove('on'); livAmbienceDuck(1, 1); showOpening(MEMORY_LINES, 'memory', M.finish); };
+      v.addEventListener('playing', ()=>{ if(started) return; started = true; v.classList.add('on'); snd = roomSound(MEMORY_SFX, {vol:1, fade:.02, loop:false}); });
+      v.addEventListener('ended', ()=>{ try{ localStorage.setItem('bleood_living_cut2', '1'); }catch(_){ } M.finish(); });
+      v.addEventListener('error', fallback);
+      livAmbienceDuck(0, .6);
+      const go2 = ()=>{ const pr = v.play(); if(pr && pr.catch) pr.catch(fallback); };
+      if(RBUF[MEMORY_SFX]) go2(); else { let w = false; const g = ()=>{ if(!w){ w = true; go2(); } }; roomBuf(MEMORY_SFX).then(g); setTimeout(g, 2500); }
+      if(seen){ skipper = e => { if(!started) return; e.stopPropagation(); M.finish(); }; addEventListener('keydown', skipper, true); wrap.addEventListener('touchstart', skipper, {capture:true, passive:true}); wrap.addEventListener('mousedown', skipper, true); }
     }else{ memoryEl.classList.remove('on'); showOpening(MEMORY_LINES, 'memory', M.finish); }
   }
   // eyes shut, then open. while they are open, moving is fatal. used by the head in the chair and by the demon in the hallway
