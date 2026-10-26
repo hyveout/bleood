@@ -249,7 +249,7 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
 .flower:focus-visible{outline:1px dashed var(--bone); outline-offset:4px}
 /* the page each flower leads to, written under its bloom: above the dark, so it can be read before any candle is lit */
 .flower-name{position:absolute; z-index:17; transform:translateX(-50%); white-space:nowrap; pointer-events:none;
-  font-family:var(--display); font-size:max(15px, min(calc(var(--s) * .19), 30px)); line-height:1; color:var(--bone); opacity:.55;
+  font-family:var(--crtface); font-size:max(12px, min(calc(var(--s) * .12), 19px)); letter-spacing:.14em; text-transform:uppercase; line-height:1; color:var(--bone); opacity:.6;
   text-shadow:0 0 8px #000, 0 0 3px #000; transition:opacity .35s ease}
 .flower-name.on{opacity:1}
 /* home ring: each flower on a short stem; hover and it grows, lifting the bloom (same as the flower link on every page) */
