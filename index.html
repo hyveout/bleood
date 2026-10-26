@@ -247,9 +247,9 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
   filter:grayscale(1) brightness(1.08) drop-shadow(0 0 14px rgba(255,255,255,.55)) drop-shadow(0 6px 5px rgba(0,0,0,.85));
 }
 .flower:focus-visible{outline:1px dashed var(--bone); outline-offset:4px}
-/* the page each flower leads to, small, just under its bloom: above the dark, so it can be read before any candle is lit */
-.flower-name{position:absolute; z-index:17; transform:translate(-50%,0); white-space:nowrap; pointer-events:none;
-  font-family:var(--crtface); font-size:max(9px, min(calc(var(--s) * .075), 13px)); letter-spacing:.08em; text-transform:lowercase; line-height:1; color:var(--bone); opacity:.75;
+/* the page each flower leads to, small, just under its bloom, at the flower's depth (so the dark dims it with the flowers) */
+.flower-name{position:absolute; transform:translate(-50%,0); white-space:nowrap; pointer-events:none;
+  font-family:var(--crtface); font-size:max(9px, min(calc(var(--s) * .075), 13px)); letter-spacing:.08em; text-transform:lowercase; line-height:1; color:var(--bone); opacity:.9;
   text-shadow:0 0 4px #000, 0 0 2px #000, 0 0 1px #000; transition:opacity .35s ease, transform .6s cubic-bezier(.3,1.08,.5,1)}
 .flower-name.on{opacity:1; transform:translate(-50%, calc(var(--s) * -.09))}      /* rises with the bloom */
 /* home ring: each flower on a short stem; hover and it grows, lifting the bloom (same as the flower link on every page) */
@@ -1742,7 +1742,7 @@ function layoutRing(){
     scene.appendChild(el);
     // its name, under the bloom. kept outside the flower so it sits above the dark (the flowers fade into it; the names stay readable)
     const nm = document.createElement('span'); nm.className = 'flower-name'; nm.textContent = p.title; nm.setAttribute('aria-hidden', 'true');
-    nm.style.setProperty('--s', size + 'px'); nm._fl = el; nm._r = ((((i*47)%36)-18)) * Math.PI / 180;      // (placed on the lily's heart once the flower is laid out: placeNames)
+    nm.style.setProperty('--s', size + 'px'); nm.style.zIndex = el.style.zIndex; nm._fl = el;      // (at its flower's depth: behind her when the flower is, and in the dark with it) nm._r = ((((i*47)%36)-18)) * Math.PI / 180;      // (placed on the lily's heart once the flower is laid out: placeNames)
     el.addEventListener('mouseenter', ()=> nm.classList.add('on')); el.addEventListener('mouseleave', ()=> nm.classList.remove('on'));
     el.addEventListener('focus', ()=> nm.classList.add('on')); el.addEventListener('blur', ()=> nm.classList.remove('on'));
     scene.appendChild(nm);
