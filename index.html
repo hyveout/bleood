@@ -247,11 +247,11 @@ main{position:relative; z-index:1; min-height:100vh; min-height:100dvh; display:
   filter:grayscale(1) brightness(1.08) drop-shadow(0 0 14px rgba(255,255,255,.55)) drop-shadow(0 6px 5px rgba(0,0,0,.85));
 }
 .flower:focus-visible{outline:1px dashed var(--bone); outline-offset:4px}
-/* the page each flower leads to, small, in the heart of its bloom: above the dark, so it can be read before any candle is lit */
-.flower-name{position:absolute; z-index:17; transform:translate(-50%,-50%); white-space:nowrap; pointer-events:none;
+/* the page each flower leads to, small, just under its bloom: above the dark, so it can be read before any candle is lit */
+.flower-name{position:absolute; z-index:17; transform:translate(-50%,0); white-space:nowrap; pointer-events:none;
   font-family:var(--crtface); font-size:max(9px, min(calc(var(--s) * .075), 13px)); letter-spacing:.08em; text-transform:lowercase; line-height:1; color:var(--bone); opacity:.75;
   text-shadow:0 0 4px #000, 0 0 2px #000, 0 0 1px #000; transition:opacity .35s ease, transform .6s cubic-bezier(.3,1.08,.5,1)}
-.flower-name.on{opacity:1; transform:translate(-50%, calc(-50% - var(--s) * .09))}      /* rises with the bloom */
+.flower-name.on{opacity:1; transform:translate(-50%, calc(var(--s) * -.09))}      /* rises with the bloom */
 /* home ring: each flower on a short stem; hover and it grows, lifting the bloom (same as the flower link on every page) */
 .flower .bloom{position:relative; z-index:1; display:block; width:100%; height:100%; transition:transform .6s cubic-bezier(.3,1.08,.5,1)}
 @media (hover:hover) and (pointer:fine){ .flower:hover .bloom{transform:translateY(-9%)} }
@@ -1090,6 +1090,8 @@ body.mob-full .mob-exit:active{opacity:1; border-color:rgba(232,227,214,.9)}
 @keyframes watchthrob{0%,100%{transform:scale(1)} 30%{transform:scale(1.035)}}
 @keyframes watchflick{0%{filter:none} 50%{filter:brightness(1.4)}}
 .living:has(.living-watch.on) .livcv{filter:saturate(.55) contrast(1.18) brightness(.9)}
+.living .js-vid{position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000; z-index:60; display:none; pointer-events:none}
+.living .js-vid.on{display:block}
 .living-red{position:absolute; inset:0; z-index:4; pointer-events:none; opacity:0;
   background:radial-gradient(ellipse at center, rgba(150,0,0,.35) 0%, rgba(70,0,0,.8) 60%, rgba(10,0,0,.97) 100%); mix-blend-mode:multiply}
 /* the warning: no box. the room fades to black, her head floats in the dark, and the words are scratched under it */
@@ -1650,7 +1652,7 @@ function placeNames(){
     const im = nm._fl && nm._fl.querySelector('img'); if(!im) return;
     const r = im.getBoundingClientRect(), w = im.offsetWidth || r.width, h = im.offsetHeight || r.height, cx = r.left + r.width / 2, cy = r.top + r.height / 2, a = nm._r || 0;
     const ox = (HEART.x * Math.cos(a) - HEART.y * Math.sin(a)) * w, oy = (HEART.x * Math.sin(a) + HEART.y * Math.cos(a)) * h;
-    nm.style.left = (cx + ox - sr.left) + 'px'; nm.style.top = (cy + oy - sr.top) + 'px';
+    nm.style.left = (cx + ox - sr.left) + 'px'; nm.style.top = (r.bottom - h * .03 - sr.top) + 'px';      // just under the bloom, centred on its heart
   });
 }
 function layoutRing(){
@@ -1701,7 +1703,7 @@ function layoutRing(){
     scene.appendChild(el);
     // its name, under the bloom. kept outside the flower so it sits above the dark (the flowers fade into it; the names stay readable)
     const nm = document.createElement('span'); nm.className = 'flower-name'; nm.textContent = p.title; nm.setAttribute('aria-hidden', 'true');
-    nm._fl = el; nm._r = ((((i*47)%36)-18)) * Math.PI / 180;      // (placed on the lily's heart once the flower is laid out: placeNames)
+    nm.style.setProperty('--s', size + 'px'); nm._fl = el; nm._r = ((((i*47)%36)-18)) * Math.PI / 180;      // (placed on the lily's heart once the flower is laid out: placeNames)
     el.addEventListener('mouseenter', ()=> nm.classList.add('on')); el.addEventListener('mouseleave', ()=> nm.classList.remove('on'));
     el.addEventListener('focus', ()=> nm.classList.add('on')); el.addEventListener('blur', ()=> nm.classList.remove('on'));
     scene.appendChild(nm);
@@ -5614,9 +5616,31 @@ const LIVING = (function(){
     if(scareRig.glow.parent !== camera){ camera.add(scareRig.glow); scareRig.glow.position.set(0, .3, -1.8); }
     return scareRig;
   }
+  // she has you: the film of her catching you plays over everything, then it all starts over (the bedroom, the notes, the hallways).
+  // the same for every way she can catch you: her head in the haunting, the eyes in the dark room, the chase. if the film cannot
+  // play, the old lunge (her head at your face) stands in
+  const JS_VIDEO = 'bleood_jumpscare.mp4';
+  let jsVid = null, jsOn = false;
   function jumpscare(W){
+    if(jsOn) return;
     W.scaring = true; W.open = false;
     chaseSoundsStop(true);
+    if(jsVid){
+      jsOn = true; redLevel = 0; level.shake = 0;
+      const done = ()=>{ if(!jsOn) return; jsOn = false; clearTimeout(guard); jsVid.onended = null;
+        fade = 1; fadeTo = 1; jsVid.classList.remove('on'); try{ jsVid.pause(); }catch(_){ }
+        W.lunge = null; W.scaring = false; W.next = performance.now() + 5000; restart(true); };
+      const guard = setTimeout(done, 8000);      // (whatever happens, it never hangs)
+      try{ jsVid.currentTime = 0; }catch(_){ }
+      jsVid.onended = done;
+      const pr = jsVid.play();
+      if(pr && pr.then) pr.then(()=> jsVid.classList.add('on')).catch(()=>{ jsOn = false; clearTimeout(guard); jsVid.onended = null; lungeScare(W); });
+      else jsVid.classList.add('on');
+      return;
+    }
+    lungeScare(W);
+  }
+  function lungeScare(W){
     // in the chair it is her own head that comes at you; a demon in the hallway sends one of her heads
     const built = W.head ? null : getScareRig();
     const H = W.head || built.group, eyes = W.head ? W.eyes : built.eyes, glow = W.head ? W.eyeGlow : built.glow;
@@ -6241,6 +6265,7 @@ const LIVING = (function(){
     tipEl.addEventListener('touchend', e=>{ e.preventDefault(); e.stopPropagation(); closeTip(); });
     redEl = document.createElement('div'); redEl.className = 'living-red'; wrap.appendChild(redEl);
     watchEl = document.createElement('div'); watchEl.className = 'living-watch'; wrap.appendChild(watchEl);      // the 'she is looking' state: red, throbbing, the picture straining
+    jsVid = document.createElement('video'); jsVid.className = 'js-vid'; jsVid.muted = true; jsVid.playsInline = true; jsVid.setAttribute('playsinline', ''); jsVid.setAttribute('webkit-playsinline', ''); jsVid.preload = 'auto'; jsVid.src = JS_VIDEO; wrap.appendChild(jsVid);
     scareEl = document.createElement('div'); scareEl.className = 'jumpscare'; scareEl.innerHTML = '<img src="' + TARGET_IMG + '" alt="">'; wrap.appendChild(scareEl);
 
     noteOverlay = document.createElement('div'); noteOverlay.className = 'note-overlay';
@@ -6490,7 +6515,7 @@ const LIVING = (function(){
   function loopBody(now){      // phones: 30 frames a second, steady, instead of 60 that cannot be held
     const dt = Math.min((now - last) / 1000, TOUCH ? .08 : 0.05); last = now;
     if(opening){ stepOpening(now); if(level && level.intro) level.intro.t0 = now; }
-    const reading = !!opening || !!dolly || noteOverlay.classList.contains('on') || panel.classList.contains('on') || tipOpen || !!(level && level.intro) || !!(level && level.ending && level.ending.locked) || !!(level && level.memory) || !!(level && level.plush && level.plush.lock);
+    const reading = jsOn || !!opening || !!dolly || noteOverlay.classList.contains('on') || panel.classList.contains('on') || tipOpen || !!(level && level.intro) || !!(level && level.ending && level.ending.locked) || !!(level && level.memory) || !!(level && level.plush && level.plush.lock);
     if(reading) movingNow = false;
 
     if(level && !reading && (lookVec.x || lookVec.y)){ const k = Math.min(1, dt * 22); yaw -= lookVec.x * k; pitch = Math.max(-1.35, Math.min(1.35, pitch - lookVec.y * k)); lookVec = {x:lookVec.x * (1 - k), y:lookVec.y * (1 - k)}; if(Math.abs(lookVec.x) + Math.abs(lookVec.y) < 1e-4) lookVec = {x:0, y:0}; }      // phone drag-to-look: the banked turn let out smoothly
