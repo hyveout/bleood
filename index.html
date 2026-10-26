@@ -1062,9 +1062,13 @@ body.mob-full .mob-exit:active{opacity:1; border-color:rgba(232,227,214,.9)}
 @media (max-aspect-ratio:1/1){ .slideshow .ss-frame{height:auto; width:100%} }
 .living-credits{position:absolute; inset:0; z-index:8; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:clamp(6px,1.4vh,14px);
   pointer-events:none; opacity:0; color:#141312; text-align:center; padding:0 8%; will-change:opacity, transform}
-.living-credits .cr-top{font-family:var(--display); font-size:clamp(.95rem,2.6vw,1.6rem); letter-spacing:.04em; opacity:.8}
-.living-credits .cr-main{font-family:var(--display); font-size:clamp(2rem,7.4vw,4.6rem); line-height:1.05; color:#a8140f}
-.living-credits .cr-sub{font-family:var(--display); font-size:clamp(1.2rem,3.6vw,2.2rem); opacity:.85}
+.living-credits .cr-top{font-family:var(--display); font-size:clamp(.75rem,3.4cqw,1.6rem); letter-spacing:.04em; opacity:.8}
+.living-credits .cr-main{font-family:var(--display); font-size:clamp(1.4rem,9cqw,4.6rem); line-height:1.05; color:#a8140f}
+.living-credits .cr-sub{font-family:var(--display); font-size:clamp(.9rem,4.6cqw,2.2rem); opacity:.85}
+.living-credits .cr-game{font-size:clamp(1.3rem,8.5cqw,3.6rem); white-space:nowrap; margin-bottom:clamp(2px,.8vh,10px)}
+.living-credits .cr-role{display:flex; flex-direction:column; align-items:center; gap:2px}
+.living-credits .cr-role .cr-top{font-size:clamp(.62rem,2.6cqw,1.15rem); white-space:nowrap}
+.living-credits .cr-role .cr-sub{font-size:clamp(.85rem,4.4cqw,1.8rem); white-space:nowrap}
 .living-ask{position:absolute; left:0; right:0; bottom:9%; z-index:8; text-align:center; opacity:0; pointer-events:none; transition:opacity 1.4s ease}
 .living-ask.on{opacity:1}
 .ask-line{font-family:var(--display); font-size:clamp(1.5rem,5.6vw,3.2rem); line-height:1.15; color:#f1eee6; padding:0 6%;
@@ -2414,15 +2418,15 @@ const LIVING = (function(){
   const SAFE_CODE = '7391';
   // the credits, shown one card at a time in the white room at the end. top line small, main line large (either may be left out).
   // add more cards to the end of this list
+  // the credits, by game: a card per game (its name, then each part and who made it), then the ones across all three
   const CREDITS = [
     {main:'KILL YOUR IDOLS', sub:'bleood'},
     {top:'Designed and Developed by', main:'Hyveout'},
-    {top:'Assets and Cutscenes', main:'B1eed0ut<br>Happy', sub:'Assessment, Attention, Living'},
-    {top:'Assets and Scenery', main:'Foolveil', sub:'Attention'},
-    {top:'Cutscenes', main:'Xen<br>Zokuv', sub:'Living'},
-    {top:'Sound Design', main:'Aquasocks<br>Shadx2'},
+    {game:'Assessment', roles:[['Assets', 'B1eed0ut · Happy'], ['Sound Design', 'Aquasocks']]},
+    {game:'Attention', roles:[['Assets and Scenery', 'Foolveil'], ['Cutscenes', 'B1eed0ut · Happy'], ['Sound Design', 'Shadx2']]},
+    {game:'Living', roles:[['3D Cutscenes', 'Zokuv · Xen'], ['Additional Assets', 'B1eed0ut · Happy'], ['Sound Design', 'Shadx2']]},
+    {top:'3D Assets', main:'Zokuv<br>Posixspwn'},
     {top:'Voice Acting', main:'Anne Lily Kump'},
-    {top:'3D Assets', main:'Posixspwn'},
     {top:'Additional Assets and Trailers', main:'Noahsocold'},
   ];
   // the four garments in the closet, left to right; each one's colour picks out one number painted by the door
@@ -5218,13 +5222,15 @@ const LIVING = (function(){
         level.shake = 0;
         if(tw > 2.0 && E.locked && !E.leaving) E.locked = false;      // you can move in the white the whole time
         // the credits come up in front of you, one card at a time, wherever you walk
-        const CT0 = 2.2, IN = 1.3, HOLD = 3.2, OUT = 1.2, GAP = .6, per = IN + HOLD + OUT + GAP, tc = tw - CT0;
-        const ci = tc < 0 ? -1 : Math.floor(tc / per);
+        // (a game's card stays up longer: there is more on it)
+        const CT0 = 2.2, IN = 1.3, OUT = 1.2, GAP = .6, holdOf = c => c.game ? 5.2 : 3.2, tc = tw - CT0;
+        let ci = -1, lt = 0, HOLD = 3.2; if(tc >= 0){ let t0 = 0; for(let k = 0; k < CREDITS.length; k++){ const per = IN + holdOf(CREDITS[k]) + OUT + GAP; if(tc < t0 + per){ ci = k; lt = tc - t0; HOLD = holdOf(CREDITS[k]); break; } t0 += per; } if(ci < 0) ci = CREDITS.length; }
         if(ci >= 0 && ci < CREDITS.length && !E.leaving){
-          const lt = tc - ci * per, op = lt < IN ? lt / IN : lt < IN + HOLD ? 1 : lt < IN + HOLD + OUT ? 1 - (lt - IN - HOLD) / OUT : 0;
+          const op = lt < IN ? lt / IN : lt < IN + HOLD ? 1 : lt < IN + HOLD + OUT ? 1 - (lt - IN - HOLD) / OUT : 0;
           if(creditsEl.dataset.i !== String(ci)){
             const c = CREDITS[ci]; creditsEl.dataset.i = String(ci);
-            creditsEl.innerHTML = (c.top ? '<span class="cr-top">' + c.top + '</span>' : '') + '<span class="cr-main">' + c.main + '</span>' + (c.sub ? '<span class="cr-sub">' + c.sub + '</span>' : '');
+            creditsEl.innerHTML = c.game ? '<span class="cr-main cr-game">' + c.game + '</span>' + c.roles.map(([r, n]) => '<span class="cr-role"><span class="cr-top">' + r + '</span><span class="cr-sub">' + n + '</span></span>').join('')
+              : (c.top ? '<span class="cr-top">' + c.top + '</span>' : '') + '<span class="cr-main">' + c.main + '</span>' + (c.sub ? '<span class="cr-sub">' + c.sub + '</span>' : '');
           }
           creditsEl.style.opacity = ease(op).toFixed(3); creditsEl.style.transform = 'scale(' + (.965 + .035 * ease(Math.min(1, lt / (IN + HOLD)))).toFixed(4) + ')';
         }else{
