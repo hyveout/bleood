@@ -3034,8 +3034,9 @@ const LIVING = (function(){
       // on the wall that runs along z (x fixed)
       strip(h, x - sx * .015, h/2, z - sz * CW/2, sx < 0 ? Math.PI/2 : -Math.PI/2, (sx < 0 ? sz : -sz) * Math.PI/2, CW);
     });
-    // cobwebs in one or two of the top corners, their anchor at the corner (the texture's own corner), hanging down the wall that runs along x
-    [[-1, -1], [1, -1], [-1, 1], [1, 1]].filter(()=> Math.random() < .5).slice(0, 2).forEach(([sx, sz])=>{
+    // cobwebs in the top corners: OFF (taken out Oct 27). to bring them back, set COBWEBS to true
+    const COBWEBS = false;
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].filter(()=> COBWEBS && Math.random() < .5).slice(0, 2).forEach(([sx, sz])=>{
       if((sz < 0 && open.back) || (sz > 0 && open.front)) return;
       const sz2 = .5 + Math.random() * .5, x = cx + sx * (w/2 - sz2/2 - .01), z = cz + sz * (d/2 - .03);
       const m = cobweb(g, x, h - sz2/2 - .01, z, sz < 0 ? 0 : Math.PI, sz2);
